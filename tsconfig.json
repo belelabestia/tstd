@@ -1,12 +1,15 @@
 {
   "compilerOptions": {
-    "target": "ESNext",
-    "module": "commonjs",
+    "declaration": true,
+    "target": "esnext",
+    "module": "esnext",
+    "lib": ["esnext"],
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "strict": true,
     "strictNullChecks": true,
     "skipLibCheck": true,
     "outDir": "dist"
-  }
+  },
+  "include": ["modules/index.ts"]
 }

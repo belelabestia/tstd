@@ -1,9 +1,12 @@
 {
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "scripts": {
-    "start": "tsx .",
-    "samples": "tsx ./samples"
+    "start": "tsc --watch"
   },
   "devDependencies": {
-    "tsx": "^4.20.3"
-  }
+    "tsx": "^4.20.3",
+    "typescript": "^5.8.3"
+  },
+  "files": ["dist"]
 }
