@@ -1,5 +1,5 @@
 import { is } from '../modules';
-import { branchEverything } from './branch-everything';
+import { branchEverything, branchSomething } from './branch-everything';
 import { branchingProtocols } from './branching-protocols';
 import { deferCleanup } from './defer-cleanup';
 import { initSafe } from './init-safe';
@@ -10,6 +10,7 @@ console.log('this module is just here to propose an order of reading');
 console.log('but of course you can run it too');
 
 branchEverything();
+branchSomething();
 throwUnreachable();
 niceTry();
 branchingProtocols();
