@@ -14,7 +14,7 @@ export type Schema = Record<string, TypeGuard<unknown>>;
 export type Model<T extends Schema> = { [K in keyof T]: T[K] extends TypeGuard<infer U> ? U : never };
 
 export type Truthy = Brand<'Truthy'>;
-export type DateString = Branded<string>;
+export type DateString = string & Brand<'DateString'>;
 
 export type JsonValue =
   | string
@@ -83,11 +83,11 @@ export const json = (x: unknown): x is Json =>
   jsonObject(x) ||
   jsonArray(x);
 
-export const truthyString = (x: unknown): x is string & Brand<'truthy'> =>
+export const truthyString = (x: unknown): x is string & Truthy =>
   typeof x === 'string' &&
   x.length > 0;
 
-export const truthyNumber = (x: unknown): x is number & Brand<'truthy'> =>
+export const truthyNumber = (x: unknown): x is number & Truthy =>
   typeof x === 'number' &&
   x !== 0 &&
   !Number.isNaN(x);
@@ -105,5 +105,3 @@ export const dateString = (x: unknown): x is DateString => {
     date.getMonth() === month - 1 &&
     date.getDate() === day;
 };
-
-export const $undefined = (x: unknown) => x === undefined;

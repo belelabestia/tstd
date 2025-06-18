@@ -1,0 +1,8 @@
+{
+  "scripts": {
+    "start": "tsx ."
+  },
+  "devDependencies": {
+    "tsx": "^4.20.3"
+  }
+}
