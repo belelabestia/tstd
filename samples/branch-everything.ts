@@ -24,18 +24,47 @@ export const branchEverything = () => {
   switch (res.branch) {
     case 'xs':
       console.log('extra small', res.value);
-      return;
+      break;
     case 's':
       console.log('small', res.value);
-      return;
+      break;
     case 'm':
       console.log('medium', res.value);
-      return;
+      break;
     case 'l':
       console.log('large', res.value);
-      return;
+      break;
     case 'xl':
       console.log('extra large', res.value);
+      break;
+  }
+};
+
+export const branchSomething = () => {
+  console.log('you can also decide to qualify only some branches');
+  const onlyQualifySomeBranches = () => {
+    const ran = Math.random();
+
+    if (ran > 0.8) return branch('big', ran);
+    if (ran < 0.2) return branch('small', ran);
+    return;
+  };
+
+  const res = onlyQualifySomeBranches();
+
+  console.log('you should first check against the default case');
+  if (!res) {
+    console.log('not an interesting size');
+    return;
+  }
+  
+  console.log('this way ts has only a string union left and will easily scaffold a switch statement');
+  switch (res.branch) {
+    case 'big':
+      console.log('soo big', res.value);
+      return;
+    case 'small':
+      console.log('soo small', res.value);
       return;
   }
 };

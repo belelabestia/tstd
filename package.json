@@ -1,6 +1,7 @@
 {
   "scripts": {
-    "start": "tsx ."
+    "start": "tsx .",
+    "samples": "tsx ./samples"
   },
   "devDependencies": {
     "tsx": "^4.20.3"
