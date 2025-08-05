@@ -83,9 +83,8 @@ export const json = (x: unknown): x is Json =>
   jsonObject(x) ||
   jsonArray(x);
 
-export const truthyString = (x: unknown): x is string & Truthy =>
-  typeof x === 'string' &&
-  x.length > 0;
+export const string = (x: unknown): x is string =>
+  typeof x === 'string';
 
 export const truthyNumber = (x: unknown): x is number & Truthy =>
   typeof x === 'number' &&
@@ -93,7 +92,7 @@ export const truthyNumber = (x: unknown): x is number & Truthy =>
   !Number.isNaN(x);
 
 export const dateString = (x: unknown): x is DateString => {
-  if (!truthyString(x)) return false;
+  if (!string(x)) return false;
 
   const regex = /^\d{4}-\d{2}-\d{2}$/;
   if (!regex.test(x)) return false;

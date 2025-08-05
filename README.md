@@ -50,5 +50,5 @@ To get the most out of `tstd` you should be coding by these style rules; I might
 - Return as early as possible.
 - Boil-up decision making by using `Union`.
 - Only use `Union` when all branches have a truthy value type, otherwise use simple `null` checks.
-- Use `$try` to convert `try/catch` to a `Union`.
+- Use `task` to convert `try/catch` to a `Union`.
 - Use type narrowing (`x is T`) over parsing (`return x as T`) for validation.

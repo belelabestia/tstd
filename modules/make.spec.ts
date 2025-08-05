@@ -1,10 +1,10 @@
-import { $new } from '../modules/new';
+import { make } from '../modules/make';
 
 export const initSafe = () => {
   console.log('i have a module that needs to be instantiated as a class');
-  console.log('but constructors can explode so i use $new');
+  console.log('but constructors can explode so i use make');
 
-  const res = $new(URL, 'https://google.com');
+  const res = make(URL, 'https://google.com');
   if (res.branch === 'error') {
     console.log('if the constructor snaps i can react', res.value);
     return;
