@@ -1,3 +1,5 @@
+import { test } from 'node:test';
+import * as assert from 'node:assert/strict';
 import { branch, Union } from './branch';
 import { no } from './yes-no';
 
@@ -16,66 +18,51 @@ import { no } from './yes-no';
   this design aims at staying very close to vanilla ts while significanly improving its ergonomics.
 */
 
-export const branchEverything = () => {
+test('branch everything', () => {
   // in ts we often struggle to leverage the flexibility of a dynamic language without compromising safety;
   // `branch` is a very simple utility that enables type-safe dynamic tagged unions as a return type.
 
   // here we have an operation that might return in different ways:
-  const toughDecision = () => {
-    const ran = Math.random();
-
-    if (ran < 0.2) return branch('xs', { a: 1 });
-    if (ran < 0.4) return branch('s', 'hello');
-    if (ran < 0.6) return branch('m', 2);
-    if (ran < 0.8) return branch('l', [1, 2, 3]);
+  const toughDecision = (n: number) => {
+    if (n < 0.2) return branch('xs', { a: 1 });
+    if (n < 0.4) return branch('s', 'hello');
+    if (n < 0.6) return branch('m', 2);
+    if (n < 0.8) return branch('l', [1, 2, 3]);
     return branch('xl', null);
   };
 
   // see how ts has inferred the return type of `toughDecision`;
   // this inferred type signature can be assigned to a union-typed variable:
   type Res = Union<{ xs: { a: number }, s: string, m: number, l: number[], xl: null }>;
-  const res: Res = toughDecision();
+  const res: Res = toughDecision(0.3);
+
+  assert.deepEqual(res, { branch: 's', value: 'hello' });
 
   // or passed as a union-typed argument
-  const iWantRes = (res: Res) => {};
-  iWantRes(toughDecision());
+  const branchIsL = (res: Res) => res.branch === 'l';
+  assert.ok(branchIsL(toughDecision(0.6)));
+});
 
-  // see how ergonomic it is to make decisions:
-  switch (res.branch) {
-    case 'xs':
-      return;
-    case 's':
-      return;
-    case 'm':
-      return;
-    case 'l':
-      return;
-    case 'xl':
-      return;
-  }
-};
-
-export const branchSomething = () => {
+test('branch something', () => {
   // sometimes you don't need to qualify a branch for a void return;
   // so you can decide to only qualify some branches:
-  const onlyQualifySomeBranches = () => {
-    const ran = Math.random();
-
-    if (ran > 0.8) return branch('big', ran);
-    if (ran < 0.2) return branch('small', ran);
+  const onlyQualifySomeBranches = (n: number) => {
+    if (n > 0.8) return branch('big', n);
+    if (n < 0.2) return branch('small', n);
   };
 
-  const res = onlyQualifySomeBranches();
+  const res = onlyQualifySomeBranches(0.1);
+  assert.deepEqual(res, { branch: 'small', value: 0.1 });
 
   // now res might be undefined so you need to check;
   // use yes/no to perform safe nullish checks:
-  if (no(res)) return;
+  if (no(res)) assert.fail();
 
   // now ts will easily scaffold a switch statement:
   switch (res.branch) {
     case 'big':
-      return;
+      assert.fail();
     case 'small':
       return;
   }
-};
+});
