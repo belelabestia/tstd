@@ -2,7 +2,7 @@
 // We have a few general definitions followed by a collection of branded types and a bunch of built-in type guards.
 // Extend this collection by creating your own branded types and respective guards in your project.
 
-import { Brand } from "./brand";
+import { Brand } from './brand';
 
 /** A type-narrowing function. */
 export type TypeGuard<T> = (x: unknown) => x is T;

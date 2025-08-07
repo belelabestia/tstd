@@ -9,7 +9,7 @@ import { make } from '../modules/make';
   plus, constructors often throw, which is another thing we don't like
 */
 
-test("init safely", () => {
+test('init safely', () => {
   // i have a module that needs to be instantiated as a class
   // but constructors can explode so i use the make utility instead of new
   assert.equal(make(URL, '').branch, 'error');

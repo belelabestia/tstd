@@ -11,7 +11,7 @@ import * as defer from './defer';
   see also: use.ts
 */
 
-test("defer cleanup", async () => {
+test('defer cleanup', async () => {
   // here i have some variables
   let a: number, b: number;
 

@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import * as assert from 'node:assert/strict';
 import { Brand } from './brand';
 
-test("brand stuff", () => {
+test('brand stuff', () => {
   // type branding is a very clever technique, but it's usually overengineered;
   // all we really need is the brand, not the branded type
 
@@ -12,7 +12,7 @@ test("brand stuff", () => {
   type Trimmed = string & Brand<'Trimmed'>;
   type Valid = (number | Trimmed) & Truthy;
 
-  // usually, branded types are used together with type assertions (using "as")
+  // usually, branded types are used together with type assertions (using 'as')
   // but in tstd we prefer using brands together with type guards
   const number = (x: unknown) => typeof x === 'number';
   const truthy = (x: unknown): x is Truthy => Boolean(x);
@@ -30,6 +30,6 @@ test("brand stuff", () => {
   else assert.fail();
 
   if (valid(0)) assert.fail();
-  if (valid("")) assert.fail();
+  if (valid('')) assert.fail();
   if (valid(new Date())) assert.fail();
 });
