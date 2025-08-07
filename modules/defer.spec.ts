@@ -1,27 +1,32 @@
-import { defer } from '.';
-import { unreachable } from './fail';
+import { test } from 'node:test';
+import * as assert from 'node:assert/strict';
+import * as defer from './defer';
 
-export const deferCleanup = async () => {
-  console.log('here i have some brand new variables');
-  let a = 1;
-  let b = 1;
+/*
+  this is cutting-edge stuff
 
-  console.log('but i need to clean them up before i go');
+  js/ts have an approved proposal for the `using` keyword,
+  but its implementation is still not widespread
 
-  using _resetA = defer.sync(() => {
-    a = 0;
-    console.log('a was cleaned up', { a });
-  });
+  see also: use.ts
+*/
 
-  await using _resetB = defer.async(() => {
-    b = 0;
-    console.log('b was cleaned up', { b });
-    return Promise.resolve();
-  });
+test("defer cleanup", async () => {
+  // here i have some variables
+  let a: number, b: number;
 
-  console.log('now i can do whatever i want');
-  if (a === 0) throw unreachable();
-  if (b === 0) throw unreachable();
+  {
+    // i want to clean them up when the scope ends
+    using _resetA = defer.sync(() => a = 0);
+    await using _resetB = defer.async(async () => b = 0);
 
-  console.log('and resources will be cleaned up right after');
-};
+    // now i can do whatever i want with them
+    a = b = 42;
+    assert.equal(a, 42);
+    assert.equal(b, 42);
+  }
+
+  // resources will be cleaned up right after
+  assert.equal(a, 0);
+  assert.equal(b, 0);
+});
