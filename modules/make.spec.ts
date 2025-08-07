@@ -1,14 +1,22 @@
+import { test } from 'node:test';
+import * as assert from 'node:assert/strict';
 import { make } from '../modules/make';
 
-export const initSafe = () => {
-  console.log('i have a module that needs to be instantiated as a class');
-  console.log('but constructors can explode so i use make');
+/*
+  in tstd we try to get rid of some useless keywords that involve a lot of language magic
+  one of them is the whole this/new/class/extends/super family
 
-  const res = make(URL, 'https://google.com');
-  if (res.branch === 'error') {
-    console.log('if the constructor snaps i can react', res.value);
-    return;
-  }
+  plus, constructors often throw, which is another thing we don't like
+*/
 
-  console.log('otherwise i can work with the instance', res.value);
-};
+test("init safely", () => {
+  // i have a module that needs to be instantiated as a class
+  // but constructors can explode so i use the make utility instead of new
+  assert.equal(make(URL, '').branch, 'error');
+
+  // if everything's fine, i can work with the instance
+  const href = 'https://example.com/';
+  const url = make(URL, href);
+  assert.equal(url.branch, 'success');
+  assert.equal(url.value.href, href);
+});
