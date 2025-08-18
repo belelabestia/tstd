@@ -7,7 +7,7 @@ export type Schema = Record<string, TypeGuard<unknown>>;
 /** the actual validated type */
 export type Model<T extends Schema> = { [K in keyof T]: T[K] extends TypeGuard<infer U> ? U : never };
 
-/* mind that some of this functions override the expected js behavior */
+/* mind that some of these functions override the expected js behavior */
 
 export const boolean = (x: unknown): x is boolean =>
   typeof x === 'boolean';
