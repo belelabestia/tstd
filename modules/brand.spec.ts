@@ -14,12 +14,14 @@ test('brand stuff', () => {
 
   // usually, branded types are used together with type assertions (using 'as')
   // but in tstd we prefer using brands together with type guards
-  const number = (x: unknown) => typeof x === 'number';
-  const truthy = (x: unknown): x is Truthy => Boolean(x);
-  const trimmed = (x: unknown): x is Trimmed => typeof x === 'string' && x.trim() === x;
+  const is = {
+    number: (x: unknown) => typeof x === 'number',
+    truthy: (x: unknown): x is Truthy => Boolean(x),
+    trimmed: (x: unknown): x is Trimmed => typeof x === 'string' && x.trim() === x
+  };
 
   // this way, boolean algebra and type algebra match perfectly:
-  const valid = (x: unknown): x is Valid => (number(x) || trimmed(x)) && truthy(x);
+  const valid = (x: unknown): x is Valid => (is.number(x) || is.trimmed(x)) && is.truthy(x);
 
   // now you can be very specific about function parameter types:
   const veryStrictFunction = (_: Valid) => { };
