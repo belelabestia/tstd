@@ -1,0 +1,6 @@
+{
+  "javascript.format.semicolons": "insert",
+  "typescript.format.semicolons": "insert",
+  "editor.formatOnSave": true,
+  "editor.formatOnType": true
+}
