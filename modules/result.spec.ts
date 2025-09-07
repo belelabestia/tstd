@@ -13,11 +13,11 @@ test('return a result', () => {
   const dangerousAction = (n: number) => {
     if (n < 5) return result.error('not enough');
     if (n > 10) return result.success('incredible');
-    return result.success(n);
+    return result.success();
   };
 
   // you can assign the result to a protocol-typed variable
-  type R = Result<number | string, string>;
+  type R = Result<string | void, string>;
   const res: R = dangerousAction(15);
   assert.deepEqual(res, result.success('incredible'));
 });
