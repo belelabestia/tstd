@@ -33,7 +33,7 @@ test('branch everything', () => {
 
   // see how ts has inferred the return type of `toughDecision`;
   // this inferred type signature can be assigned to a union-typed variable:
-  type Res = Union<{ xs: { a: number }, s: string, m: number, l: number[], xl: undefined }>;
+  type Res = Union<{ xs: { a: number; }, s: string, m: number, l: number[], xl: void; }>;
   const res: Res = toughDecision(0.3);
 
   assert.deepEqual(res, { branch: 's', value: 'hello' });
