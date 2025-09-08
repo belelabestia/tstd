@@ -1,7 +1,6 @@
 import { test } from 'node:test';
 import * as assert from 'node:assert/strict';
 import { branch, Union } from './branch';
-import { no } from './yes-no';
 
 /*
   a little bit of theory
@@ -52,11 +51,11 @@ test('branch something', () => {
   };
 
   const res = onlyQualifySomeBranches(0.1);
-  assert.deepEqual(res, { branch: 'small', value: 0.1 });
 
-  // now res might be undefined so you need to check;
-  // use yes/no to perform safe nullish checks:
-  if (no(res)) assert.fail();
+  // now res might be undefined so you need to check
+  if (res === undefined) assert.fail();
+
+  assert.deepEqual(res, { branch: 'small', value: 0.1 });
 
   // now ts will easily scaffold a switch statement:
   switch (res.branch) {
