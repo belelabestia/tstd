@@ -48,10 +48,14 @@ to get the most out of `tstd`, you should consider to learn to code with the fol
 - avoid any template method, strategy pattern or inversion of control
 - except for type guards, never declare return types
 
+---
+
 - use `const` whenever possible, even when mutation occurs; use `let` when reassignment is by design
 - avoid `function`, `class`, `constructor`, `this`, `new` as they provide redundant constructs
 - consequently, do not use `extends`, `super` as no one needs class hierarchies
 - always use `type` over `interface` as they have too much overlap and `type` covers everything
+
+---
 
 - export module members individually while declaring them; avoid any other `export` syntax
 - use `index.ts` files to manipulate module structure for the convenience of the consumer
@@ -59,12 +63,16 @@ to get the most out of `tstd`, you should consider to learn to code with the fol
 - for namespacing, prefer nesting over prefixing or postfixing
 - whenever a module has a dynamic dependency, make it dynamic by exporting an `init` function
 
+---
+
 - always prefer flow over callbacks; use callbacks only as entrypoints
 - delegate decisions to the caller by using `branch` and `Union`
 - return as early as possible
 - avoid `else` unless you're dealing with a boolean that's meaningful in both cases
 - avoid `switch` unless you're dealing with a union that's meaningful in all cases
 - use `branch` only if checking against presence or absence of a return value isn't enough
+
+---
 
 - prefer type narrowing (`x is T`) to parsing (`return x as T`) for validation as it is a cheaper abstraction
 - native errors and values from outside are `unknown` by design: don't try to fix this, just narrow their type
