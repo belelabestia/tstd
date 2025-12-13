@@ -2,7 +2,6 @@
 
 `tstd` (TypeStandard) is a tiny library (one could call it a micro-library) aiming at highlighting and easing the use of a particular set of language features, which can successfully manage 100% of what can be achieved by that language, while completely ignoring some others that at the end of the day are just different fancier names for specific use cases.
 
-
 ## Principles
 
 `tstd` facilitates lean procedural code without sacrificing the overall type-safety and testability of the code.

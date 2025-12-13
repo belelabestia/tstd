@@ -9,7 +9,8 @@ import * as is from './is';
 
 test('safely navigate the unknown', () => {
   // here's a bunch of unknown variables
-  const a: unknown = 1, b: unknown = '_';
+  const a: unknown = 1;
+  const b: unknown = '_';
 
   // let's narrow them down
   if (!is.number(a)) assert.fail();
@@ -37,7 +38,7 @@ test('validate model schemas', () => {
       a: is.string,
       b: is.boolean
     })
-  };
+  } satisfies is.Schema;
 
   if (!is.model(a, schema)) assert.fail();
 

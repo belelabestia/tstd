@@ -3,7 +3,7 @@ import * as assert from 'node:assert/strict';
 import { make } from '../modules/make';
 
 /*
-  in tstd we try to get rid of some useless keywords that involve a lot of language magic
+  in tstd we try to get rid of some useless keywords that involve language magic
   one of them is the whole this/new/class/extends/super family
 
   plus, constructors often throw, which is another thing we don't like
