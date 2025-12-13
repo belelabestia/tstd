@@ -44,18 +44,20 @@ this library is built as js modules with `tsc` and can be installed via its gith
 
 to get the most out of `tstd`, you should consider to learn to code with the following style rules; i might provide an eslint ruleset at some point.
 
+### abstractions
+
 - function and object names are the only level of abstraction truly needed
 - avoid any template method, strategy pattern or inversion of control whenever possible
 - except for type guards, never declare return types
 
----
+### keywords
 
 - use `const` whenever possible, even when mutation occurs; use `let` when reassignment is by design
 - avoid `function`, `class`, `constructor`, `this`, `new` as they provide redundant constructs
 - consequently, do not use `extends` or `super` as no one needs class hierarchies
 - always use `type` over `interface` as they have too much overlap and `type` covers everything
 
----
+### modules
 
 - export module members individually while declaring them; avoid any other `export` syntax
 - use `index.ts` files to manipulate module structure for consumer convenience
@@ -63,7 +65,7 @@ to get the most out of `tstd`, you should consider to learn to code with the fol
 - for namespacing, prefer nesting over prefixing or postfixing
 - whenever a module has a dynamic dependency, make it dynamic as well by exporting an `init` function
 
----
+### flow
 
 - always prefer flow over callbacks; use callbacks only as entrypoints
 - delegate decisions to the caller by using `branch` and `Union`
@@ -73,7 +75,7 @@ to get the most out of `tstd`, you should consider to learn to code with the fol
 - use `branch` only if checking against presence or absence of a return value isn't enough
 - do not waste time telling `null` and `undefined` apart; just reason in terms of presence/absence
 
----
+### types
 
 - prefer type narrowing (`x is T`) to parsing (`return x as T`) for validation as it is a cheaper abstraction
 - native errors and values from outside are `unknown` by design: don't try to fix this, just narrow their type
