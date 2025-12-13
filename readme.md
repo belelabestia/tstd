@@ -45,23 +45,23 @@ this library is built as js modules with `tsc` and can be installed via its gith
 to get the most out of `tstd`, you should consider to learn to code with the following style rules; i might provide an eslint ruleset at some point.
 
 - function and object names are the only level of abstraction truly needed
-- avoid any template method, strategy pattern or inversion of control
+- avoid any template method, strategy pattern or inversion of control whenever possible
 - except for type guards, never declare return types
 
 ---
 
 - use `const` whenever possible, even when mutation occurs; use `let` when reassignment is by design
 - avoid `function`, `class`, `constructor`, `this`, `new` as they provide redundant constructs
-- consequently, do not use `extends`, `super` as no one needs class hierarchies
+- consequently, do not use `extends` or `super` as no one needs class hierarchies
 - always use `type` over `interface` as they have too much overlap and `type` covers everything
 
 ---
 
 - export module members individually while declaring them; avoid any other `export` syntax
-- use `index.ts` files to manipulate module structure for the convenience of the consumer
-- use lowercase for module names or api containers: no one wants to use the shift key in order to help intellisense help them
+- use `index.ts` files to manipulate module structure for consumer convenience
+- use lowercase for module names or api containers: no one wants to use the shift key in order to guide intellisense
 - for namespacing, prefer nesting over prefixing or postfixing
-- whenever a module has a dynamic dependency, make it dynamic by exporting an `init` function
+- whenever a module has a dynamic dependency, make it dynamic as well by exporting an `init` function
 
 ---
 
@@ -71,6 +71,7 @@ to get the most out of `tstd`, you should consider to learn to code with the fol
 - avoid `else` unless you're dealing with a boolean that's meaningful in both cases
 - avoid `switch` unless you're dealing with a union that's meaningful in all cases
 - use `branch` only if checking against presence or absence of a return value isn't enough
+- do not waste time telling `null` and `undefined` apart; just reason in terms of presence/absence
 
 ---
 
