@@ -3,7 +3,8 @@
   "types": "./dist/index.d.ts",
   "scripts": {
     "start": "tsc --watch",
-    "test": "tsx --test modules/**.spec.ts"
+    "test": "tsx --test modules/**.spec.ts",
+    "build": "tsc"
   },
   "devDependencies": {
     "@types/node": "^24.2.0",
