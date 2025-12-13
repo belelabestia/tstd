@@ -1,5 +1,5 @@
 import { test } from 'node:test';
-import { Result, result } from '../modules/result';
+import { Result, result } from '../src/result';
 import * as assert from 'node:assert/strict';
 
 /*

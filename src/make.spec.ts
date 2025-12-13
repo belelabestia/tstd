@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import * as assert from 'node:assert/strict';
-import { make } from '../modules/make';
+import { make } from '../src/make';
 
 /*
   in tstd we try to get rid of some useless keywords that involve language magic

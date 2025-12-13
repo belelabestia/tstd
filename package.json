@@ -5,7 +5,7 @@
   "types": "./dist/index.d.ts",
   "scripts": {
     "start": "tsc --watch",
-    "test": "tsx --test modules/**.spec.ts",
+    "test": "tsx --test src/**.spec.ts",
     "build": "tsc"
   },
   "devDependencies": {
