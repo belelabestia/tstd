@@ -64,6 +64,8 @@ to get the most out of `tstd`, you should consider to learn to code with the fol
 - use lowercase for module names or api containers: no one wants to use the shift key in order to guide intellisense
 - for namespacing, prefer nesting over prefixing or postfixing
 - whenever a module has a dynamic dependency, make it dynamic as well by exporting an `init` function
+- make dynamic modules (i.e. objects with function properties) short-lived and narrow-scoped
+- stick to obviously serializable primitives for long-lived objects such as models or props objects
 
 ### flow
 
