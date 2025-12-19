@@ -8,8 +8,8 @@ export type Json =
   | boolean
   | null
   | undefined
-  | Record<string, unknown>
-  | unknown[];
+  | { [key: string]: Json; }
+  | Json[];
 
 /** a type-narrowing function */
 export type TypeGuard<T> = (x: unknown) => x is T;
@@ -48,9 +48,13 @@ export const array = (x: unknown): x is unknown[] =>
 export const json = (x: unknown): x is Json =>
   typeof x === 'string' ||
   typeof x === 'number' ||
-  typeof x === 'boolean' ||
-  record(x) ||
-  array(x) ||
+  typeof x === 'boolean' || (
+    record(x) &&
+    Object.values(x).every(json)
+  ) || (
+    array(x) &&
+    x.every(json)
+  ) ||
   absent(x);
 
 export const model = <T extends Schema>(x: unknown, schema: T): x is { [K in keyof Model<T>]: Model<T>[K] } => {
