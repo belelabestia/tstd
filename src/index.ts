@@ -1,6 +1,6 @@
 export * from './branch';
 export * from './brand';
-export * from './make';
 export * from './flat';
+export * from './result';
 
 export * as is from './is';
