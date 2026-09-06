@@ -28,7 +28,9 @@ src/branch.ts   -> Branch, Union, branch
 src/result.ts   -> Result, result, make, scope
 src/brand.ts    -> Brand
 src/flat.ts     -> Flat
-src/is.ts       -> Json, TypeGuard, Schema, Model, + guards
+src/is.ts       -> Json, TypeGuard, Schema, Model, Finite, + guards
+src/iso.ts      -> Date, Time, DateTime, Duration, Timestamp, + guards and operations
+src/form.ts     -> Field, Fields, Encoded, Decoded, plain, model, decode, encode
 ```
 
 a type and the factory that produces it are one concept, so they live in one file. there is no `types.ts` and there must never be one.
@@ -63,9 +65,11 @@ export * from './flat.js';
 export * from './result.js';
 
 export * as is from './is.js';
+export * as form from './form.js';
+export * as iso from './iso.js';
 ```
 
-`is` is namespaced because its members are generic words (`number`, `string`, `array`) that must not pollute the top level. everything else is flat because its names are already unique. the blank line separates the two policies — keep it.
+`is`, `form` and `iso` are namespaced because their members are generic words (`number`, `string`, `date`, `model`, `decode`) that must not pollute the top level. everything else is flat because its names are already unique. the blank line separates the two policies — keep it.
 
 ### a5. relative sibling imports, no aliases — house
 
@@ -1005,6 +1009,54 @@ export const datetime = (x: unknown): x is DateTime =>
   is.string(x) &&
   canonical(Date.parse(x)) === x;
 ```
+
+### o13. a form is the pairing, not a codec — house (ruled, and now built)
+
+o12 split validation off. what stayed unsolved is the **third** job a codec does: `DateFromNumber` validates, converts forward, *and* remembers how to convert back. the two conversions are inverses of each other, and two functions that must stay inverses have to be declared in one place or they drift apart the first time a field is renamed. that pairing is a **form**.
+
+```ts
+export type Field<E extends is.Json, D> = {
+  is: is.TypeGuard<E>,
+  decode: (x: E) => D,
+  encode: (x: D) => E;
+};
+```
+
+declare it once, get both shapes:
+
+```ts
+const instant = {
+  is: iso.timestamp,
+  decode: (x: iso.Timestamp) => iso.fromTimestamp(x),
+  encode: (x: iso.DateTime) => iso.toTimestamp(x)
+} satisfies form.Field<iso.Timestamp, iso.DateTime>;
+
+const user = { id: form.plain(is.string), seen: instant } satisfies form.Fields;
+
+type encoded = form.Encoded<typeof user>;   // what travels and what gets stored
+type decoded = form.Decoded<typeof user>;   // what you carry in memory
+```
+
+`form.model` / `form.decode` / `form.encode` mirror `is.model` — a record and two walkers, which is precedent the library already had. **this is not a codec, because failure does not live in it**: by the time `decode` runs the value has been narrowed, so it cannot fail and returns unboxed. no `Either`, no error accumulation, and therefore none of the combinator tower those two things force on a library. there is no `and`, `or`, `optional` or `refine`, and tstd ships no forms of its own — you write the four lines.
+
+what to know when writing one:
+
+- **the constraint cannot be `Record<string, Field<Json, unknown>>`** — a parameter is contravariant, so every real field is rejected. the trick, which needs its comment because it looks like a mistake:
+
+  ```ts
+  export type Fields = Record<string, {
+    is: is.TypeGuard<unknown>,
+    decode: (x: never) => unknown,
+    encode: (x: never) => is.Json;
+  }>;
+  ```
+
+  `never` in the parameter position accepts every field there is. no `any` anywhere in the module.
+- **`satisfies` fires at the declaration site**, so an `encode` that stops being the inverse of `decode` is an error where you wrote it, not where you used it. verified, along with: the decoded side is not assignable to the encoded side, and a non-`Json` encoded side (a `Map`, say) is refused outright.
+- **nest by calling, not by combining** — a form for a whole model is a form whose two directions call the walkers, the same move `is.spec.ts` makes for nested schemas.
+- **`plain` covers the common case**: most fields need no form at all, because o12 made the wire type and the memory type the same type. forms are for the genuinely different in-memory shape, like an instant stored as a timestamp.
+
+on the name: **`form`** is the author's own word for the concept — "declare their form in memory or in json" — and it passes the literalness test `Json` and `iso` set, since the module declares the form a value takes on each side. `io` was the runner-up and was rejected because it names an activity the module never performs (it reads no file and opens no socket; it is a pure function on a value someone else moved) and because it invites the io-ts comparison this design inverts. the type is `Field`, not `Form`, so `satisfies form.Field<...>` does not stutter.
 
 ### o11. line endings — ruled and fixed
 
