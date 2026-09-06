@@ -48,6 +48,9 @@ test('validate model schemas', () => {
 
   // you can also validate an array of models
   assert.ok(is.models([a], schema));
+
+  // an array is never a model, even though `typeof [] === 'object'`
+  assert.ok(!is.model([], schema));
 });
 
 test('validate combined types', () => {

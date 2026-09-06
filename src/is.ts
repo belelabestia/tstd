@@ -59,6 +59,7 @@ export const json = (x: unknown): x is Json =>
 
 export const model = <T extends Schema>(x: unknown, schema: T): x is { [K in keyof Model<T>]: Model<T>[K] } => {
   if (!record(x)) return false;
+  if (array(x)) return false;
 
   for (const key in schema) if (!schema[key](x[key])) return false;
   return true;
