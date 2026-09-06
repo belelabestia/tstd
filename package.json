@@ -6,9 +6,9 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {
-    "start": "tsc --watch",
-    "test": "tsc --noEmit -p tsconfig.test.json && tsx --test src/**/*.spec.ts",
-    "build": "tsc && node -e \"import('./dist/index.js')\""
+    "start": "tsc -p tsconfig.build.json --watch",
+    "test": "tsc --noEmit && tsx --test src/**/*.spec.ts",
+    "build": "tsc -p tsconfig.build.json && node -e \"import('./dist/index.js')\""
   },
   "devDependencies": {
     "@types/node": "^24.2.0",
