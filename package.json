@@ -6,7 +6,7 @@
   "types": "./dist/index.d.ts",
   "scripts": {
     "start": "tsc --watch",
-    "test": "tsx --test src/**.spec.ts",
+    "test": "tsc --noEmit -p tsconfig.test.json && tsx --test src/**/*.spec.ts",
     "build": "tsc && node -e \"import('./dist/index.js')\""
   },
   "devDependencies": {
