@@ -50,19 +50,19 @@ five modules, zero directories. my instinct would be `src/core/`, `src/types/`, 
 ❌ instead of re-declaring or curating names:
 
 ```ts
-import { branch } from './branch';
+import { branch } from './branch.js';
 export const createBranch = branch;
 ```
 
 ✅ do pure re-export, and choose flat vs namespaced per module:
 
 ```ts
-export * from './branch';
-export * from './brand';
-export * from './flat';
-export * from './result';
+export * from './branch.js';
+export * from './brand.js';
+export * from './flat.js';
+export * from './result.js';
 
-export * as is from './is';
+export * as is from './is.js';
 ```
 
 `is` is namespaced because its members are generic words (`number`, `string`, `array`) that must not pollute the top level. everything else is flat because its names are already unique. the blank line separates the two policies — keep it.
