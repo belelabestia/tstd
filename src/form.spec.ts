@@ -74,16 +74,17 @@ test('refuse what does not fit the encoded form', () => {
 
 test('nest a model in another, twice over', () => {
   // a nested model is a field whose two directions call the walkers on the model;
-  // that is always the same three lines with the same arguments, so `nest` writes them
-  const session = {
-    at: instant,
-    by: form.nest(user)
-  } satisfies form.Fields;
-
+  // that is always the same three lines with the same arguments, so `nest` writes them,
   // and nesting nests, because a nested model is a field like any other
   const audit = {
     when: instant,
-    of: form.nest(session)
+    of: form.nest({
+      at: instant,
+      by: form.nest({
+        id: form.plain(is.string),
+        seen: instant
+      })
+    })
   } satisfies form.Fields;
 
   // this is what a database gives back
