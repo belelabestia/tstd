@@ -6,21 +6,21 @@ import { Lease, lease } from './lease.js';
   the lifetime of a resource
 
   `make` and `scope` cover the two things that throw: building something and calling it.
-  neither says anything about a resource that has to be given back — a connection,
+  neither says anything about a resource that has to be given back: a connection,
   a handle, a transaction. that lifetime has four steps, and every one of them can throw:
   you open it, you use it, you close it when the use worked,
   and you still have to let it go when the use didn't.
 
   zig writes the last two as `defer` and `errdefer`; here they are just two arguments,
   named `close` and `abort`. there is deliberately no single `finally`-shaped release:
-  the two paths are different decisions — a transaction commits or rolls back,
-  a pooled connection goes back or gets thrown away — and a lease that took one function
+  the two paths are different decisions (a transaction commits or rolls back,
+  a pooled connection goes back or gets thrown away), and a lease that took one function
   would be deciding they are the same on your behalf.
   when they really are the same, you pass the same function twice, and it says so.
 
   since four steps can fail in four ways, a lease is a `Result` whose error side is itself a union, one branch per step.
   that keeps both questions answerable at the level each belongs to: `res.branch` says whether
-  you have a value, and `res.value.branch` says where it went wrong — a failed `use` is a domain
+  you have a value, and `res.value.branch` says where it went wrong. a failed `use` is a domain
   problem, while a failed `close` is a resource you no longer hold, which is a different day entirely.
   it also stays a `Result`, so `if (res.branch === 'error') return res` forwards it untouched.
 */

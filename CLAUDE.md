@@ -4,8 +4,8 @@
 
 two documents govern this repo, and both are binding:
 
-- `readme.md` — the principles and the style rules. it is a **specification**, not aspiration. code that contradicts it is a bug, and so is a rule you follow only halfway.
-- `.claude/style-kb.md` — 65 worked entries, each grounded in a real line here, in ❌ instead of / ✅ do form. **read it before writing anything**, including prose. it also carries the open work at the top.
+- `readme.md`: the principles and the style rules. it is a **specification**, not aspiration. code that contradicts it is a bug, and so is a rule you follow only halfway.
+- `.claude/style-kb.md`: 65 worked entries, each grounded in a real line here, in ❌ instead of / ✅ do form. **read it before writing anything**, including prose. it also carries the open work at the top.
 
 when the two disagree, say so instead of picking one silently.
 
@@ -25,7 +25,7 @@ npm run build
 npm start    # tsc --watch, emit only
 ```
 
-- `tsconfig.json` includes all of `src` — the editor and the typecheck. `tsconfig.build.json` narrows to `src/index.ts` and is the only thing that emits, which keeps specs out of `dist`.
+- `tsconfig.json` includes all of `src` (the editor and the typecheck). `tsconfig.build.json` narrows to `src/index.ts` and is the only thing that emits, which keeps specs out of `dist`.
 - typescript is **7.x**, the native compiler. it needs `types` and `rootDir` stated explicitly; both are set, do not remove them.
 - `.vscode/settings.json` pins the editor to the workspace compiler. without it vs code uses its own and disagrees with `npm test`.
 - `.gitattributes` forces lf. plain `git add` is safe. never change a global or system git setting to work around line endings.
@@ -56,12 +56,12 @@ these compress `.claude/style-kb.md`. go there for the examples.
 ### naming
 
 - the same word, case-distinguished, for a type and its factory: `Branch`/`branch`, `Result`/`result`.
-- when a module has two candidate types, the module's name goes to **what the caller gets back**, not to what it takes. `Lease` is the outcome; the argument record stays inline and unnamed, even when that duplicates it across `sync` and `async` — `scope` duplicates its two signatures too.
+- when a module has two candidate types, the module's name goes to **what the caller gets back**, not to what it takes. `Lease` is the outcome; the argument record stays inline and unnamed, even when that duplicates it across `sync` and `async`; `scope` duplicates its two signatures too.
 - construct every branch of one union the same way. mixing `branch('open', ...)` with `result.success(...)` in one function reads as two unions.
 - namespace by nesting an object, never by prefixing a name: `result.success`, not `successResult`.
 - the container carries the prefix: `is.number`, not `isNumber`.
 - one word, no category suffixes. no `flattenType`, no `validators`, no `resultUtils`.
-- name a module after what it literally is — `Json` is js object notation, `iso` is iso 8601 notation.
+- name a module after what it literally is: `Json` is js object notation, `iso` is iso 8601 notation.
 - name a conversion after its **source**, not its destination: `fromTimestamp`, not `toDate`. a destination name is fine only when exactly one route exists.
 
 ### keywords
@@ -75,11 +75,11 @@ these compress `.claude/style-kb.md`. go there for the examples.
 ### types
 
 - never declare a return type. the one exception is a type guard, where `x is T` cannot be inferred.
-- `as` only where it is the only way to obtain a peculiar typescript behavior — branding a computation a brand already proved, or writing into a generic mapped type. it needs no comment; this rule is the comment.
+- `as` only where it is the only way to obtain a peculiar typescript behavior: branding a computation a brand already proved, or writing into a generic mapped type. it needs no comment; this rule is the comment.
 - tagged unions come from `Union<{ ... }>`, never hand-written.
 - wrap anything a reader will hover in `Flat`.
 - brand the requirement, not the type: `Brand<'Trimmed'>` composed with `&`, never one branded type per shape.
-- when a guard checks more than its type can say, brand it — `is.number` narrows to `Finite`.
+- when a guard checks more than its type can say, brand it: `is.number` narrows to `Finite`.
 - `satisfies` for literals that must keep their inferred type: schemas, forms, encode bodies.
 - values from outside are `unknown` and stay `unknown`. carry the error, do not normalise it.
 
@@ -97,10 +97,10 @@ these compress `.claude/style-kb.md`. go there for the examples.
 - never tell `null` and `undefined` apart. presence and absence.
 - `try`/`catch` exists only inside `make` and `scope`. business code has none.
 - never hide flow behind data. no `map`, `andThen`, `unwrap`, `match` on a branch.
-- "callbacks only as entrypoints" is about *your* code, not about the boundary modules. `make`, `scope` and `lease` take functions because they **are** the entrypoint — they are where `try`/`catch` lives. taking a function is not the thing being warned against; sequencing with functions is.
+- "callbacks only as entrypoints" is about *your* code, not about the boundary modules. `make`, `scope` and `lease` take functions because they **are** the entrypoint (they are where `try`/`catch` lives). taking a function is not the thing being warned against; sequencing with functions is.
 - a function that cannot fail returns an unboxed value, not a result.
 - narrowing owns every failure; what comes after it is total. that is why decoding never fails.
-- a dependency is a resource that must be established once, like a connection — that gets an `init`. everything else is a **value** and travels as an argument, the way a schema and a zone do.
+- a dependency is a resource that must be established once, like a connection; that gets an `init`. everything else is a **value** and travels as an argument, the way a schema and a zone do.
 
 ### comments
 
@@ -112,7 +112,7 @@ these compress `.claude/style-kb.md`. go there for the examples.
 
 ### specs
 
-- the spec is a tutorial that happens to execute. flat `test()` calls from `node:test`, no `describe`, no hooks, no mocks — a closure is a fake.
+- the spec is a tutorial that happens to execute. flat `test()` calls from `node:test`, no `describe`, no hooks, no mocks; a closure is a fake.
 - test names are capability sentences: `'safely navigate the unknown'`, not `'model() returns false for arrays'`.
 - narrow with `if (!guard(x)) assert.fail()`, which demonstrates the technique instead of merely testing it.
 - show the shape: a nested form declaration should read like the payload it describes.
@@ -123,7 +123,7 @@ these are settled. do not propose them again without the author raising it first
 
 - a linter, a formatter, a bundler, another test framework
 - `map`/`andThen`/`unwrap`/`match`, or anything else that sequences results
-- guard combinators — `union`, `or`, `optional`, `refine`
+- guard combinators: `union`, `or`, `optional`, `refine`
 - codecs that validate and convert in one step, `Either`, error accumulation
 - a `types.ts`, a `utils.ts`, or grouping files by kind
 - calendar-aware durations (`P1M`), local-time construction, or anything that resolves an ambiguity by guessing
