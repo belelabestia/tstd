@@ -29,7 +29,7 @@ src/result.ts   -> Result, result, make, scope
 src/brand.ts    -> Brand
 src/flat.ts     -> Flat
 src/is.ts       -> Json, TypeGuard, Schema, Model, Finite, + guards
-src/iso.ts      -> Date, Time, DateTime, Duration, Timestamp, + guards and operations
+src/iso.ts      -> Date, Time, DateTime, Duration, Timestamp, Zone, + guards, operations and init
 src/form.ts     -> Field, Fields, Encoded, Decoded, plain, nest, model, decode, encode
 ```
 
@@ -887,7 +887,7 @@ the `.js` emit is byte-identical to 5.9; only two `.d.ts` differ, by an alpha-re
 
 these are the places where i think the code contradicts the readme. each needs a ruling before it becomes a rule.
 
-**status:** o1–o5 and o7–o9 are ruled and applied on `claude-onboarding`. o6 is ruled too — see o6b. o10 stands, except `is.number`, which is now branded — see o4b.
+**status:** every o entry is ruled and applied on `claude-onboarding`. o6 → o6b, `is.number` → o4b, schema validation → o12, forms → o13, time zones → o14.
 
 ### o1. published output does not resolve
 
@@ -1036,7 +1036,36 @@ rules that came out of building `iso.ts`:
 - **durations are milliseconds, a branded number** — `number` is `Json` anyway, and `P1M` is not a fixed amount of time, so an ISO duration string would force `add` to make calendar decisions on the caller's behalf. anything calendar-aware belongs in its own module.
 - **casts are expected here**: one per branded return, each branding a computation the input's brand already proved. this is o6b working as designed, not abuse of it.
 - **partiality is absence** — `add` can only fail by leaving representable time, which needs no explanation, so it returns `DateTime | undefined` rather than a `Result`.
-- **one canonical spelling per form.** an offset or a seconds-precision time is rejected; normalise through `Date.parse` → `iso.timestamp` → `iso.fromTimestamp`.
+- **one canonical spelling per form, plus one explicit door.** an offset or a seconds-precision time is rejected by the guard, because a guard that silently accepted three spellings of the same instant would be deciding for the caller. normalising is a separate, deliberate call:
+
+  ```ts
+  /** the instant a foreign spelling points at, or nothing if there is none */
+  export const parse = (x: string) => canonical(Date.parse(x)) as DateTime | undefined;
+  ```
+
+  strictness at the boundary was never about time zones. it is about spelling, and a foreign spelling denotes the same instant, so `parse` loses nothing — it just has to be asked for.
+
+### o14. what needs a zone goes behind `init` — house (ruled, and now built)
+
+an instant is absolute; the day it falls on is not. `2024-01-01T23:30:00.000Z` is already the second in rome, so `dateOf` has no answer until someone names a zone. that is a dynamic dependency, and the readme already says what to do with one: "whenever a module has a dynamic dependency, make it dynamic as well by exporting an `init` function".
+
+```ts
+const where = 'Europe/Rome';
+if (!iso.zone(where)) assert.fail();
+
+const rome = iso.init(where);
+
+rome.dateOf(x);   // 2024-01-02
+iso.dateOf(x);    // 2024-01-01, the module itself always answers in utc
+```
+
+the pattern this settles, and it is the same one as everywhere else:
+
+- **the zone is narrowed, not trusted** — `iso.zone` brands a name this runtime actually knows, so `init` receives a proven value and cannot fail. the failing step stays at the boundary, where it belongs.
+- **so `init` is total**, and everything it returns is total. building the `Intl` formatter goes through `make`, and one load-bearing cast reads the value the brand already proved is there.
+- **utc stays the module's default.** a zone is a decision, so it is the caller's; the undecorated `dateOf` and `timeOf` answer in utc and say so.
+- **reading only.** building an instant from a local date and time is deliberately absent, because a local wall clock time can be ambiguous or nonexistent across a dst boundary — the same reason `Duration` refuses `P1M`. ambiguity is what this library declines to guess at.
+- **narrowing applies to references, not to literals** — `if (iso.zone('Europe/Rome')) iso.init('Europe/Rome')` does not compile. bind it to a variable first. same trap as o4b.
 
 the guards need no regex — a string is a canonical instant exactly when it round-trips:
 
