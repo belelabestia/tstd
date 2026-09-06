@@ -132,6 +132,19 @@ test('tell a leak from a failure', () => {
     use: conn => conn.query(false),
     close: conn => conn.close(false)
   });
+
+  // when the two releases really are the same thing, say so by name and pass it twice;
+  // that reads as a decision, where a single `finally` would have made it for you
+  const release = (conn: ReturnType<typeof sdk.connect>) => conn.close(false);
+
+  const same = lease.sync({
+    open: () => sdk.connect(false),
+    use: conn => conn.query(false),
+    close: release,
+    abort: release
+  });
+
+  assert.equal(same.branch, 'success');
 });
 
 test('lease something asynchronous', async () => {
