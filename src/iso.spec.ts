@@ -46,6 +46,12 @@ test('reject anything that is not canonical', () => {
   assert.ok(!iso.date('2024-02-31'));
   assert.ok(!iso.time('25:00:00.000'));
 
+  // nor an expanded year, which round trips but does not slice: a year is four digits
+  assert.ok(!iso.datetime('-000001-01-01T00:00:00.000Z'));
+  assert.ok(!iso.datetime('+275760-09-13T00:00:00.000Z'));
+  assert.ok(is.absent(iso.parse('-000001-01-01T00:00:00.000Z')));
+  assert.ok(!iso.timestamp(-62167219200001));
+
   // the canonical forms pass
   assert.ok(iso.datetime('2024-01-02T03:04:05.006Z'));
   assert.ok(iso.date('2024-01-02'));

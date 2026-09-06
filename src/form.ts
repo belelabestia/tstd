@@ -31,6 +31,7 @@ export const plain = <E extends is.Json>(guard: is.TypeGuard<E>) => ({
   encode: (x: E) => x
 });
 
+/** whether a value is the encoded form of a record of fields */
 export const model = <T extends Fields>(x: unknown, forms: T): x is Encoded<T> => {
   if (!is.record(x)) return false;
   if (is.array(x)) return false;
@@ -39,6 +40,7 @@ export const model = <T extends Fields>(x: unknown, forms: T): x is Encoded<T> =
   return true;
 };
 
+/** whether a value is a list of the encoded form, every element of it */
 export const models = <T extends Fields>(x: unknown, forms: T): x is Encoded<T>[] => {
   if (!is.array(x)) return false;
 
@@ -46,6 +48,7 @@ export const models = <T extends Fields>(x: unknown, forms: T): x is Encoded<T>[
   return true;
 };
 
+/** the decoded form of an encoded one, which cannot fail because the guard already ran */
 export const decode = <T extends Fields>(x: Encoded<T>, forms: T) => {
   const out = {} as Decoded<T>;
 
@@ -53,6 +56,7 @@ export const decode = <T extends Fields>(x: Encoded<T>, forms: T) => {
   return out;
 };
 
+/** the encoded form of a decoded one, ready for json */
 export const encode = <T extends Fields>(x: Decoded<T>, forms: T) => {
   const out = {} as Encoded<T>;
 

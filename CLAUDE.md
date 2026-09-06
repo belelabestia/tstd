@@ -127,7 +127,7 @@ these are settled. do not propose them again without the author raising it first
 - guard combinators: `union`, `or`, `optional`, `refine`
 - codecs that validate and convert in one step, `Either`, error accumulation
 - a `types.ts`, a `utils.ts`, or grouping files by kind
-- calendar-aware durations (`P1M`), local-time construction, or anything that resolves an ambiguity by guessing
+- calendar-aware durations (`P1M`), or anything that resolves an ambiguity by guessing. local-time construction is *not* on this list any more: `iso.fromLocal` ships, because o16 found a way to build it without guessing (the guard refuses the ambiguous and nonexistent spellings, so what reaches it names exactly one instant)
 - declared return types, `interface`, `any`
 
 the test for a new helper: does it *compose* things, or does it only write lines the caller would have written identically? `form.nest` passes because it writes three fixed lines. a combinator fails. **write the boilerplate, don't invent an operator.**

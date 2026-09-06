@@ -3,7 +3,7 @@ import { Flat } from './flat.js';
 
 /**
  * in tstd we only care about json types
- * everything else is considered custom 
+ * everything else is considered custom
  */
 export type Json =
   | string

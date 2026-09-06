@@ -145,10 +145,14 @@ test('nest a model in another, twice over', () => {
   a zone is a value, so the factory takes one and closes over it; the field's guard is
   an ordinary function, which is what lets it know about daylight saving. the brand names
   the zone it was checked in, so a spelling proven in one zone cannot be read in another.
+
+  `iso.fromLocal` admits absence, because a brand pins its zone only when the zone is a literal
+  and a zone read at runtime can still disagree. here it cannot: the guard that admitted `x`
+  ran against this very `zone`, so the closure is the proof, and the cast says so.
 */
 const zoned = <Z extends string>(zone: Z & iso.Zone) => ({
   is: (x: unknown): x is iso.Local & iso.Unambiguous<Z> => iso.local(x) && iso.unambiguous(x, zone),
-  decode: (x: iso.Local & iso.Unambiguous<Z>) => iso.fromLocal(x, zone),
+  decode: (x: iso.Local & iso.Unambiguous<Z>) => iso.fromLocal(x, zone) as iso.DateTime & iso.Unambiguous<Z>,
   encode: (x: iso.DateTime & iso.Unambiguous<Z>) => iso.localOf(x, zone)
 });
 

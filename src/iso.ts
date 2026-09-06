@@ -34,7 +34,10 @@ const canonical = (ms: number) => {
   const instance = make(Date, ms);
   if (instance.branch === 'error') return;
 
-  return instance.value.toISOString();
+  const out = instance.value.toISOString();
+  if (out.length !== 24) return;
+
+  return out;
 };
 
 export const timestamp = (x: unknown): x is Timestamp =>
@@ -158,8 +161,16 @@ export const unambiguous = <T extends DateTime | Local, Z extends string>(x: T, 
 /** the local date and time an instant is written down as in a zone */
 export const localOf = <Z extends string>(x: DateTime & Unambiguous<Z>, zone: NoInfer<Z> & Zone) => reading(x, zone) as Local & Unambiguous<Z>;
 
-/** the instant a local date and time names in a zone */
-export const fromLocal = <Z extends string>(x: Local & Unambiguous<Z>, zone: NoInfer<Z> & Zone) => instants(x, zone)[0] as DateTime & Unambiguous<Z>;
+/**
+ * the instant a local date and time names in a zone, or nothing if it names none
+ * the brand pins the zone only when it is a literal, so a zone read at runtime can still disagree
+ */
+export const fromLocal = <Z extends string>(x: Local & Unambiguous<Z>, zone: NoInfer<Z> & Zone) => {
+  const found = instants(x, zone);
+  if (found.length !== 1) return;
+
+  return found[0] as DateTime & Unambiguous<Z>;
+};
 
 /** the instant a duration away from another, or nothing if there is none */
 export const add = (x: DateTime, d: Duration) => canonical(toTimestamp(x) + d) as DateTime | undefined;

@@ -125,8 +125,7 @@ test('tell a leak from a failure', () => {
 
   assert.equal(lost.value.branch, 'abort');
 
-  // there is no `finally` here: a lease without both releases does not typecheck
-  // @ts-expect-error
+  // @ts-expect-error there is no `finally` here: a lease without both releases does not typecheck
   lease.sync({
     open: () => sdk.connect(false),
     use: conn => conn.query(false),

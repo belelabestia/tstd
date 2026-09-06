@@ -1089,7 +1089,7 @@ the pattern this settles, and it is the same one as everywhere else:
 - **the zone is narrowed, not trusted**: `iso.zone` brands a name this runtime actually knows, so the operation receives a proven value and cannot fail. the failing step stays at the boundary, where it belongs.
 - **so the operations are total**. building the `Intl` formatter goes through `make`, and one load-bearing cast reads the value the brand already proved is there.
 - **utc stays the module's default.** a zone is a decision, so it is the caller's; the undecorated `dateOf` and `timeOf` answer in utc and say so.
-- **reading only.** building an instant from a local date and time is deliberately absent, because a local wall clock time can be ambiguous or nonexistent across a dst boundary (the same reason `Duration` refuses `P1M`). ambiguity is what this library declines to guess at.
+- **reading only, at the time this was written.** o16 later added `iso.fromLocal`, which builds an instant from a local spelling without guessing: the guard refuses the ambiguous and the nonexistent ones, so what reaches the conversion names exactly one instant. the principle stands (ambiguity is never resolved by guessing); it turned out to be satisfiable.
 - **narrowing applies to references, not to literals**: `if (iso.zone('Europe/Rome')) iso.dateOf(x, 'Europe/Rome')` does not compile. bind it to a variable first. same trap as o4b.
 
 the guards need no regex; a string is a canonical instant exactly when it round-trips:
@@ -1207,7 +1207,9 @@ export const unambiguous = <T extends DateTime | Local, Z extends string>(x: T, 
 export const fromLocal = <Z extends string>(x: Local & Unambiguous<Z>, zone: NoInfer<Z> & Zone) => ...
 ```
 
-`NoInfer` on the trailing zone is load bearing. without it typescript has two inference sites for `Z`, reconciles them at `string`, and every cross zone call compiles again. with it, `Z` is fixed by the value and the zone argument has to match. a zone narrowed from a literal keeps its literal type, so `rome` carries `'Europe/Rome'`; a zone read from config degrades to today's behaviour rather than to something worse.
+`NoInfer` on the trailing zone is load bearing. without it typescript has two inference sites for `Z`, reconciles them at `string`, and every cross zone call compiles again. with it, `Z` is fixed by the value and the zone argument has to match. a zone narrowed from a literal keeps its literal type, so `rome` carries `'Europe/Rome'` and gets the protection.
+
+**a zone read at runtime does not, and the first version of this entry was wrong about it.** with a config zone `Z` infers `string`, the brand degrades to a template that matches anything, `NoInfer` has nothing left to constrain, and the cross zone call compiles again. that is not "today's behaviour": `fromLocal` was returning `instants(x, zone)[0]` from an empty array, so it handed back `undefined` wearing a proof brand, which is worse than the silent guess this entry was written to close. found by a review agent, verified, and fixed: `fromLocal` now guards on the length and admits absence. the totality it used to claim belongs to the caller that closes over one zone for both the guard and the conversion, which is what the `zoned` recipe does and says.
 
 **the factory is not shipped.** `form.zoned` lived in `form.ts` briefly and was moved into `form.spec.ts` as a recipe, because o13 says tstd ships no forms of its own and `form.ts` has no business importing `iso.ts`. the spec is documentation, so demonstrating the four lines is its job. `nest` is not a precedent for shipping this: `nest` composes forms with forms and reaches outside nothing.
 
