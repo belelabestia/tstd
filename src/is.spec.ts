@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import * as assert from 'node:assert/strict';
-import * as is from './is';
+import * as is from './is.js';
 
 /*
   schema validation doesn't have to be a complicated task;

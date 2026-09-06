@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import * as assert from 'node:assert/strict';
-import { Brand } from './brand';
+import { Brand } from './brand.js';
 
 test('brand stuff', () => {
   // type branding is a very clever technique, but it's usually overengineered;

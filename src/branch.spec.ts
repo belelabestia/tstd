@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import * as assert from 'node:assert/strict';
-import { branch, Union } from './branch';
+import { branch, Union } from './branch.js';
 
 /*
   a little bit of theory

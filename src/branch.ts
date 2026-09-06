@@ -1,4 +1,4 @@
-import { Flat } from './flat';
+import { Flat } from './flat.js';
 
 /** the building block of our branching technique */
 export type Branch<B extends string | symbol, V = void> = { branch: B, value: V; };

@@ -1,12 +1,13 @@
 {
   "name": "@belelabestia/tstd",
   "version": "0.1.1",
+  "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {
     "start": "tsc --watch",
     "test": "tsx --test src/**.spec.ts",
-    "build": "tsc"
+    "build": "tsc && node -e \"import('./dist/index.js')\""
   },
   "devDependencies": {
     "@types/node": "^24.2.0",

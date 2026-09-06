@@ -1,4 +1,4 @@
-import { branch, Union } from './branch';
+import { branch, Union } from './branch.js';
 
 /** a particularly useful union type */
 export type Result<S, E> = Union<{ success: S; error: E; }>;

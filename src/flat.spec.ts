@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import * as assert from 'node:assert/strict';
-import { Flat } from './flat';
+import { Flat } from './flat.js';
 
 test('flatten complex types', () => {
   // collapse comples types to readable object literals

@@ -1,5 +1,5 @@
 import { test } from 'node:test';
-import { make, Result, result, scope } from '../src/result';
+import { make, Result, result, scope } from './result.js';
 import * as assert from 'node:assert/strict';
 
 /*
