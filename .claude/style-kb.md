@@ -36,7 +36,7 @@ src/brand.ts    -> Brand
 src/flat.ts     -> Flat
 src/is.ts       -> Json, TypeGuard, Schema, Model, Finite, + guards
 src/iso.ts      -> Date, Time, DateTime, Local, Duration, Timestamp, Zone, Unambiguous, + guards and operations
-src/form.ts     -> Field, Fields, Encoded, Decoded, plain, nest, model, decode, encode
+src/form.ts     -> Field, Fields, Encoded, Decoded, plain, nest, model, models, decode, encode
 src/lease.ts    -> Lease, lease
 ```
 
@@ -1211,7 +1211,7 @@ export const fromLocal = <Z extends string>(x: Local & Unambiguous<Z>, zone: NoI
 
 **the factory is not shipped.** `form.zoned` lived in `form.ts` briefly and was moved into `form.spec.ts` as a recipe, because o13 says tstd ships no forms of its own and `form.ts` has no business importing `iso.ts`. the spec is documentation, so demonstrating the four lines is its job. `nest` is not a precedent for shipping this: `nest` composes forms with forms and reaches outside nothing.
 
-**there is no date only field**, deliberately. storing `'2024-01-02'` drops the time of day, so `decode(encode(x))` is not `x` and never can be, while every other field round trips exactly. worse, the brand would have to mean "the start of an unambiguous day in this zone" rather than "this spelling and that instant name each other", and typescript would treat the two as interchangeable because the brand string matches. two claims under one name, mutually assignable, is the lie brands exist to prevent. build it when a caller needs it, with its own brand, and with an honest note that the round trip is one way.
+**there is no date only field**, deliberately. storing `'2024-01-02'` drops the time of day, so `decode(encode(x))` is not `x` and never can be, while every other field round trips exactly. worse, the brand would have to mean "the start of an unambiguous day in this zone" rather than "this spelling and that instant name each other", and typescript would treat the two as interchangeable because the brand string matches. two claims under one name, mutually assignable, is the lie brands exist to prevent. **dropped**, not deferred: it is not to be built unless the author asks for it, and the reasoning above is here so it does not get proposed again.
 
 the algorithm was fuzzed over a year at thirty minute granularity against an independent read back, across rome, santiago, lord howe (a thirty minute dst shift), chatham (a forty five minute offset), kolkata, st johns, apia and utc: no false accepts, no false refusals, no round trip failures.
 

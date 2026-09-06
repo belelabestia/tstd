@@ -39,6 +39,13 @@ export const model = <T extends Fields>(x: unknown, forms: T): x is Encoded<T> =
   return true;
 };
 
+export const models = <T extends Fields>(x: unknown, forms: T): x is Encoded<T>[] => {
+  if (!is.array(x)) return false;
+
+  for (let i = 0; i < x.length; i++) if (!model(x[i], forms)) return false;
+  return true;
+};
+
 export const decode = <T extends Fields>(x: Encoded<T>, forms: T) => {
   const out = {} as Decoded<T>;
 

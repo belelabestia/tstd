@@ -72,6 +72,26 @@ test('refuse what does not fit the encoded form', () => {
   assert.ok(!form.model([], user));
 });
 
+test('narrow a stored list, then map it', () => {
+  // a database hands back rows, not one row
+  const x: unknown = JSON.parse('[{"id":"a","seen":0},{"id":"b","seen":1704164645006}]');
+
+  // `models` is to `model` what `is.models` is to `is.model`: the same guard, once per element
+  if (!form.models(x, user)) assert.fail();
+
+  // so every element is proven, and mapping the list is a loop over total calls
+  const held = x.map(row => form.decode(row, user));
+
+  assert.deepEqual(held, [
+    { id: 'a', seen: '1970-01-01T00:00:00.000Z' },
+    { id: 'b', seen: '2024-01-02T03:04:05.006Z' }
+  ]);
+
+  // one bad row refuses the whole list, and a row is still not a list
+  assert.ok(!form.models([{ id: 'a', seen: 0 }, { id: 'b' }], user));
+  assert.ok(!form.models({ id: 'a', seen: 0 }, user));
+});
+
 test('nest a model in another, twice over', () => {
   // a nested model is a field whose two directions call the walkers on the model;
   // that is always the same three lines with the same arguments, so `nest` writes them,
