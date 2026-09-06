@@ -11,6 +11,10 @@
     "strict": true,
     "strictNullChecks": true,
     "skipLibCheck": true,
+    "types": [
+      "node"
+    ],
+    "rootDir": "src",
     "outDir": "dist"
   },
   "include": [
