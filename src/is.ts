@@ -1,3 +1,5 @@
+import { Flat } from './flat.js';
+
 /**
  * in tstd we only care about json types
  * everything else is considered custom 
@@ -57,7 +59,7 @@ export const json = (x: unknown): x is Json =>
   ) ||
   absent(x);
 
-export const model = <T extends Schema>(x: unknown, schema: T): x is { [K in keyof Model<T>]: Model<T>[K] } => {
+export const model = <T extends Schema>(x: unknown, schema: T): x is Flat<Model<T>> => {
   if (!record(x)) return false;
   if (array(x)) return false;
 
@@ -65,7 +67,7 @@ export const model = <T extends Schema>(x: unknown, schema: T): x is { [K in key
   return true;
 };
 
-export const models = <T extends Schema>(x: unknown, schema: T): x is { [K in keyof Model<T>]: Model<T>[K] }[] => {
+export const models = <T extends Schema>(x: unknown, schema: T): x is Flat<Model<T>>[] => {
   if (!array(x)) return false;
 
   for (let i = 0; i < x.length; i++) if (!model(x[i], schema)) return false;
