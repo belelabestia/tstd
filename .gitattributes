@@ -1,0 +1,2 @@
+# keep line endings stable regardless of platform or core.autocrlf
+* text=auto eol=lf
