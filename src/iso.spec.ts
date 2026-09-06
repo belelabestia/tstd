@@ -118,3 +118,58 @@ test('carry instants in models, never dates', () => {
   // and it is still branded, so it maps without being validated again
   assert.equal(iso.dateOf(x.created), '2024-01-02');
 });
+
+test('refuse a local spelling the zone does not name once', () => {
+  const rome = 'Europe/Rome';
+  if (!iso.zone(rome)) assert.fail();
+
+  // a local date and time is a spelling with no zone in it, so it is not an instant yet
+  const x = '2024-01-02T00:30:00.000';
+  if (!iso.local(x)) assert.fail();
+
+  // the zone is what turns it into one, and only the guard can say whether it does
+  if (!iso.unambiguous(x, rome)) assert.fail();
+  assert.equal(iso.fromLocal(x, rome), '2024-01-01T23:30:00.000Z');
+
+  // when the clock goes forward that spelling never happened
+  const skipped = '2024-03-31T02:30:00.000';
+  if (!iso.local(skipped)) assert.fail();
+  assert.ok(!iso.unambiguous(skipped, rome));
+
+  // and when it goes back the same spelling happens twice, which is a choice this library declines
+  const twice = '2024-10-27T02:30:00.000';
+  if (!iso.local(twice)) assert.fail();
+  assert.ok(!iso.unambiguous(twice, rome));
+
+  // an hour later it is one spelling again
+  const once = '2024-10-27T03:30:00.000';
+  if (!iso.local(once)) assert.fail();
+  assert.ok(iso.unambiguous(once, rome));
+  assert.equal(iso.fromLocal(once, rome), '2024-10-27T02:30:00.000Z');
+
+  // and a spelling with a zone already in it is not a local one
+  assert.ok(!iso.local('2024-01-02T00:30:00.000Z'));
+});
+
+test('write an instant down the way a zone writes it', () => {
+  const rome = 'Europe/Rome';
+  if (!iso.zone(rome)) assert.fail();
+
+  const x = '2024-01-01T23:30:00.000Z';
+  if (!iso.datetime(x)) assert.fail();
+
+  // the same guard reads the other way round: this instant is the only one rome spells like that
+  if (!iso.unambiguous(x, rome)) assert.fail();
+  assert.equal(iso.localOf(x, rome), '2024-01-02T00:30:00.000');
+
+  // so the two are inverses, and the brand is what says they are
+  assert.equal(iso.fromLocal(iso.localOf(x, rome), rome), x);
+
+  // an instant inside the repeated hour has no spelling that names it back
+  const repeated = '2024-10-27T00:30:00.000Z';
+  if (!iso.datetime(repeated)) assert.fail();
+  assert.ok(!iso.unambiguous(repeated, rome));
+
+  // reading a part of it is still fine: a reading is not a round trip
+  assert.equal(iso.timeOf(repeated, rome), '02:30:00.000');
+});

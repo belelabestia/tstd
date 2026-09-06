@@ -117,3 +117,47 @@ test('nest a model in another, twice over', () => {
   const wrong = { when: 0, of: { at: 0, by: { id: 'a', seen: '1970-01-01T00:00:00.000Z' } } };
   assert.ok(!form.model(wrong, audit));
 });
+
+test('store an instant as a zone writes it, not as utc does', () => {
+  const rome = 'Europe/Rome';
+  if (!iso.zone(rome)) assert.fail();
+
+  // a zone is a value, so the field takes one and closes over it;
+  // the field's guard is an ordinary function, which is what makes that possible
+  const booking = {
+    id: form.plain(is.string),
+    starts: form.zoned(rome)
+  } satisfies form.Fields;
+
+  // this is what the database holds: midnight and a half, as rome writes it
+  const x: unknown = JSON.parse('{"id":"a","starts":"2024-01-02T00:30:00.000"}');
+  if (!form.model(x, booking)) assert.fail();
+
+  // decoding is total, so the instant comes out unboxed, and it is the day before in utc
+  const held = form.decode(x, booking);
+  assert.equal(held.starts, '2024-01-01T23:30:00.000Z');
+  assert.equal(iso.dateOf(held.starts), '2024-01-01');
+
+  // and encoding writes it back exactly as it was stored
+  assert.deepEqual(form.encode(held, booking), x);
+});
+
+test('refuse a local spelling that the zone does not name once', () => {
+  const rome = 'Europe/Rome';
+  if (!iso.zone(rome)) assert.fail();
+
+  const booking = { starts: form.zoned(rome) } satisfies form.Fields;
+
+  // the guard owns every failure there is, so it is the guard that knows about daylight saving:
+  // this hour never happened in rome, and this one happened twice
+  assert.ok(!form.model({ starts: '2024-03-31T02:30:00.000' }, booking));
+  assert.ok(!form.model({ starts: '2024-10-27T02:30:00.000' }, booking));
+
+  // an instant is not a local spelling either, however similar it looks
+  assert.ok(!form.model({ starts: '2024-01-02T00:30:00.000Z' }, booking));
+
+  // what is left is a value already proven to name one instant, so decoding cannot fail
+  const x: unknown = { starts: '2024-10-27T03:30:00.000' };
+  if (!form.model(x, booking)) assert.fail();
+  assert.equal(form.decode(x, booking).starts, '2024-10-27T02:30:00.000Z');
+});

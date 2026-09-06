@@ -11,6 +11,12 @@ export type Time = string & Brand<'Time'>;
 /** an instant, as `yyyy-mm-ddThh:mm:ss.sssZ` */
 export type DateTime = string & Brand<'DateTime'>;
 
+/** a local date and time, as `yyyy-mm-ddThh:mm:ss.sss` */
+export type Local = string & Brand<'Local'>;
+
+/** the proof that a local spelling and an instant name each other in a zone, and nothing else does */
+export type Unambiguous = Brand<'Unambiguous'>;
+
 /** an amount of time, in milliseconds */
 export type Duration = number & Brand<'Duration'>;
 
@@ -46,6 +52,10 @@ export const date = (x: unknown): x is Date =>
 export const time = (x: unknown): x is Time =>
   is.string(x) &&
   canonical(Date.parse(`1970-01-01T${x}Z`)) === `1970-01-01T${x}Z`;
+
+export const local = (x: unknown): x is Local =>
+  is.string(x) &&
+  canonical(Date.parse(`${x}Z`)) === `${x}Z`;
 
 export const duration = (x: unknown): x is Duration =>
   is.number(x);
@@ -104,6 +114,52 @@ export const timeOf = (x: DateTime, zone?: Zone) => {
   const part = parts(x, zone);
   return `${part.hour}:${part.minute}:${part.second}.${part.fractionalSecond}` as Time;
 };
+
+/** the local date and time an instant reads as in a zone */
+const reading = (x: DateTime, zone: Zone) => `${dateOf(x, zone)}T${timeOf(x, zone)}` as Local;
+
+/** how far a zone is from utc at an instant, in milliseconds */
+const offset = (x: Timestamp, zone: Zone) => Date.parse(`${reading(fromTimestamp(x), zone)}Z`) - x;
+
+/**
+ * every instant a local date and time names in a zone
+ * the offsets a day either side are every offset the spelling could have been written in,
+ * and one of them names it back only if the zone really was that far from utc at that instant
+ */
+const instants = (x: Local, zone: Zone) => {
+  const wall = Date.parse(`${x}Z`);
+  const out: DateTime[] = [];
+
+  for (const guess of [wall - days(1), wall + days(1)]) {
+    if (!timestamp(guess)) continue;
+
+    const ms = wall - offset(guess, zone);
+    if (!timestamp(ms)) continue;
+    if (offset(ms, zone) !== wall - ms) continue;
+
+    const found = fromTimestamp(ms);
+    if (out.includes(found)) continue;
+
+    out.push(found);
+  }
+
+  return out;
+};
+
+/** whether a local date and time and an instant name each other in a zone, and nothing else does */
+export const unambiguous = <T extends DateTime | Local>(x: T, zone: Zone): x is T & Unambiguous => (
+  datetime(x) &&
+  instants(reading(x, zone), zone).length === 1
+) || (
+  local(x) &&
+  instants(x, zone).length === 1
+);
+
+/** the local date and time an instant is written down as in a zone */
+export const localOf = (x: DateTime & Unambiguous, zone: Zone) => reading(x, zone) as Local & Unambiguous;
+
+/** the instant a local date and time names in a zone */
+export const fromLocal = (x: Local & Unambiguous, zone: Zone) => instants(x, zone)[0] as DateTime & Unambiguous;
 
 /** the instant a duration away from another, or nothing if there is none */
 export const add = (x: DateTime, d: Duration) => canonical(toTimestamp(x) + d) as DateTime | undefined;
