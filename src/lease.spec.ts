@@ -18,9 +18,11 @@ import { Lease, lease } from './lease.js';
   would be deciding they are the same on your behalf.
   when they really are the same, you pass the same function twice, and it says so.
 
-  since four steps can fail in four ways, the lease branches five ways instead of two.
-  that is the whole point: a failed `use` is a domain problem, while a failed `close`
-  is a resource you no longer hold and no longer own, which is a different day entirely.
+  since four steps can fail in four ways, a lease is a `Result` whose error side is itself a union, one branch per step.
+  that keeps both questions answerable at the level each belongs to: `res.branch` says whether
+  you have a value, and `res.value.branch` says where it went wrong — a failed `use` is a domain
+  problem, while a failed `close` is a resource you no longer hold, which is a different day entirely.
+  it also stays a `Result`, so `if (res.branch === 'error') return res` forwards it untouched.
 */
 
 // say we have an sdk connecting us to something; a boolean picks failure, as usual
@@ -49,7 +51,9 @@ test('lease a resource', () => {
     abort: conn => conn.close(false)
   });
 
-  // the lease branches five ways, one per step that can throw, and it infers the used value
+  // a lease is a result, so a caller who does not care why can forward it in one line;
+  // the error side names the step that threw, for a caller who does
+  // the lease infers the used value
   const protocol: Lease<string> = res;
   assert.equal(protocol.branch, 'success');
 
@@ -68,7 +72,10 @@ test('never open what you cannot use', () => {
     abort: conn => conn.close(false)
   });
 
-  assert.equal(res.branch, 'open');
+  assert.equal(res.branch, 'error');
+  if (res.branch !== 'error') assert.fail();
+
+  assert.equal(res.value.branch, 'open');
 });
 
 test('release what a failed use leaves behind', () => {
@@ -86,7 +93,9 @@ test('release what a failed use leaves behind', () => {
   });
 
   // the branch names the step that threw, so a failed use is still a failed use
-  assert.equal(res.branch, 'use');
+  if (res.branch !== 'error') assert.fail();
+
+  assert.equal(res.value.branch, 'use');
   assert.ok(released);
 });
 
@@ -99,7 +108,9 @@ test('tell a leak from a failure', () => {
     abort: conn => conn.close(true)
   });
 
-  assert.equal(kept.branch, 'close');
+  if (kept.branch !== 'error') assert.fail();
+
+  assert.equal(kept.value.branch, 'close');
 
   // and when both the use and the release fail, the release wins the branch:
   // the failed call is over, while the resource is still out there
@@ -110,7 +121,9 @@ test('tell a leak from a failure', () => {
     abort: conn => conn.close(true)
   });
 
-  assert.equal(lost.branch, 'abort');
+  if (lost.branch !== 'error') assert.fail();
+
+  assert.equal(lost.value.branch, 'abort');
 
   // there is no `finally` here: a lease without both releases does not typecheck
   // @ts-expect-error
@@ -141,5 +154,7 @@ test('lease something asynchronous', async () => {
     abort: async conn => conn.close(false)
   });
 
-  assert.equal(failed.branch, 'use');
+  if (failed.branch !== 'error') assert.fail();
+
+  assert.equal(failed.value.branch, 'use');
 });
