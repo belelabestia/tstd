@@ -74,6 +74,7 @@ to get the most out of `tstd`, you should consider to learn to code with the fol
 ### modules
 
 - export module members individually while declaring them; avoid any other `export` syntax
+- write the `.js` extension in relative imports: this is esm
 - use `index.ts` files to manipulate module structure for consumer convenience
 - use lowercase for module names or api containers: no one wants to use the shift key in order to guide intellisense
 - for namespacing, prefer nesting over prefixing or postfixing
@@ -84,6 +85,8 @@ to get the most out of `tstd`, you should consider to learn to code with the fol
 ### flow
 
 - always prefer flow over callbacks; use callbacks only as entrypoints
+- never hide flow behind data: no `map`, `andThen`, `unwrap` or `match` on a branch
+- a function that cannot fail returns an unboxed value, not a result
 - delegate decisions to the caller by using `branch` and `Union`
 - return as early as possible
 - avoid `else` unless you're dealing with a boolean that's meaningful in both cases
@@ -95,3 +98,4 @@ to get the most out of `tstd`, you should consider to learn to code with the fol
 
 - prefer type narrowing (`x is T`) to parsing (`return x as T`) for validation as it is a cheaper abstraction
 - native errors and values from outside are `unknown` by design: don't try to fix this, just narrow their type
+- when a guard checks more than its type can say, brand the requirement, as `is.number` does with `Finite`
