@@ -4,29 +4,7 @@ working notes behind `CLAUDE.md`. every entry is grounded in a real line of this
 
 ## open work
 
-two designs are agreed in principle and not built. neither is urgent; both want a fresh head.
-
-### 1. a form that serializes to a zone, not to utc
-
-`iso.dateOf(x, zone)` reads in a zone, but a **form** whose stored side is local (`'2024-01-02'` as rome writes it, not as utc does) has no utility yet. the shape is a form factory taking a zone, which is a value, so it is an argument like every other (o14):
-
-```ts
-form.zoned(rome)   // Field<iso.Date, iso.DateTime>, roughly
-```
-
-`encode` is total: an instant plus a zone is one local date. **`decode` is the whole problem**: a local date or wall clock time can be ambiguous or absent across a dst boundary, and guessing is the thing this library refuses (o12, o14).
-
-the promising line, and the reason it fits: **let the field's own `is` do the zone-aware checking**. a `Field`'s guard is an ordinary function, so it can be closed over the zone and reject a local spelling that is ambiguous in it. then `decode` receives a value already proven unambiguous and stays total, and the invariant that failure lives only in narrowing survives intact. worth trying before anything cleverer.
-
-### 2. a module for resources: done, see o15
-
-built as `src/lease.ts` on 2026-09-07. the section below is kept only for the questions it raised; the answers are in o15.
-
-#### the old note
-
-the value/resource line is settled (o14) but only one half exists. `make` and `scope` cover instantiating and calling things that throw; **nothing covers a resource's lifetime**: establish, use, release, release even when the use failed. `result.spec.ts` walks a connection through `scope.sync` by hand, which is the current answer and is not one.
-
-open questions: whether it is an `init`-style closure or another argument-taking module; what it is called; whether release is a callback (which the readme allows only "as entrypoints") or flow; and whether it earns a place at all in a library this small.
+nothing. the two designs that were open on 2026-09-06 are built and ruled: resources became `src/lease.ts` (o15), and the zoned form became a recipe in `src/form.spec.ts` with the machinery in `src/iso.ts` (o16).
 
 ---
 
@@ -57,7 +35,7 @@ src/result.ts   -> Result, result, make, scope
 src/brand.ts    -> Brand
 src/flat.ts     -> Flat
 src/is.ts       -> Json, TypeGuard, Schema, Model, Finite, + guards
-src/iso.ts      -> Date, Time, DateTime, Duration, Timestamp, Zone, + guards and operations
+src/iso.ts      -> Date, Time, DateTime, Local, Duration, Timestamp, Zone, Unambiguous, + guards and operations
 src/form.ts     -> Field, Fields, Encoded, Decoded, plain, nest, model, decode, encode
 src/lease.ts    -> Lease, lease
 ```
@@ -1209,6 +1187,31 @@ lease.sync({
 - **the outcome is a free branch union, not a `Result`**: `Union<{ success: V, open: unknown, use: unknown, close: unknown, abort: unknown }>`. one branch per step that can throw. `Result<V, unknown>` would erase the distinction the module exists to make: "the use failed" versus "you no longer hold the resource". every non-success payload is `unknown`, so the funnel still collapses in one line when a caller does not care.
 - **decide, never accumulate.** use ok + close throws → branch `close`, and the used value is dropped. use throws + abort throws → branch `abort`, and the use error is lost: the failed call is over, the resource is still out there. that loss is the price of refusing error accumulation, and the spec says so in prose rather than hiding it.
 - taking four functions is **not** the callback rule being broken. `lease` is a boundary module like `make` and `scope`; it is where `try`/`catch` lives, so it is an entrypoint by construction. this was the one thing the subagent had to guess at; it is now stated in `CLAUDE.md`.
+
+### o16. a zoned form, and the brand that names its zone: house (ruled, built by a subagent)
+
+storing an instant the way a zone writes it down, rather than the way utc does. the kb sketched this as easy on the `encode` side and hard on `decode`; that was backwards in an instructive way.
+
+**`decode` was solved exactly as predicted.** the field's `is` is an ordinary function, so it closes over the zone and rejects a local spelling that is ambiguous (the repeated hour) or nonexistent (the skipped one) in it. `decode` then receives a value already proven to name one instant, so it stays total and the invariant holds: narrowing owns every failure.
+
+**`encode` was not easy.** instant to local spelling is not injective: during a repeated hour two distinct instants share one spelling, so an unbranded `encode(x: DateTime)` would claim a return type it cannot prove. the decoded side is branded too, and a caller narrows an instant before storing it.
+
+**a bare brand was not enough.** `Brand<'Unambiguous'>` records that some zone was checked, never which one, so a spelling proven in chatham typechecked against a rome field and decoded to the first of two candidates without complaint: the silent guess this library refuses, wearing a brand that looked like proof. verified, then closed by naming the zone in the brand:
+
+```ts
+export type Unambiguous<Z extends string> = Brand<`unambiguous in ${Z}`>;
+
+export const unambiguous = <T extends DateTime | Local, Z extends string>(x: T, zone: Z & Zone): x is T & Unambiguous<Z> => ...
+export const fromLocal = <Z extends string>(x: Local & Unambiguous<Z>, zone: NoInfer<Z> & Zone) => ...
+```
+
+`NoInfer` on the trailing zone is load bearing. without it typescript has two inference sites for `Z`, reconciles them at `string`, and every cross zone call compiles again. with it, `Z` is fixed by the value and the zone argument has to match. a zone narrowed from a literal keeps its literal type, so `rome` carries `'Europe/Rome'`; a zone read from config degrades to today's behaviour rather than to something worse.
+
+**the factory is not shipped.** `form.zoned` lived in `form.ts` briefly and was moved into `form.spec.ts` as a recipe, because o13 says tstd ships no forms of its own and `form.ts` has no business importing `iso.ts`. the spec is documentation, so demonstrating the four lines is its job. `nest` is not a precedent for shipping this: `nest` composes forms with forms and reaches outside nothing.
+
+**there is no date only field**, deliberately. storing `'2024-01-02'` drops the time of day, so `decode(encode(x))` is not `x` and never can be, while every other field round trips exactly. worse, the brand would have to mean "the start of an unambiguous day in this zone" rather than "this spelling and that instant name each other", and typescript would treat the two as interchangeable because the brand string matches. two claims under one name, mutually assignable, is the lie brands exist to prevent. build it when a caller needs it, with its own brand, and with an honest note that the round trip is one way.
+
+the algorithm was fuzzed over a year at thirty minute granularity against an independent read back, across rome, santiago, lord howe (a thirty minute dst shift), chatham (a forty five minute offset), kolkata, st johns, apia and utc: no false accepts, no false refusals, no round trip failures.
 
 ### o11. line endings: ruled and fixed
 
