@@ -29,7 +29,7 @@ src/result.ts   -> Result, result, make, scope
 src/brand.ts    -> Brand
 src/flat.ts     -> Flat
 src/is.ts       -> Json, TypeGuard, Schema, Model, Finite, + guards
-src/iso.ts      -> Date, Time, DateTime, Duration, Timestamp, Zone, + guards, operations and init
+src/iso.ts      -> Date, Time, DateTime, Duration, Timestamp, Zone, + guards and operations
 src/form.ts     -> Field, Fields, Encoded, Decoded, plain, nest, model, decode, encode
 ```
 
@@ -1045,27 +1045,42 @@ rules that came out of building `iso.ts`:
 
   strictness at the boundary was never about time zones. it is about spelling, and a foreign spelling denotes the same instant, so `parse` loses nothing — it just has to be asked for.
 
-### o14. what needs a zone goes behind `init` — house (ruled, and now built)
+### o14. a zone is a value, so it travels as an argument — house (ruled, and now built)
 
-an instant is absolute; the day it falls on is not. `2024-01-01T23:30:00.000Z` is already the second in rome, so `dateOf` has no answer until someone names a zone. that is a dynamic dependency, and the readme already says what to do with one: "whenever a module has a dynamic dependency, make it dynamic as well by exporting an `init` function".
+an instant is absolute; the day it falls on is not. `2024-01-01T23:30:00.000Z` is already the second in rome, so `dateOf` has no answer until someone names a zone.
 
 ```ts
-const where = 'Europe/Rome';
-if (!iso.zone(where)) assert.fail();
+const rome = 'Europe/Rome';
+if (!iso.zone(rome)) assert.fail();
 
-const rome = iso.init(where);
+iso.dateOf(x, rome);   // 2024-01-02
+iso.dateOf(x);         // 2024-01-01, utc is the answer that needs no decision
+```
 
-rome.dateOf(x);   // 2024-01-02
-iso.dateOf(x);    // 2024-01-01, the module itself always answers in utc
+**this was built as `iso.init(zone)` first, and that was wrong.** the readme's init rule reads like it applies — but `init` is for a *resource that has to be established once*, like a connection or a configured sdk, which is what "a dynamic one is just a closure" means. a zone is a **value**, and every configured operation in this library takes its value as a trailing argument: `is.model(x, schema)`, `is.models(x, schema)`, `form.model(x, forms)`, `form.decode(x, forms)`, `form.encode(x, forms)`, `make(c, ...args)`, `scope.sync(f, ...args)`. `iso.init` was the only `init` in the whole codebase — a single exception, written by following the readme's letter against the codebase's unanimous practice.
+
+the rule that reconciles them, now in the readme: "a dependency is a resource that has to be established once, like a connection; everything else is a value and travels as an argument, the way a schema does".
+
+**how to tell**: if you would keep it in a variable and pass it around, it is a value. if it holds a socket, a handle, or a file, it is a resource. when in doubt, argument — a closure is the heavier choice and the readme already says to keep dynamic modules "short-lived and narrow-scoped", which is a warning, not an invitation.
+
+note the shape this produces: an optional trailing parameter with a guard clause for its absence, defaulting to the answer that needs no decision.
+
+```ts
+export const dateOf = (x: DateTime, zone?: Zone) => {
+  if (is.absent(zone)) return x.slice(0, 10) as Date;
+
+  const part = parts(x, zone);
+  return `${part.year}-${part.month}-${part.day}` as Date;
+};
 ```
 
 the pattern this settles, and it is the same one as everywhere else:
 
-- **the zone is narrowed, not trusted** — `iso.zone` brands a name this runtime actually knows, so `init` receives a proven value and cannot fail. the failing step stays at the boundary, where it belongs.
-- **so `init` is total**, and everything it returns is total. building the `Intl` formatter goes through `make`, and one load-bearing cast reads the value the brand already proved is there.
+- **the zone is narrowed, not trusted** — `iso.zone` brands a name this runtime actually knows, so the operation receives a proven value and cannot fail. the failing step stays at the boundary, where it belongs.
+- **so the operations are total**. building the `Intl` formatter goes through `make`, and one load-bearing cast reads the value the brand already proved is there.
 - **utc stays the module's default.** a zone is a decision, so it is the caller's; the undecorated `dateOf` and `timeOf` answer in utc and say so.
 - **reading only.** building an instant from a local date and time is deliberately absent, because a local wall clock time can be ambiguous or nonexistent across a dst boundary — the same reason `Duration` refuses `P1M`. ambiguity is what this library declines to guess at.
-- **narrowing applies to references, not to literals** — `if (iso.zone('Europe/Rome')) iso.init('Europe/Rome')` does not compile. bind it to a variable first. same trap as o4b.
+- **narrowing applies to references, not to literals** — `if (iso.zone('Europe/Rome')) iso.dateOf(x, 'Europe/Rome')` does not compile. bind it to a variable first. same trap as o4b.
 
 the guards need no regex — a string is a canonical instant exactly when it round-trips:
 
