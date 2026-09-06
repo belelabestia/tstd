@@ -80,10 +80,7 @@ test('nest a model in another, twice over', () => {
     when: instant,
     of: form.nest({
       at: instant,
-      by: form.nest({
-        id: form.plain(is.string),
-        seen: instant
-      })
+      by: form.nest(user)
     })
   } satisfies form.Fields;
 

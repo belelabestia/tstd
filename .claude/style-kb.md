@@ -1135,13 +1135,12 @@ what to know when writing one:
     when: instant,
     of: form.nest({
       at: instant,
-      by: form.nest({
-        id: form.plain(is.string),
-        seen: instant
-      })
+      by: form.nest(user)
     })
   } satisfies form.Fields;
   ```
+
+  an inline literal and a named model nest the same way, so mixing them is free — declare a model once where it is reused, and inline the levels that exist only here.
 
   nesting nests, because a nested model is a field like any other, and inference survives the descent — `form.decode(x, audit).of.by.seen` is a `DateTime` three levels down, verified in both directions. this is still not a combinator: `nest` composes nothing and adds no algebra, it only writes lines you would have written yourself. that is the test to apply before adding anything else of the kind (a `list` for arrays of models, say) — **write the boilerplate, don't invent an operator**.
 - **`plain` covers the common case**: most fields need no form at all, because o12 made the wire type and the memory type the same type. forms are for the genuinely different in-memory shape, like an instant stored as a timestamp.
