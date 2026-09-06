@@ -86,14 +86,33 @@ test('nest a model in another, twice over', () => {
     of: form.nest(session)
   } satisfies form.Fields;
 
-  const x: unknown = JSON.parse('{"when":0,"of":{"at":0,"by":{"id":"a","seen":0}}}');
+  // this is what a database gives back
+  const x: unknown = JSON.parse(`{
+    "when": 1704164645006,
+    "of": {
+      "at": 1704078245006,
+      "by": { "id": "a", "seen": 1700000000000 }
+    }
+  }`);
+
   if (!form.model(x, audit)) assert.fail();
 
   // narrowing reached the bottom, so decoding still cannot fail
   const held = form.decode(x, audit);
 
-  // and inference reached it too: this is a DateTime, three levels down
-  assert.equal(iso.dateOf(held.of.by.seen), '1970-01-01');
+  // and this is the same object with every instant readable, at every depth
+  assert.deepEqual(held, {
+    when: '2024-01-02T03:04:05.006Z',
+    of: {
+      at: '2024-01-01T03:04:05.006Z',
+      by: { id: 'a', seen: '2023-11-14T22:13:20.000Z' }
+    }
+  });
+
+  // inference reached the bottom too: this is a DateTime, three levels down
+  assert.equal(iso.dateOf(held.of.by.seen), '2023-11-14');
+
+  // and encoding puts it back exactly as it was stored
   assert.deepEqual(form.encode(held, audit), x);
 
   // one wrong field at the bottom is enough to refuse the whole thing
