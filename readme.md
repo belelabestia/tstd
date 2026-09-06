@@ -38,7 +38,21 @@ the same goes if you feel like there are too many lacking features: feel free to
 
 ## installation
 
-this library is built as js modules with `tsc` and can be installed via its github registry.
+this library is built as js modules with `tsc` and can be installed via its github registry; it ships as esm only.
+
+point the scope at the registry in your `.npmrc`:
+
+```
+@belelabestia:registry=https://npm.pkg.github.com
+```
+
+then install as usual:
+
+```
+npm i @belelabestia/tstd
+```
+
+github packages wants a token even for public ones, so you might need a `//npm.pkg.github.com/:_authToken=...` line too.
 
 ## style
 
