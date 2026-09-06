@@ -71,9 +71,9 @@ export * as is from './is';
 
 ❌ instead of `import { Flat } from '@/flat'` or `'src/flat'`
 
-✅ do `import { Flat } from './flat'`
+✅ do `import { Flat } from './flat.js'`
 
-no `paths` in tsconfig, no resolver config to explain.
+no `paths` in tsconfig, no resolver config to explain. the `.js` extension is mandatory — the package is esm, `module` is `nodenext`, and the extension is what makes the emitted output loadable in node *and* directly in a browser. readme rule: "write the `.js` extension in relative imports: this is esm".
 
 ### a6. lowercase filenames, always — house
 
@@ -559,6 +559,13 @@ if (res.branch === 'error') return res;
 
 there is deliberately no monadic api on `result`. do not add `map`, `andThen`, `unwrap`, or a `match` helper — the readme rejects that whole layer, and `branch`'s purpose is to "delegate decisions to the caller", not to sequence them.
 
+this is now settled and in the readme, in two parts:
+
+- "never hide flow behind data: no `map`, `andThen`, `unwrap` or `match` on a branch"
+- "a function that cannot fail returns an unboxed value, not a result"
+
+the second half answers what a `Result` with an impossible branch would mean: nothing, because you never write one. `Result<S, E>` carrying both branches is not over-modelling — a function returning it can genuinely do both, and one that cannot returns the bare value.
+
 ### f7. imperative loops over array callbacks in library code — house, with one open
 
 ✅ `model` and `models` both loop and return early:
@@ -836,6 +843,8 @@ lowercase step names (`checkout`, `setup node`, `install deps`, `build`, `publis
 
 these are the places where i think the code contradicts the readme. each needs a ruling before it becomes a rule.
 
+**status:** o1–o5 and o7–o9 are ruled and applied on `claude-onboarding`. o6 awaits a ruling. o10 stands, except `is.number`, which is now branded — see o4b.
+
 ### o1. published output does not resolve
 
 `module: esnext` emits `export * from './branch'`; no `"type": "module"` in the manifest. verified: `import('./dist/index.js')` fails with `Cannot find module '...\dist\branch'`.
@@ -889,6 +898,25 @@ if (array(x)) return false;
 
 ✅ do `x is Flat<Model<T>>` — a type guard is one of the two places d1 permits an annotation, so there is no tension, only duplication.
 
+### o4b. brand what a guard checks but its type cannot say — house (ruled)
+
+`is.number` is now branded, overriding my recommendation in o10:
+
+```ts
+/** a number that is neither nan nor infinity */
+export type Finite = number & Brand<'Finite'>;
+
+export const number = (x: unknown): x is Finite =>
+  typeof x === 'number' &&
+  Number.isFinite(x);
+```
+
+my legibility objection was wrong: declaration output renders the field as `a: is.Finite`, not as `number & Brand<"Finite">`, so `Flat` still reads cleanly. arithmetic and assignment to a plain `number` both keep working, because `Finite` is an intersection *with* `number`. what changes is that a function may now demand `is.Finite` and only a checked value satisfies it.
+
+note narrowing applies to references, not to literal expressions: `if (is.number(2)) takesFinite(2)` does not compile — narrow a variable.
+
+readme rule: "when a guard checks more than its type can say, brand the requirement, as `is.number` does with `Finite`".
+
 ### o7. `is.json` uses `.every` while `model`/`models` loop
 
 f7 says imperative loops; `json` uses `Object.values(x).every(json)` and `x.every(json)`. pick one. i would keep `.every` in `json` (it is an expression, and e1 requires the body stay an expression) and note the exception explicitly — but it should be a stated exception, not an accident.
@@ -915,4 +943,15 @@ const res = scope.sync(() => conn.value.query(true));
 
 ### o10. things i would not change, for the record
 
-so the reasoning is on file: `Result<S, E>` always carrying both branches even for infallible functions (caller delegation, working as designed); the absence of `map`/`andThen`/`unwrap` (f6); `Json` including `undefined` (f4 — the readme rules on this and i was wrong to flag it); `is.number` rejecting `NaN` without a brand (branding the primitive would leak `Brand<'Finite'>` into every `Model` and defeat `Flat`); `branch`'s single `value as V` cast (unavoidable for a void-defaulted optional — worth one comment marking it as the sanctioned exception); `Brand`'s unexported `unique symbol` (emits correctly into `brand.d.ts`).
+so the reasoning is on file: `Result<S, E>` always carrying both branches even for infallible functions (**ruled**: infallible functions return the unboxed value, so the situation never arises — see f6); the absence of `map`/`andThen`/`unwrap` (**ruled**: in the readme now, permanent); `Json` including `undefined` (**ruled**: presence/absence comes first); `is.number` rejecting `NaN` without a brand (**overruled** — it is branded now, see o4b, and my legibility objection did not survive contact with the declaration output); `branch`'s single `value as V` cast (still open, o6); `Brand`'s unexported `unique symbol` (emits correctly into `brand.d.ts`).
+
+### o11. line endings — ruled and fixed
+
+`core.autocrlf=true` with CRLF blobs turned every one-line edit into a whole-file rewrite. fixed with `.gitattributes`:
+
+```
+# keep line endings stable regardless of platform or core.autocrlf
+* text=auto eol=lf
+```
+
+plus one `git add --renormalize` pass, isolated in its own commit. a hard re-checkout is now clean even with `core.autocrlf=true` still set, so the repo is immune regardless of anyone's git config. **do not** change a global or system git setting to work around this — the attributes file is the fix.
