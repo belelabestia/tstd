@@ -74,7 +74,7 @@ the spec is the module's documentation; documentation lives next to what it docu
 
 ### a3. flat `src/`, no folders until nesting earns it — house
 
-five modules, zero directories. my instinct would be `src/core/`, `src/types/`, `src/guards/`. don't. the readme's rule is "for namespacing, prefer nesting over prefixing" — that is about *type and api* nesting (`result.success`), not directory nesting. add a directory only when a module genuinely grows sub-modules.
+eight modules, zero directories. my instinct would be `src/core/`, `src/types/`, `src/guards/`. don't. the readme's rule is "for namespacing, prefer nesting over prefixing" — that is about *type and api* nesting (`result.success`), not directory nesting. add a directory only when a module genuinely grows sub-modules.
 
 ### a4. `index.ts` is api shaping only — house
 
@@ -91,6 +91,7 @@ export const createBranch = branch;
 export * from './branch.js';
 export * from './brand.js';
 export * from './flat.js';
+export * from './lease.js';
 export * from './result.js';
 
 export * as is from './is.js';
