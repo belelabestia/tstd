@@ -4,7 +4,22 @@ working notes behind `CLAUDE.md`. every entry is grounded in a real line of this
 
 ## open work
 
-nothing. the two designs that were open on 2026-09-06 are built and ruled: resources became `src/lease.ts` (o15), and the zoned form became a recipe in `src/form.spec.ts` with the machinery in `src/iso.ts` (o16).
+### `is.json` claims `Json` for any object with no own enumerable properties
+
+filed 2026-09-07, found by a review agent, not yet fixed. it predates all of this work: `main` has the same bug byte for byte.
+
+```ts
+is.json(new Date())        // true
+is.json(new Map())         // true
+is.json(new Set([1]))      // true
+is.json({ a: new Date() }) // true
+```
+
+`record(x) && Object.values(x).every(json)` is vacuously satisfied when there are no own enumerable properties, so the guard admits values that are not `Json`: `Date` is not assignable to `{ [key: string]: Json }`. two consequences. the predicate claims more than it checks, which is the one thing a guard must never do (e4, o4b). and the `JSON.parse(JSON.stringify(x))` round trip that `iso.spec.ts` and `form.spec.ts` asserted does not actually hold for everything the guard lets through. `form.Fields` now rests its `encode: (x: never) => is.Json` constraint on it, so the blast radius grew even though the bug did not.
+
+the shape of a fix wants a ruling, because every option costs something the readme cares about: checking the prototype (`Object.getPrototypeOf(x) === Object.prototype`) is the cheap and correct test but reaches for machinery this library avoids; rejecting anything with a constructor other than `Object` is the same idea worse; and narrowing `record` itself would change what `is.record` means, which o5 already ruled against. do not fix it by weakening the type.
+
+the two designs that were open on 2026-09-06 are built and ruled: resources became `src/lease.ts` (o15), and the zoned form became a recipe in `src/form.spec.ts` with the machinery in `src/iso.ts` (o16).
 
 ---
 
