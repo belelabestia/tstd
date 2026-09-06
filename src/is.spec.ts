@@ -21,6 +21,19 @@ test('safely navigate the unknown', () => {
   assert.equal(b, '_');
 });
 
+test('demand a finite number', () => {
+  // is.number rejects nan and infinity, so what comes out of it is branded;
+  // that way a function can demand a number that has actually been checked
+  const half = (x: is.Finite) => x / 2;
+
+  const a: unknown = 1;
+  if (!is.number(a)) assert.fail();
+
+  assert.equal(half(a), 0.5);
+  assert.ok(!is.number(NaN));
+  assert.ok(!is.number(Infinity));
+});
+
 test('validate model schemas', () => {
   // here's a more complex unknown variable
   const a: unknown = {

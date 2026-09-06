@@ -1,3 +1,4 @@
+import { Brand } from './brand.js';
 import { Flat } from './flat.js';
 
 /**
@@ -19,6 +20,9 @@ export type TypeGuard<T> = (x: unknown) => x is T;
 /** an object describing a structure */
 export type Schema = Record<string, TypeGuard<unknown>>;
 
+/** a number that is neither nan nor infinity */
+export type Finite = number & Brand<'Finite'>;
+
 /** the actual validated type */
 export type Model<T extends Schema> = { [K in keyof T]: T[K] extends TypeGuard<infer U> ? U : never };
 
@@ -33,7 +37,7 @@ export const absent = (x: unknown): x is undefined | null =>
 export const boolean = (x: unknown): x is boolean =>
   typeof x === 'boolean';
 
-export const number = (x: unknown): x is number =>
+export const number = (x: unknown): x is Finite =>
   typeof x === 'number' &&
   Number.isFinite(x);
 
