@@ -1,6 +1,30 @@
 # tstd style knowledge base
 
-working notes toward `claude.md`. every entry is grounded in a real line of this repo.
+working notes behind `CLAUDE.md`. every entry is grounded in a real line of this repo.
+
+## open work
+
+two designs are agreed in principle and not built. neither is urgent; both want a fresh head.
+
+### 1. a form that serializes to a zone, not to utc
+
+`iso.dateOf(x, zone)` reads in a zone, but a **form** whose stored side is local — `'2024-01-02'` as rome writes it, not as utc does — has no utility yet. the shape is a form factory taking a zone, which is a value, so it is an argument like every other (o14):
+
+```ts
+form.zoned(rome)   // Field<iso.Date, iso.DateTime>, roughly
+```
+
+`encode` is total: an instant plus a zone is one local date. **`decode` is the whole problem**: a local date or wall clock time can be ambiguous or absent across a dst boundary, and guessing is the thing this library refuses (o12, o14).
+
+the promising line, and the reason it fits: **let the field's own `is` do the zone-aware checking**. a `Field`'s guard is an ordinary function, so it can be closed over the zone and reject a local spelling that is ambiguous in it. then `decode` receives a value already proven unambiguous and stays total, and the invariant that failure lives only in narrowing survives intact. worth trying before anything cleverer.
+
+### 2. a module for resources
+
+the value/resource line is settled (o14) but only one half exists. `make` and `scope` cover instantiating and calling things that throw; **nothing covers a resource's lifetime** — establish, use, release, release even when the use failed. `result.spec.ts` walks a connection through `scope.sync` by hand, which is the current answer and is not one.
+
+open questions: whether it is an `init`-style closure or another argument-taking module; what it is called; whether release is a callback (which the readme allows only "as entrypoints") or flow; and whether it earns a place at all in a library this small.
+
+---
 
 two kinds of entry:
 
