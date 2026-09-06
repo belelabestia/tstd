@@ -17,6 +17,9 @@ export type Duration = number & Brand<'Duration'>;
 /** a number of milliseconds since the epoch that an instant can be built from */
 export type Timestamp = number & Brand<'Timestamp'>;
 
+/** the name of a time zone this runtime knows */
+export type Zone = string & Brand<'Zone'>;
+
 /** the canonical instant a timestamp points at, or nothing if there is none */
 const canonical = (ms: number) => {
   if (!is.number(ms)) return;
@@ -47,6 +50,13 @@ export const time = (x: unknown): x is Time =>
 export const duration = (x: unknown): x is Duration =>
   is.number(x);
 
+export const zone = (x: unknown): x is Zone =>
+  is.string(x) &&
+  Intl.supportedValuesOf('timeZone').includes(x);
+
+/** the instant a foreign spelling points at, or nothing if there is none */
+export const parse = (x: string) => canonical(Date.parse(x)) as DateTime | undefined;
+
 /** the instant a timestamp points at */
 export const fromTimestamp = (x: Timestamp) => canonical(x) as DateTime;
 
@@ -67,6 +77,47 @@ export const add = (x: DateTime, d: Duration) => canonical(toTimestamp(x) + d) a
 
 /** how long it takes to get from one instant to another */
 export const diff = (from: DateTime, to: DateTime) => (toTimestamp(to) - toTimestamp(from)) as Duration;
+
+/**
+ * the reading operations that cannot answer without a time zone
+ * the brand proves the zone is known, so building the formatter cannot fail
+ */
+export const init = (zone: Zone) => {
+  const format = make(Intl.DateTimeFormat, 'en-US', {
+    timeZone: zone,
+    hourCycle: 'h23',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    fractionalSecondDigits: 3
+  }).value as Intl.DateTimeFormat;
+
+  const parts = (x: DateTime) => {
+    const out: Record<string, string> = {};
+
+    for (const part of format.formatToParts(toTimestamp(x))) out[part.type] = part.value;
+    return out;
+  };
+
+  return {
+    /** the calendar date an instant falls on, in this zone */
+    dateOf: (x: DateTime) => {
+      const part = parts(x);
+
+      return `${part.year}-${part.month}-${part.day}` as Date;
+    },
+
+    /** the wall clock time an instant falls at, in this zone */
+    timeOf: (x: DateTime) => {
+      const part = parts(x);
+
+      return `${part.hour}:${part.minute}:${part.second}.${part.fractionalSecond}` as Time;
+    }
+  };
+};
 
 export const millis = (x: number) => x as Duration;
 

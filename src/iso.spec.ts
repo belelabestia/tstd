@@ -51,11 +51,38 @@ test('reject anything that is not canonical', () => {
   assert.ok(iso.date('2024-01-02'));
   assert.ok(iso.time('03:04:05.006'));
 
-  // to accept a foreign spelling, parse it into a timestamp and narrow that
-  const parsed = Date.parse('2024-01-02T04:04:05.006+01:00');
-  if (!iso.timestamp(parsed)) assert.fail();
+  // a foreign spelling still points at an instant, so normalising it loses nothing;
+  // it just has to be asked for, rather than let through a guard
+  assert.equal(iso.parse('2024-01-02T04:04:05.006+01:00'), '2024-01-02T03:04:05.006Z');
+  assert.equal(iso.parse('2024-01-02T03:04:05Z'), '2024-01-02T03:04:05.000Z');
 
-  assert.equal(iso.fromTimestamp(parsed), '2024-01-02T03:04:05.006Z');
+  // and a spelling that points at nothing is absent, not an error worth explaining
+  assert.ok(is.absent(iso.parse('the day before yesterday')));
+});
+
+test('read the calendar in a zone', () => {
+  // an instant is absolute, but the day it falls on is not:
+  // that question has no answer until someone names a zone
+  const x = '2024-01-01T23:30:00.000Z';
+  if (!iso.datetime(x)) assert.fail();
+
+  // so the operations that need one live behind `init`, which only takes a proven zone;
+  // note the zone has to be a variable: narrowing applies to references, not to literals
+  const where = 'Europe/Rome';
+  if (!iso.zone(where)) assert.fail();
+
+  const rome = iso.init(where);
+
+  // in rome it is already the second, half an hour past midnight
+  assert.equal(rome.dateOf(x), '2024-01-02');
+  assert.equal(rome.timeOf(x), '00:30:00.000');
+
+  // while the module itself always answers in utc
+  assert.equal(iso.dateOf(x), '2024-01-01');
+  assert.equal(iso.timeOf(x), '23:30:00.000');
+
+  // a zone this runtime does not know never gets as far as `init`
+  assert.ok(!iso.zone('Middle/Earth'));
 });
 
 test('measure and move in time', () => {
