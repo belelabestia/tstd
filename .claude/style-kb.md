@@ -30,7 +30,7 @@ src/brand.ts    -> Brand
 src/flat.ts     -> Flat
 src/is.ts       -> Json, TypeGuard, Schema, Model, Finite, + guards
 src/iso.ts      -> Date, Time, DateTime, Duration, Timestamp, + guards and operations
-src/form.ts     -> Field, Fields, Encoded, Decoded, plain, model, decode, encode
+src/form.ts     -> Field, Fields, Encoded, Decoded, plain, nest, model, decode, encode
 ```
 
 a type and the factory that produces it are one concept, so they live in one file. there is no `types.ts` and there must never be one.
@@ -829,6 +829,42 @@ no conventional-commit prefixes, no scopes, no body, no footers. version bumps a
 
 lowercase step names (`checkout`, `setup node`, `install deps`, `build`, `publish`), no matrix, no cache, no reusable workflows, pinned major action versions (`@v4`). additions must match that voice.
 
+### i5. the wide project is `tsconfig.json`; the narrow one only emits — house
+
+❌ instead of narrowing the default config to the entry point and putting the full source in a second one:
+
+```json
+// tsconfig.json      -> include: ["src/index.ts"]
+// tsconfig.test.json -> include: ["src"]
+```
+
+✅ do the opposite:
+
+```json
+// tsconfig.json       -> include: ["src"]          the editor and `tsc --noEmit`
+// tsconfig.build.json -> include: ["src/index.ts"] emit only, keeps specs out of dist
+```
+
+an editor only ever auto-loads `tsconfig.json`. a file outside its `include` lands in an *inferred* project with no `@types`, which reports `node:test` and `node:assert/strict` as missing while `npm test` stays green against the other config. whatever a human opens must be in `tsconfig.json`.
+
+### i6. typescript 7 wants two things stated explicitly — house
+
+the native compiler stopped inferring both of these, and the failures are loud but misleading:
+
+```json
+"types": ["node"],
+"rootDir": "src",
+```
+
+- without `types`, `@types` is not auto-discovered and you get `TS2591: Cannot find name 'node:assert/strict'` — plus a cascade of narrowing failures downstream, because `assert.fail()` loses its `never` return and every `if (!guard(x)) assert.fail()` stops narrowing.
+- without `rootDir`, `TS5011` refuses to guess the common source directory; left unset the emit lands in `dist/src/`, which silently breaks `main: ./dist/index.js`.
+
+the `.js` emit is byte-identical to 5.9; only two `.d.ts` differ, by an alpha-rename and union member order. also pin the editor to the workspace compiler, or it will use its own bundled one and disagree with `npm test`:
+
+```json
+"js/ts.tsdk.path": "node_modules/typescript/lib"
+```
+
 ---
 
 ## j. prose voice (for readme / docs / claude.md itself)
@@ -1053,7 +1089,22 @@ what to know when writing one:
 
   `never` in the parameter position accepts every field there is. no `any` anywhere in the module.
 - **`satisfies` fires at the declaration site**, so an `encode` that stops being the inverse of `decode` is an error where you wrote it, not where you used it. verified, along with: the decoded side is not assignable to the encoded side, and a non-`Json` encoded side (a `Map`, say) is refused outright.
-- **nest by calling, not by combining** — a form for a whole model is a form whose two directions call the walkers, the same move `is.spec.ts` makes for nested schemas.
+- **nest by calling, not by combining** — a form for a whole model is a form whose two directions call the walkers. that is always the same three lines with the same arguments, so `nest` writes them:
+
+  ```ts
+  export const nest = <T extends Fields>(forms: T) => ({
+    is: (x: unknown): x is Encoded<T> => model(x, forms),
+    decode: (x: Encoded<T>) => decode(x, forms),
+    encode: (x: Decoded<T>) => encode(x, forms)
+  });
+  ```
+
+  ```ts
+  const session = { at: instant, by: form.nest(user) } satisfies form.Fields;
+  const audit = { when: instant, of: form.nest(session) } satisfies form.Fields;
+  ```
+
+  nesting nests, because a nested model is a field like any other, and inference survives the descent — `form.decode(x, audit).of.by.seen` is a `DateTime` three levels down, verified in both directions. this is still not a combinator: `nest` composes nothing and adds no algebra, it only writes lines you would have written yourself. that is the test to apply before adding anything else of the kind (a `list` for arrays of models, say) — **write the boilerplate, don't invent an operator**.
 - **`plain` covers the common case**: most fields need no form at all, because o12 made the wire type and the memory type the same type. forms are for the genuinely different in-memory shape, like an instant stored as a timestamp.
 
 on the name: **`form`** is the author's own word for the concept — "declare their form in memory or in json" — and it passes the literalness test `Json` and `iso` set, since the module declares the form a value takes on each side. `io` was the runner-up and was rejected because it names an activity the module never performs (it reads no file and opens no socket; it is a pure function on a value someone else moved) and because it invites the io-ts comparison this design inverts. the type is `Field`, not `Form`, so `satisfies form.Field<...>` does not stutter.

@@ -72,7 +72,7 @@ test('refuse what does not fit the encoded form', () => {
   assert.ok(!form.model([], user));
 });
 
-test('nest a model in another', () => {
+test('nest a model in another, twice over', () => {
   // a nested model is a field whose two directions call the walkers on the model;
   // that is always the same three lines with the same arguments, so `nest` writes them
   const session = {
@@ -80,10 +80,23 @@ test('nest a model in another', () => {
     by: form.nest(user)
   } satisfies form.Fields;
 
-  const x: unknown = JSON.parse('{"at":0,"by":{"id":"a","seen":0}}');
-  if (!form.model(x, session)) assert.fail();
+  // and nesting nests, because a nested model is a field like any other
+  const audit = {
+    when: instant,
+    of: form.nest(session)
+  } satisfies form.Fields;
 
-  const held = form.decode(x, session);
-  assert.equal(held.by.seen, '1970-01-01T00:00:00.000Z');
-  assert.deepEqual(form.encode(held, session), x);
+  const x: unknown = JSON.parse('{"when":0,"of":{"at":0,"by":{"id":"a","seen":0}}}');
+  if (!form.model(x, audit)) assert.fail();
+
+  // narrowing reached the bottom, so decoding still cannot fail
+  const held = form.decode(x, audit);
+
+  // and inference reached it too: this is a DateTime, three levels down
+  assert.equal(iso.dateOf(held.of.by.seen), '1970-01-01');
+  assert.deepEqual(form.encode(held, audit), x);
+
+  // one wrong field at the bottom is enough to refuse the whole thing
+  const wrong = { when: 0, of: { at: 0, by: { id: 'a', seen: '1970-01-01T00:00:00.000Z' } } };
+  assert.ok(!form.model(wrong, audit));
 });
