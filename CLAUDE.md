@@ -108,6 +108,7 @@ these compress `.claude/style-kb.md`. go there for the examples.
 - a doc comment says what a thing is *for*. the signature already says what it takes.
 - the teaching goes in the spec: a `/* */` essay at the top, then narration above the lines it explains.
 - lowercase prose everywhere. headings, commit messages, ci step names, comments.
+- **no em dashes.** not in comments, not in the readme, not in commit messages, not in this file. use parentheses for an aside, a colon to introduce, a semicolon to join two clauses that belong together, or rewrite the sentence so it does not need one. the same goes for en dashes used as punctuation.
 
 ### specs
 
