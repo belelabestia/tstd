@@ -971,7 +971,9 @@ readme rule: "when a guard checks more than its type can say, brand the requirem
 
 ### o7. `is.json` uses `.every` while `model`/`models` loop
 
-f7 says imperative loops; `json` uses `Object.values(x).every(json)` and `x.every(json)`. pick one. i would keep `.every` in `json` (it is an expression, and e1 requires the body stay an expression) and note the exception explicitly, but it should be a stated exception, not an accident.
+f7 says imperative loops; `json` uses `Object.values(x).every(json)` and `x.every(json)`.
+
+**ruled: keep `.every`, and state the exception.** a guard body has to stay an expression (e1), because that is what keeps boolean algebra matching type algebra (d5); a `for` would force a statement body and break it. so `.every` inside a guard is sanctioned, and everywhere else you loop and return early. it is now a rule in `CLAUDE.md` rather than an accident in one file, and per o6b it goes in the docs, not in a comment.
 
 ### o8. `scope.sync(instance.method, ...)` silently loses `this`
 

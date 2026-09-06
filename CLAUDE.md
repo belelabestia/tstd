@@ -5,7 +5,7 @@
 two documents govern this repo, and both are binding:
 
 - `readme.md`: the principles and the style rules. it is a **specification**, not aspiration. code that contradicts it is a bug, and so is a rule you follow only halfway.
-- `.claude/style-kb.md`: 65 worked entries, each grounded in a real line here, in ❌ instead of / ✅ do form. **read it before writing anything**, including prose. it also carries the open work at the top.
+- `.claude/style-kb.md`: worked entries, each grounded in a real line here, in ❌ instead of / ✅ do form. **read it before writing anything**, including prose. it also carries the open work at the top.
 
 when the two disagree, say so instead of picking one silently.
 
@@ -87,6 +87,7 @@ these compress `.claude/style-kb.md`. go there for the examples.
 
 - the body is one boolean expression, one condition per line, operator leading. it stays an expression so boolean algebra keeps matching type algebra.
 - compose with `&&` and `||`. there are no combinators and there will be none.
+- a guard body stays an expression, so `.every` is the one sanctioned exception to the loop rule: `is.json` uses it because a `for` would force a statement body. everywhere else, loop and return early.
 - narrow, never parse. validation does not allocate.
 - narrowing applies to references, not to literal expressions. bind to a variable first.
 
