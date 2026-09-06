@@ -81,6 +81,11 @@ test('read the calendar in a zone', () => {
 
   // a zone this runtime does not know never gets past the guard
   assert.ok(!iso.zone('Middle/Earth'));
+
+  // the guard asks the runtime rather than a table, so every name the runtime honours passes;
+  // `Intl.supportedValuesOf` lists neither `UTC` nor `Asia/Kolkata`, and both work fine
+  assert.ok(iso.zone('UTC'));
+  assert.ok(iso.zone('Asia/Kolkata'));
 });
 
 test('measure and move in time', () => {

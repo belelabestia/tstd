@@ -62,7 +62,7 @@ export const duration = (x: unknown): x is Duration =>
 
 export const zone = (x: unknown): x is Zone =>
   is.string(x) &&
-  Intl.supportedValuesOf('timeZone').includes(x);
+  make(Intl.DateTimeFormat, 'en-US', { timeZone: x }).branch === 'success';
 
 /** the instant a foreign spelling points at, or nothing if there is none */
 export const parse = (x: string) => canonical(Date.parse(x)) as DateTime | undefined;
