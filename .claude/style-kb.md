@@ -18,7 +18,11 @@ form.zoned(rome)   // Field<iso.Date, iso.DateTime>, roughly
 
 the promising line, and the reason it fits: **let the field's own `is` do the zone-aware checking**. a `Field`'s guard is an ordinary function, so it can be closed over the zone and reject a local spelling that is ambiguous in it. then `decode` receives a value already proven unambiguous and stays total, and the invariant that failure lives only in narrowing survives intact. worth trying before anything cleverer.
 
-### 2. a module for resources
+### 2. a module for resources — done, see o15
+
+built as `src/lease.ts` on 2026-09-07. the section below is kept only for the questions it raised; the answers are in o15.
+
+#### the old note
 
 the value/resource line is settled (o14) but only one half exists. `make` and `scope` cover instantiating and calling things that throw; **nothing covers a resource's lifetime** — establish, use, release, release even when the use failed. `result.spec.ts` walks a connection through `scope.sync` by hand, which is the current answer and is not one.
 
@@ -55,6 +59,7 @@ src/flat.ts     -> Flat
 src/is.ts       -> Json, TypeGuard, Schema, Model, Finite, + guards
 src/iso.ts      -> Date, Time, DateTime, Duration, Timestamp, Zone, + guards and operations
 src/form.ts     -> Field, Fields, Encoded, Decoded, plain, nest, model, decode, encode
+src/lease.ts    -> Lease, lease
 ```
 
 a type and the factory that produces it are one concept, so they live in one file. there is no `types.ts` and there must never be one.
@@ -1185,6 +1190,24 @@ what to know when writing one:
 - **`plain` covers the common case**: most fields need no form at all, because o12 made the wire type and the memory type the same type. forms are for the genuinely different in-memory shape, like an instant stored as a timestamp.
 
 on the name: **`form`** is the author's own word for the concept — "declare their form in memory or in json" — and it passes the literalness test `Json` and `iso` set, since the module declares the form a value takes on each side. `io` was the runner-up and was rejected because it names an activity the module never performs (it reads no file and opens no socket; it is a pure function on a value someone else moved) and because it invites the io-ts comparison this design inverts. the type is `Field`, not `Form`, so `satisfies form.Field<...>` does not stutter.
+
+### o15. a lease is a lifetime, and it branches per step — house (built by a subagent)
+
+`make` covers building what throws, `scope` covers calling it; **`lease` covers holding something you must give back**. four steps, every one of which can throw, passed as one record:
+
+```ts
+lease.sync({
+  open: () => sdk.connect(false),
+  use: conn => conn.query(false),
+  close: conn => conn.close(false),
+  abort: conn => conn.close(false)
+});
+```
+
+- **`close` and `abort`, never a `finally`.** zig's `defer`/`errdefer` split, renamed: `abort` names what happens to the *resource*, where `errdefer` names *when the callback fires*. commit/rollback maps onto close/abort exactly. when the two really are the same, pass the same named function twice — that states the sameness instead of hiding it, and a single release parameter would decide it for the caller.
+- **the outcome is a free branch union, not a `Result`**: `Union<{ success: V, open: unknown, use: unknown, close: unknown, abort: unknown }>`. one branch per step that can throw. `Result<V, unknown>` would erase the distinction the module exists to make — "the use failed" versus "you no longer hold the resource". every non-success payload is `unknown`, so the funnel still collapses in one line when a caller does not care.
+- **decide, never accumulate.** use ok + close throws → branch `close`, and the used value is dropped. use throws + abort throws → branch `abort`, and the use error is lost: the failed call is over, the resource is still out there. that loss is the price of refusing error accumulation, and the spec says so in prose rather than hiding it.
+- taking four functions is **not** the callback rule being broken. `lease` is a boundary module like `make` and `scope` — it is where `try`/`catch` lives, so it is an entrypoint by construction. this was the one thing the subagent had to guess at; it is now stated in `CLAUDE.md`.
 
 ### o11. line endings — ruled and fixed
 
