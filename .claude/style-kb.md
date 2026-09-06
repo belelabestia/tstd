@@ -1128,9 +1128,19 @@ what to know when writing one:
   });
   ```
 
+  nest the declarations, not just the payload — a form written inline ends up shaped exactly like the json it describes, which is the whole point of it:
+
   ```ts
-  const session = { at: instant, by: form.nest(user) } satisfies form.Fields;
-  const audit = { when: instant, of: form.nest(session) } satisfies form.Fields;
+  const audit = {
+    when: instant,
+    of: form.nest({
+      at: instant,
+      by: form.nest({
+        id: form.plain(is.string),
+        seen: instant
+      })
+    })
+  } satisfies form.Fields;
   ```
 
   nesting nests, because a nested model is a field like any other, and inference survives the descent — `form.decode(x, audit).of.by.seen` is a `DateTime` three levels down, verified in both directions. this is still not a combinator: `nest` composes nothing and adds no algebra, it only writes lines you would have written yourself. that is the test to apply before adding anything else of the kind (a `list` for arrays of models, say) — **write the boilerplate, don't invent an operator**.
