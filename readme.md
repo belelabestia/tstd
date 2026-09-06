@@ -68,6 +68,7 @@ to get the most out of `tstd`, you should consider to learn to code with the fol
 
 - use `const` whenever possible, even when mutation occurs; use `let` when reassignment is by design
 - avoid `function`, `class`, `constructor`, `this`, `new` as they provide redundant constructs
+- `make` owns every class instantiation there is, native ones included; the instance never escapes the module that built it
 - consequently, do not use `extends` or `super` as no one needs class hierarchies
 - always use `type` over `interface` as they have too much overlap and `type` covers everything
 

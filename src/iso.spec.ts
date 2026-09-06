@@ -18,6 +18,9 @@ import * as iso from './iso.js';
   and the only thing a date module owes you is functions that manipulate it without ever mutating it.
 
   `iso` is named after the notation, exactly like `Json` is: these are all iso 8601 lexical forms.
+
+  the global `Date` never escapes this module: it gets built with `make`, which owns every
+  instantiation there is, and only its canonical string comes back out.
 */
 
 test('narrow before you map', () => {
@@ -65,6 +68,7 @@ test('measure and move in time', () => {
   // a duration is milliseconds, so it is a number you can read
   assert.equal(iso.diff(from, to), iso.hours(30));
   assert.equal(iso.days(1), 86400000);
+  assert.equal(iso.weeks(1), iso.days(7));
 
   // and moving is total except at the very edge of representable time,
   // which is absence, not an error worth explaining

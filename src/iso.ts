@@ -1,5 +1,6 @@
 import { Brand } from './brand.js';
 import * as is from './is.js';
+import { make } from './result.js';
 
 /** a calendar date, as `yyyy-mm-dd` */
 export type Date = string & Brand<'Date'>;
@@ -8,7 +9,7 @@ export type Date = string & Brand<'Date'>;
 export type Time = string & Brand<'Time'>;
 
 /** an instant, as `yyyy-mm-ddThh:mm:ss.sssZ` */
-export type Datetime = string & Brand<'Datetime'>;
+export type DateTime = string & Brand<'DateTime'>;
 
 /** an amount of time, in milliseconds */
 export type Duration = number & Brand<'Duration'>;
@@ -21,14 +22,17 @@ const canonical = (ms: number) => {
   if (!is.number(ms)) return;
   if (Math.abs(ms) > 8.64e15) return;
 
-  return new Date(ms).toISOString();
+  const instance = make(Date, ms);
+  if (instance.branch === 'error') return;
+
+  return instance.value.toISOString();
 };
 
 export const timestamp = (x: unknown): x is Timestamp =>
   is.number(x) &&
   is.present(canonical(x));
 
-export const datetime = (x: unknown): x is Datetime =>
+export const datetime = (x: unknown): x is DateTime =>
   is.string(x) &&
   canonical(Date.parse(x)) === x;
 
@@ -43,26 +47,26 @@ export const time = (x: unknown): x is Time =>
 export const duration = (x: unknown): x is Duration =>
   is.number(x);
 
-/** the instant this code is running at */
-export const now = () => new Date().toISOString() as Datetime;
-
 /** the instant a timestamp points at */
-export const fromTimestamp = (x: Timestamp) => new Date(x).toISOString() as Datetime;
+export const fromTimestamp = (x: Timestamp) => canonical(x) as DateTime;
+
+/** the instant this code is running at */
+export const now = () => fromTimestamp(Date.now() as Timestamp);
 
 /** the milliseconds since the epoch an instant points at */
-export const toTimestamp = (x: Datetime) => Date.parse(x) as Timestamp;
+export const toTimestamp = (x: DateTime) => Date.parse(x) as Timestamp;
 
 /** the calendar date an instant falls on */
-export const dateOf = (x: Datetime) => x.slice(0, 10) as Date;
+export const dateOf = (x: DateTime) => x.slice(0, 10) as Date;
 
 /** the wall clock time an instant falls at */
-export const timeOf = (x: Datetime) => x.slice(11, 23) as Time;
+export const timeOf = (x: DateTime) => x.slice(11, 23) as Time;
 
 /** the instant a duration away from another, or nothing if there is none */
-export const add = (x: Datetime, d: Duration) => canonical(toTimestamp(x) + d) as Datetime | undefined;
+export const add = (x: DateTime, d: Duration) => canonical(toTimestamp(x) + d) as DateTime | undefined;
 
 /** how long it takes to get from one instant to another */
-export const diff = (from: Datetime, to: Datetime) => (toTimestamp(to) - toTimestamp(from)) as Duration;
+export const diff = (from: DateTime, to: DateTime) => (toTimestamp(to) - toTimestamp(from)) as Duration;
 
 export const millis = (x: number) => x as Duration;
 
@@ -73,3 +77,5 @@ export const minutes = (x: number) => x * 60000 as Duration;
 export const hours = (x: number) => x * 3600000 as Duration;
 
 export const days = (x: number) => x * 86400000 as Duration;
+
+export const weeks = (x: number) => x * 604800000 as Duration;

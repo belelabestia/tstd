@@ -212,7 +212,11 @@ if (url.branch === 'error') return url;
 url.value.href;
 ```
 
-`make` is the single sanctioned interop point with class-based apis. its signature is the only place `new` appears in the source:
+`make` owns **every** instantiation there is, native constructors included, even ones that provably cannot throw — `iso.ts` builds its `Date` through `make(Date, ms)` and branches on the error it knows will not come. the instance never escapes the module that built it; only a branded string does. readme rule: "`make` owns every class instantiation there is, native ones included; the instance never escapes the module that built it".
+
+note `make(Date)` with no arguments does not typecheck — TS resolves the constructor to a multi-argument overload — so reach for a static like `Date.now()` instead, which is not instantiation at all.
+
+its signature is the only place `new` appears in the source:
 
 ```ts
 export const make = <Args extends unknown[], Instance>(c: new (...args: Args) => Instance, ...args: Args) => { ... }
@@ -968,6 +972,39 @@ i tried to remove it and could not. what fails, so nobody retries it blindly:
 both produce `value: { a: number } | undefined`, which is not assignable to a `Union` branch's `value: { a: number }`. overloading a typed const does not help either: the arrow implementation must itself be assignable to the overload, so the cast just moves. making `Branch`'s `value` optional would fix the void branch and break every consumer that reads `.value` — `url.value.href` in `result.spec.ts` for one.
 
 so: an optional parameter is `V | undefined`, and no single arrow signature turns that back into `V`. the assertion is the price of `branch('xl')` and `branch('xs', { a: 1 })` being one function.
+
+### o12. narrow, then map — house (ruled, and now built)
+
+the answer to schema validation, and to why tstd has no codecs. a codec like `NumberFromString` fuses two questions: *is this parseable* and *what is the value*. split them:
+
+> **narrowing owns every failure. mapping receives a proven value, so it is total and returns it unboxed.**
+
+the brand is the receipt that carries the proof from step one to step two. the payoff is that one schema declares the wire form, the db form and the memory form at once, because they are the same type:
+
+```ts
+const user = { id: is.string, created: iso.datetime, every: iso.duration } satisfies is.Schema;
+type user = Flat<is.Model<typeof user>>;
+```
+
+that model is `Json` by construction, so it round-trips through `JSON.parse`/`stringify` untouched, and it is still branded, so it maps without being validated again.
+
+rules that came out of building `iso.ts`:
+
+- **name a conversion after its source, never its destination** — there are many ways to reach a number, so `fromTimestamp`, not `toNumber`. a destination name is fine only when exactly one route exists (`toTimestamp`, `dateOf`).
+- **name a module after the notation it speaks**, as `Json` does — `iso` covers date, time, datetime and duration because all four are iso 8601 lexical forms.
+- **there is no in-memory form to convert to.** an instant is a branded string on the wire and in memory alike. what other libraries call a view model is just the representation that happens to suit memory better, and it is data too, not presentation.
+- **durations are milliseconds, a branded number** — `number` is `Json` anyway, and `P1M` is not a fixed amount of time, so an ISO duration string would force `add` to make calendar decisions on the caller's behalf. anything calendar-aware belongs in its own module.
+- **casts are expected here**: one per branded return, each branding a computation the input's brand already proved. this is o6b working as designed, not abuse of it.
+- **partiality is absence** — `add` can only fail by leaving representable time, which needs no explanation, so it returns `DateTime | undefined` rather than a `Result`.
+- **one canonical spelling per form.** an offset or a seconds-precision time is rejected; normalise through `Date.parse` → `iso.timestamp` → `iso.fromTimestamp`.
+
+the guards need no regex — a string is a canonical instant exactly when it round-trips:
+
+```ts
+export const datetime = (x: unknown): x is DateTime =>
+  is.string(x) &&
+  canonical(Date.parse(x)) === x;
+```
 
 ### o11. line endings — ruled and fixed
 
