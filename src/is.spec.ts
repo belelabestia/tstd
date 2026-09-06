@@ -22,7 +22,7 @@ test('safely navigate the unknown', () => {
 });
 
 test('validate model schemas', () => {
-  // here's a more complex unkown variable
+  // here's a more complex unknown variable
   const a: unknown = {
     a: 1,
     b: {
@@ -67,14 +67,14 @@ test('validate combined types', () => {
   // same goes for literals
   // you're free to implement as you wish
   // typescript will infer this
-  const isBBool = (x: unknown) => x === 'a' || x === 'b' || x === 'c';
-  assert.ok(isBBool('a'));
-  assert.ok(!isBBool('d'));
+  const isAbc = (x: unknown) => x === 'a' || x === 'b' || x === 'c';
+  assert.ok(isAbc('a'));
+  assert.ok(!isAbc('d'));
 
   // this won't be inferred
-  const isBArrIncl = (x: unknown): x is 'a' | 'b' | 'c' => is.string(x) && ['a', 'b', 'c'].includes(x);
-  assert.ok(isBArrIncl('a'));
-  assert.ok(!isBArrIncl('d'));
+  const isAbcIncl = (x: unknown): x is 'a' | 'b' | 'c' => is.string(x) && ['a', 'b', 'c'].includes(x);
+  assert.ok(isAbcIncl('a'));
+  assert.ok(!isAbcIncl('d'));
 
   // you can combine as you wish
   // as long as you use boolean logic, typescript will infer

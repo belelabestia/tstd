@@ -3,7 +3,7 @@ import * as assert from 'node:assert/strict';
 import { Flat } from './flat.js';
 
 test('flatten complex types', () => {
-  // collapse comples types to readable object literals
+  // collapse complex types to readable object literals
   type Complicated<T> = Pick<Record<number, T[]>, 1 | 2 | 3>;
   interface A extends Complicated<{ a: number, b: string; }> { }
 

@@ -77,8 +77,9 @@ test('do resource management with the scope api', () => {
   conn = scope.sync(sdk.connect, false);
   assert.equal(conn.branch, 'success');
 
-  // we can then use it
-  const res = scope.sync(conn.value.query, true);
+  // we can then use it; a method bound to `this` has to be wrapped,
+  // as scope calls it detached: one more reason not to write classes
+  const res = scope.sync(() => conn.value.query(true));
   assert.equal(res.branch, 'error');
 
   // and make sure we clean everything up

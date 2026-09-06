@@ -14,7 +14,7 @@ import { branch, Union } from './branch.js';
   branch is a factory function used to make single branches of tagged union types;
   it's designed to work with the Union generic type.
 
-  this design aims at staying very close to vanilla ts while significanly improving its ergonomics.
+  this design aims at staying very close to vanilla ts while significantly improving its ergonomics.
 */
 
 test('branch everything', () => {
