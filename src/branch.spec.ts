@@ -65,3 +65,19 @@ test('branch something', () => {
       return;
   }
 });
+
+// a symbol makes a branch key that cannot collide with anyone else's tag;
+// it has to be declared here, as only a module-level const is a unique symbol
+const missing = Symbol('missing');
+
+test('branch with a symbol', () => {
+  const lookup = (key: string) => {
+    if (key === 'a') return branch('found', 1);
+    return branch(missing);
+  };
+
+  type Res = Union<{ found: number, [missing]: void; }>;
+  const res: Res = lookup('b');
+
+  assert.equal(res.branch, missing);
+});
