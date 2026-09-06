@@ -52,3 +52,10 @@ export const encode = <T extends Fields>(x: Decoded<T>, forms: T) => {
   for (const key in forms) out[key] = forms[key].encode(x[key] as never) as Encoded<T>[typeof key];
   return out;
 };
+
+/** a field for a model nested in another */
+export const nest = <T extends Fields>(forms: T) => ({
+  is: (x: unknown): x is Encoded<T> => model(x, forms),
+  decode: (x: Encoded<T>) => decode(x, forms),
+  encode: (x: Decoded<T>) => encode(x, forms)
+});

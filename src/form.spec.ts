@@ -72,15 +72,12 @@ test('refuse what does not fit the encoded form', () => {
   assert.ok(!form.model([], user));
 });
 
-test('nest by calling, not by combining', () => {
-  // a form for a whole model is just a form whose two directions call the walkers
+test('nest a model in another', () => {
+  // a nested model is a field whose two directions call the walkers on the model;
+  // that is always the same three lines with the same arguments, so `nest` writes them
   const session = {
     at: instant,
-    by: {
-      is: (x: unknown): x is form.Encoded<typeof user> => form.model(x, user),
-      decode: (x: form.Encoded<typeof user>) => form.decode(x, user),
-      encode: (x: form.Decoded<typeof user>) => form.encode(x, user)
-    }
+    by: form.nest(user)
   } satisfies form.Fields;
 
   const x: unknown = JSON.parse('{"at":0,"by":{"id":"a","seen":0}}');
