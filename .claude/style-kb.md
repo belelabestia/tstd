@@ -843,7 +843,7 @@ lowercase step names (`checkout`, `setup node`, `install deps`, `build`, `publis
 
 these are the places where i think the code contradicts the readme. each needs a ruling before it becomes a rule.
 
-**status:** o1–o5 and o7–o9 are ruled and applied on `claude-onboarding`. o6 awaits a ruling. o10 stands, except `is.number`, which is now branded — see o4b.
+**status:** o1–o5 and o7–o9 are ruled and applied on `claude-onboarding`. o6 is ruled too — see o6b. o10 stands, except `is.number`, which is now branded — see o4b.
 
 ### o1. published output does not resolve
 
@@ -943,7 +943,31 @@ const res = scope.sync(() => conn.value.query(true));
 
 ### o10. things i would not change, for the record
 
-so the reasoning is on file: `Result<S, E>` always carrying both branches even for infallible functions (**ruled**: infallible functions return the unboxed value, so the situation never arises — see f6); the absence of `map`/`andThen`/`unwrap` (**ruled**: in the readme now, permanent); `Json` including `undefined` (**ruled**: presence/absence comes first); `is.number` rejecting `NaN` without a brand (**overruled** — it is branded now, see o4b, and my legibility objection did not survive contact with the declaration output); `branch`'s single `value as V` cast (still open, o6); `Brand`'s unexported `unique symbol` (emits correctly into `brand.d.ts`).
+so the reasoning is on file: `Result<S, E>` always carrying both branches even for infallible functions (**ruled**: infallible functions return the unboxed value, so the situation never arises — see f6); the absence of `map`/`andThen`/`unwrap` (**ruled**: in the readme now, permanent); `Json` including `undefined` (**ruled**: presence/absence comes first); `is.number` rejecting `NaN` without a brand (**overruled** — it is branded now, see o4b, and my legibility objection did not survive contact with the declaration output); `branch`'s single `value as V` cast (ruled: see o6b); `Brand`'s unexported `unique symbol` (emits correctly into `brand.d.ts`).
+
+### o6b. `as` where nothing else works — house (ruled)
+
+readme rule: "`as` is allowed exactly where it's the only way to obtain a peculiar typescript behavior, as in `branch`". it goes in no comment — the rule lives here and in the readme, so the source stays bare per g1.
+
+the canonical instance:
+
+```ts
+export const branch = <B extends string | symbol, V = void>(branch: B, value?: V) => ({ branch, value: value as V });
+```
+
+i tried to remove it and could not. what fails, so nobody retries it blindly:
+
+```ts
+// destructured conditional rest tuple — V is inferred fine, but value comes out V | undefined
+(branch: B, ...[value]: V extends void ? [] : [V]) => ({ branch, value })
+
+// indexed instead of destructured — identical failure, TS collapses the tuple to [] | [V]
+(branch: B, ...rest: V extends void ? [] : [V]) => ({ branch, value: rest[0] })
+```
+
+both produce `value: { a: number } | undefined`, which is not assignable to a `Union` branch's `value: { a: number }`. overloading a typed const does not help either: the arrow implementation must itself be assignable to the overload, so the cast just moves. making `Branch`'s `value` optional would fix the void branch and break every consumer that reads `.value` — `url.value.href` in `result.spec.ts` for one.
+
+so: an optional parameter is `V | undefined`, and no single arrow signature turns that back into `V`. the assertion is the price of `branch('xl')` and `branch('xs', { a: 1 })` being one function.
 
 ### o11. line endings — ruled and fixed
 

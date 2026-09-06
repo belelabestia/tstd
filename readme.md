@@ -97,5 +97,6 @@ to get the most out of `tstd`, you should consider to learn to code with the fol
 ### types
 
 - prefer type narrowing (`x is T`) to parsing (`return x as T`) for validation as it is a cheaper abstraction
+- `as` is allowed exactly where it's the only way to obtain a peculiar typescript behavior, as in `branch`
 - native errors and values from outside are `unknown` by design: don't try to fix this, just narrow their type
 - when a guard checks more than its type can say, brand the requirement, as `is.number` does with `Finite`
