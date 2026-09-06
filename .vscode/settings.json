@@ -2,5 +2,6 @@
   "javascript.format.semicolons": "insert",
   "typescript.format.semicolons": "insert",
   "editor.formatOnSave": true,
-  "editor.formatOnType": true
+  "editor.formatOnType": true,
+  "js/ts.tsdk.path": "node_modules/typescript/lib"
 }
