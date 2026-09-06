@@ -1,6 +1,5 @@
 import { Flat } from './flat.js';
 import * as is from './is.js';
-import * as iso from './iso.js';
 
 /** the two forms one value takes, plus the guard that proves the encoded one */
 export type Field<E extends is.Json, D> = {
@@ -30,13 +29,6 @@ export const plain = <E extends is.Json>(guard: is.TypeGuard<E>) => ({
   is: guard,
   decode: (x: E) => x,
   encode: (x: E) => x
-});
-
-/** a field that stores an instant the way a zone writes it down, rather than the way utc does */
-export const zoned = (zone: iso.Zone) => ({
-  is: (x: unknown): x is iso.Local & iso.Unambiguous => iso.local(x) && iso.unambiguous(x, zone),
-  decode: (x: iso.Local & iso.Unambiguous) => iso.fromLocal(x, zone),
-  encode: (x: iso.DateTime & iso.Unambiguous) => iso.localOf(x, zone)
 });
 
 export const model = <T extends Fields>(x: unknown, forms: T): x is Encoded<T> => {

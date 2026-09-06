@@ -118,15 +118,27 @@ test('nest a model in another, twice over', () => {
   assert.ok(!form.model(wrong, audit));
 });
 
+/*
+  a field is four lines, so tstd ships none of them: here is the one for an instant
+  stored the way a zone writes it down, rather than the way utc does.
+
+  a zone is a value, so the factory takes one and closes over it; the field's guard is
+  an ordinary function, which is what lets it know about daylight saving. the brand names
+  the zone it was checked in, so a spelling proven in one zone cannot be read in another.
+*/
+const zoned = <Z extends string>(zone: Z & iso.Zone) => ({
+  is: (x: unknown): x is iso.Local & iso.Unambiguous<Z> => iso.local(x) && iso.unambiguous(x, zone),
+  decode: (x: iso.Local & iso.Unambiguous<Z>) => iso.fromLocal(x, zone),
+  encode: (x: iso.DateTime & iso.Unambiguous<Z>) => iso.localOf(x, zone)
+});
+
 test('store an instant as a zone writes it, not as utc does', () => {
   const rome = 'Europe/Rome';
   if (!iso.zone(rome)) assert.fail();
 
-  // a zone is a value, so the field takes one and closes over it;
-  // the field's guard is an ordinary function, which is what makes that possible
   const booking = {
     id: form.plain(is.string),
-    starts: form.zoned(rome)
+    starts: zoned(rome)
   } satisfies form.Fields;
 
   // this is what the database holds: midnight and a half, as rome writes it
@@ -146,7 +158,7 @@ test('refuse a local spelling that the zone does not name once', () => {
   const rome = 'Europe/Rome';
   if (!iso.zone(rome)) assert.fail();
 
-  const booking = { starts: form.zoned(rome) } satisfies form.Fields;
+  const booking = { starts: zoned(rome) } satisfies form.Fields;
 
   // the guard owns every failure there is, so it is the guard that knows about daylight saving:
   // this hour never happened in rome, and this one happened twice

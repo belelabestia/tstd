@@ -15,7 +15,7 @@ export type DateTime = string & Brand<'DateTime'>;
 export type Local = string & Brand<'Local'>;
 
 /** the proof that a local spelling and an instant name each other in a zone, and nothing else does */
-export type Unambiguous = Brand<'Unambiguous'>;
+export type Unambiguous<Z extends string> = Brand<`unambiguous in ${Z}`>;
 
 /** an amount of time, in milliseconds */
 export type Duration = number & Brand<'Duration'>;
@@ -147,7 +147,7 @@ const instants = (x: Local, zone: Zone) => {
 };
 
 /** whether a local date and time and an instant name each other in a zone, and nothing else does */
-export const unambiguous = <T extends DateTime | Local>(x: T, zone: Zone): x is T & Unambiguous => (
+export const unambiguous = <T extends DateTime | Local, Z extends string>(x: T, zone: Z & Zone): x is T & Unambiguous<Z> => (
   datetime(x) &&
   instants(reading(x, zone), zone).length === 1
 ) || (
@@ -156,10 +156,10 @@ export const unambiguous = <T extends DateTime | Local>(x: T, zone: Zone): x is 
 );
 
 /** the local date and time an instant is written down as in a zone */
-export const localOf = (x: DateTime & Unambiguous, zone: Zone) => reading(x, zone) as Local & Unambiguous;
+export const localOf = <Z extends string>(x: DateTime & Unambiguous<Z>, zone: NoInfer<Z> & Zone) => reading(x, zone) as Local & Unambiguous<Z>;
 
 /** the instant a local date and time names in a zone */
-export const fromLocal = (x: Local & Unambiguous, zone: Zone) => instants(x, zone)[0] as DateTime & Unambiguous;
+export const fromLocal = <Z extends string>(x: Local & Unambiguous<Z>, zone: NoInfer<Z> & Zone) => instants(x, zone)[0] as DateTime & Unambiguous<Z>;
 
 /** the instant a duration away from another, or nothing if there is none */
 export const add = (x: DateTime, d: Duration) => canonical(toTimestamp(x) + d) as DateTime | undefined;
