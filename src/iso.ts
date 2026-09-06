@@ -66,23 +66,11 @@ export const now = () => fromTimestamp(Date.now() as Timestamp);
 /** the milliseconds since the epoch an instant points at */
 export const toTimestamp = (x: DateTime) => Date.parse(x) as Timestamp;
 
-/** the calendar date an instant falls on */
-export const dateOf = (x: DateTime) => x.slice(0, 10) as Date;
-
-/** the wall clock time an instant falls at */
-export const timeOf = (x: DateTime) => x.slice(11, 23) as Time;
-
-/** the instant a duration away from another, or nothing if there is none */
-export const add = (x: DateTime, d: Duration) => canonical(toTimestamp(x) + d) as DateTime | undefined;
-
-/** how long it takes to get from one instant to another */
-export const diff = (from: DateTime, to: DateTime) => (toTimestamp(to) - toTimestamp(from)) as Duration;
-
 /**
- * the reading operations that cannot answer without a time zone
+ * the parts an instant is made of, as a zone reads them
  * the brand proves the zone is known, so building the formatter cannot fail
  */
-export const init = (zone: Zone) => {
+const parts = (x: DateTime, zone: Zone) => {
   const format = make(Intl.DateTimeFormat, 'en-US', {
     timeZone: zone,
     hourCycle: 'h23',
@@ -95,29 +83,33 @@ export const init = (zone: Zone) => {
     fractionalSecondDigits: 3
   }).value as Intl.DateTimeFormat;
 
-  const parts = (x: DateTime) => {
-    const out: Record<string, string> = {};
+  const out: Record<string, string> = {};
 
-    for (const part of format.formatToParts(toTimestamp(x))) out[part.type] = part.value;
-    return out;
-  };
-
-  return {
-    /** the calendar date an instant falls on, in this zone */
-    dateOf: (x: DateTime) => {
-      const part = parts(x);
-
-      return `${part.year}-${part.month}-${part.day}` as Date;
-    },
-
-    /** the wall clock time an instant falls at, in this zone */
-    timeOf: (x: DateTime) => {
-      const part = parts(x);
-
-      return `${part.hour}:${part.minute}:${part.second}.${part.fractionalSecond}` as Time;
-    }
-  };
+  for (const part of format.formatToParts(toTimestamp(x))) out[part.type] = part.value;
+  return out;
 };
+
+/** the calendar date an instant falls on, in utc unless a zone says otherwise */
+export const dateOf = (x: DateTime, zone?: Zone) => {
+  if (is.absent(zone)) return x.slice(0, 10) as Date;
+
+  const part = parts(x, zone);
+  return `${part.year}-${part.month}-${part.day}` as Date;
+};
+
+/** the wall clock time an instant falls at, in utc unless a zone says otherwise */
+export const timeOf = (x: DateTime, zone?: Zone) => {
+  if (is.absent(zone)) return x.slice(11, 23) as Time;
+
+  const part = parts(x, zone);
+  return `${part.hour}:${part.minute}:${part.second}.${part.fractionalSecond}` as Time;
+};
+
+/** the instant a duration away from another, or nothing if there is none */
+export const add = (x: DateTime, d: Duration) => canonical(toTimestamp(x) + d) as DateTime | undefined;
+
+/** how long it takes to get from one instant to another */
+export const diff = (from: DateTime, to: DateTime) => (toTimestamp(to) - toTimestamp(from)) as Duration;
 
 export const millis = (x: number) => x as Duration;
 

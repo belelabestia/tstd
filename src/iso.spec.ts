@@ -66,22 +66,20 @@ test('read the calendar in a zone', () => {
   const x = '2024-01-01T23:30:00.000Z';
   if (!iso.datetime(x)) assert.fail();
 
-  // so the operations that need one live behind `init`, which only takes a proven zone;
+  // so the operations that need one take it as an argument, the way a schema is taken;
   // note the zone has to be a variable: narrowing applies to references, not to literals
-  const where = 'Europe/Rome';
-  if (!iso.zone(where)) assert.fail();
-
-  const rome = iso.init(where);
+  const rome = 'Europe/Rome';
+  if (!iso.zone(rome)) assert.fail();
 
   // in rome it is already the second, half an hour past midnight
-  assert.equal(rome.dateOf(x), '2024-01-02');
-  assert.equal(rome.timeOf(x), '00:30:00.000');
+  assert.equal(iso.dateOf(x, rome), '2024-01-02');
+  assert.equal(iso.timeOf(x, rome), '00:30:00.000');
 
-  // while the module itself always answers in utc
+  // while leaving the zone out answers in utc, which is the only answer that needs no decision
   assert.equal(iso.dateOf(x), '2024-01-01');
   assert.equal(iso.timeOf(x), '23:30:00.000');
 
-  // a zone this runtime does not know never gets as far as `init`
+  // a zone this runtime does not know never gets past the guard
   assert.ok(!iso.zone('Middle/Earth'));
 });
 
