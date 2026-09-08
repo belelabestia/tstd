@@ -109,6 +109,8 @@ to get the most out of `tstd`, you should consider to learn to code with the fol
 
 ### types
 
+- a type is an expression the compiler evaluates: treat an alias as a comptime `const` and its parameters as that const's arguments
+- so name and reuse types the way you name and reuse values; a shape written twice is duplication, named or not, and a type worth naming is not always a type worth exporting
 - prefer type narrowing (`x is T`) to parsing (`return x as T`) for validation as it is a cheaper abstraction
 - `as` is allowed exactly where it's the only way to obtain a peculiar typescript behavior, as in `branch`
 - native errors and values from outside are `unknown` by design: don't try to fix this, just narrow their type

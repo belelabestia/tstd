@@ -402,6 +402,46 @@ readme: "native errors and values from outside are `unknown` by design: don't tr
 
 ---
 
+### d8. a type is a comptime const: house
+
+the governing idea behind every other entry in this section. a type is not documentation and not a declaration ceremony: it is an expression the compiler evaluates before your program runs. an alias is a `const` in that language, and its parameters are that const's arguments.
+
+```ts
+❌ instead of
+sync: <U extends Result<unknown, unknown>>(work: (hold: <R>(x: {
+  open: () => R,
+  close: (r: R) => void,
+  abort: (r: R) => void;
+}) => Result<R, unknown>) => U) => { ... },
+async: async <U extends Result<unknown, unknown>>(work: (hold: <R>(x: {
+  open: () => Promise<R>,
+  close: (r: R) => Promise<void>,
+  abort: (r: R) => Promise<void>;
+}) => Promise<Result<R, unknown>>) => Promise<U>) => { ... }
+
+✅ do
+type Resource<R> = {
+  open: () => R,
+  close: (r: R) => void,
+  abort: (r: R) => void;
+};
+
+type Async<S> = { [K in keyof S]: S[K] extends (...args: infer A) => infer T ? (...args: A) => Promise<T> : never };
+
+type Hold = <R>(x: Resource<R>) => Result<R, unknown>;
+type Holds = <R>(x: Async<Resource<R>>) => Promise<Result<R, unknown>>;
+
+sync: <U extends Result<unknown, unknown>>(work: (hold: Hold) => U) => { ... },
+async: async <U extends Result<unknown, unknown>>(work: (hold: Holds) => Promise<U>) => { ... }
+```
+
+what follows from reading a type as a const:
+
+- **a shape written twice is duplication**, exactly as a repeated expression is, and naming it costs one line. nobody would inline the same four-line object literal in two functions to avoid declaring a `const`.
+- **naming and exporting are different decisions.** `Resource`, `Async`, `Release`, `Hold` and `Holds` are named and stay in `scope.ts`; only `Scope` and `Exit` leave it. the api surface rule is about what a caller can reach, not about what the author is allowed to name. the old wording of the naming rule ran the two together and said the argument record "stays inline and unnamed"; that was wrong and `CLAUDE.md` has been corrected.
+- **a generic type is a function call.** `Async<Resource<R>>` reads as one, and it is the reason the async half is not a second copy of the sync one.
+- **a computation is fine in a type.** a lookup like `Extract<U, Branch<'error', unknown>>['value']` is not cleverness; the alternative is `as` in the body, which loses what the compiler already knew (o19).
+- **the same rules that govern values govern types**: one concept per name, no category suffixes, no `Type` on the end, lowercase file names, and no `types.ts`, because a const does not live in a `consts.ts` either.
 
 ## e. type guards
 

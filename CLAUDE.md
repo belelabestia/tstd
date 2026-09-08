@@ -74,6 +74,7 @@ these compress `.claude/style-kb.md`. go there for the examples.
 
 ### types
 
+- a type is a statically known expression: an alias is a comptime `const`, its parameters are that const's arguments. name one, reuse one, and keep one local for exactly the reasons you would with a value (d8).
 - never declare a return type. the one exception is a type guard, where `x is T` cannot be inferred.
 - `as` only where it is the only way to obtain a peculiar typescript behavior: branding a computation a brand already proved, or writing into a generic mapped type. it needs no comment; this rule is the comment.
 - tagged unions come from `Union<{ ... }>`, never hand-written.
