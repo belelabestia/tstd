@@ -4,6 +4,32 @@ working notes behind `CLAUDE.md`. every entry is grounded in a real line of this
 
 ## open work
 
+### `lease` treats a failed `use` as a success
+
+filed 2026-09-08, raised by the author, not yet ruled. **this is the first thing to pick up next session**, ahead of the cycle entry below it.
+
+`lease` branches on all four `scope` calls correctly, so this is not about throws. it is about the results business code actually returns:
+
+```ts
+const held = lease.sync({
+  open: () => connect(),
+  use: c => query(c),  // returns Result<Rows, DbError>
+  close: c => c.end(),
+  abort: c => c.kill()
+});
+// held is Lease<Result<Rows, DbError>>
+```
+
+`use` is typed `(r: R) => V`, so a `result.error` is just another `V`. `scope.sync` wraps it in `result.success`, `use.branch` reads `'success'`, and the close path runs. three consequences: `abort` never runs for a failure that did not throw, which is the case a lease exists for; `Lease<V>`'s error union never mentions that failure, so the signature says less than the value carries; and the caller branches twice, on two unions that mean the same thing.
+
+the code is short and the ruling is not, because each option costs something the readme cares about.
+
+having `lease` look for a `branch` property on `V` couples it to `Result`'s shape and turns it into `andThen`, which the refusal list forbids outright.
+
+giving `use` its own error parameter (`use: (r: R) => Result<V, E>`) makes the failing lease total and folds `E` into `Lease`, but then every caller has to box, including the ones whose `use` cannot fail, against the readme rule "a function that cannot fail returns an unboxed value, not a result".
+
+leaving it alone means `abort` covers throws only. that is defensible, since a domain error is not a leak and `close` is the right path for it, but then the doc comment "how a lease ends: with the value the use produced, or at the step that threw" is the whole contract and `abort` should say so too. written down, it stops being a hole and becomes a boundary.
+
 ### `is.json` recurses forever on a cyclic graph of plain objects
 
 filed 2026-09-08. the vacuity hole and the `NaN` hole that stood here are ruled and fixed (o17); this one is not. it is the single case where "what `JSON.stringify` tolerates" and "what the notation can spell" give the same answer, because both refuse a cycle.
