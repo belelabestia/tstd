@@ -30,6 +30,16 @@ if a function is used in the code and it changes its return type, its signature 
 
 specifying the return type of a function can only be useful when that's the only way for the language to know about our branding intentions, i.e. in type guards.
 
+### distrust what the types cannot say
+
+a signature is the whole contract, so a construct that carries a requirement the signature cannot express will typecheck cleanly and fail at runtime. two of them are worth naming, because between them they are the reason for most of the keyword rules below.
+
+a method's `this` requirement is invisible. a class method is typed `(x: boolean) => string`, with no trace of the instance it needs, so tearing it off its object and passing it somewhere else compiles and then throws when called. annotating the receiving parameter `this: void` does not catch it either: that rejects only a function which declares a `this` parameter explicitly, and a class method never declares one. no guard can recover the information at runtime, because a function's use of `this` is not observable; only its source text is, and reading source text is not narrowing.
+
+a thrown exception is invisible in exactly the same way. nothing in `(x: string) => number` admits that the call can fail, so a throwing call typechecks and takes the process down.
+
+this is why constructors, `this` and `try`/`catch`/`finally` are confined to `make` and `scope` rather than merely discouraged. those two are the only places the unsafety is allowed to exist, and their job is to convert it into something the types can state: a `Result` that the signature returns. `lease` adds no `try` of its own; it is built out of `scope`.
+
 ## warning
 
 this is a research project; if you like its principles i suggest you just copy my approach or parts of the code.
@@ -67,7 +77,7 @@ to get the most out of `tstd`, you should consider to learn to code with the fol
 ### keywords
 
 - use `const` whenever possible, even when mutation occurs; use `let` when reassignment is by design
-- avoid `function`, `class`, `constructor`, `this`, `new` as they provide redundant constructs
+- avoid `function`, `class`, `constructor`, `this`, `new`: they are redundant constructs, and a method also carries a `this` requirement that its type never mentions
 - `make` owns every class instantiation there is, native ones included; the instance never escapes the module that built it
 - consequently, do not use `extends` or `super` as no one needs class hierarchies
 - always use `type` over `interface` as they have too much overlap and `type` covers everything
@@ -87,6 +97,7 @@ to get the most out of `tstd`, you should consider to learn to code with the fol
 ### flow
 
 - always prefer flow over callbacks; use callbacks only as entrypoints
+- `try`, `catch` and `finally` appear only inside `make` and `scope`: a throw is as invisible to a signature as a `this` requirement, so it gets turned into a `Result` at the boundary instead of travelling as flow
 - never hide flow behind data: no `map`, `andThen`, `unwrap` or `match` on a branch
 - a function that cannot fail returns an unboxed value, not a result
 - delegate decisions to the caller by using `branch` and `Union`

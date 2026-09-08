@@ -241,6 +241,8 @@ url.value.href;
 
 note `make(Date)` with no arguments does not typecheck (TS resolves the constructor to a multi-argument overload), so reach for a static like `Date.now()` instead, which is not instantiation at all.
 
+the deeper reason for the rule is o18, not tidiness: a method carries a `this` requirement its type never states, so a constructor hands you an object whose methods cannot safely be taken apart.
+
 its signature is the only place `new` appears in the source:
 
 ```ts
@@ -574,7 +576,7 @@ res.value;
 const res = await scope.async(fetchThing, url);
 ```
 
-three constructs total: `make` for constructors, `scope.sync`, `scope.async`. business code contains no `try`.
+three constructs total: `make` for constructors, `scope.sync`, `scope.async`. business code contains no `try`. `lease` adds none of its own, it is built out of `scope`. the reason this is a boundary and not a preference is o18: a throw is invisible to a signature, so it has to be converted into a `Result` somewhere, and these are the somewhere.
 
 ### f6. flow over callbacks; callbacks only as entrypoints: house
 
@@ -1275,3 +1277,32 @@ const plain = (x: Record<string, unknown>) =>
 module private, above its first user, per the `canonical` precedent in `iso.ts`. `record` is untouched, so o5 stands. the order of the disjunction is load bearing: an array fails `plain` (its prototype is `Array.prototype`) and falls through to the `array` arm, which is where it was always handled.
 
 what remains is the cycle case, at the top of this file. it is not a variant of this bug: fidelity says a cycle is not `Json`, and the guard agrees with that, it just says so by exhausting the stack instead of returning `false`.
+
+### o18. constructors and `try` are avoided for the same reason: house (ruled, and now in the readme)
+
+the readme used to justify the keyword bans with "they provide redundant constructs", which is true and much too weak. the author's ruling: state the real reason, which is that both constructs carry a requirement the type system cannot express, and say it in the readme where the principles live. it is now `### distrust what the types cannot say`.
+
+a method's `this` requirement does not appear in its type. compiled, not assumed:
+
+```ts
+class Conn { host = 'h'; query(x: boolean) { return this.host + x; } }
+const c = new Conn();
+
+// typeof c.query is `(x: boolean) => string`, with no trace of Conn
+const nonGeneric = (f: (this: void, x: boolean) => string) => f(true);
+nonGeneric(c.query); // exit 0, and throws at runtime
+```
+
+`this: void` on the receiving parameter is the obvious defence and it does not work, which was worth finding out before writing it down as advice. it rejects only a function that declares its `this` explicitly:
+
+```ts
+const declared = function (this: Conn, x: boolean) { return this.host + x; };
+const wants: (this: void, x: boolean) => string = declared;
+// error TS2322: the 'this' types of each signature are incompatible
+```
+
+a class method never declares one, so nothing in the assignment is contravariant on anything. `strict` was on for both runs.
+
+**so there is no `is.selfless`**, which the author asked about and this entry answers. `this` usage is not observable at runtime: `Function.prototype.toString` exposes source text, and source text is defeated by a closure, by a nested arrow inheriting an outer `this`, by `eval`, and by a method that touches `this` on one branch only. a guard built on it would claim more than it checks, which is the one thing d5 and o4b forbid, and the brand would be exactly the kind that o16 caught being unsound. do not propose it again.
+
+a throw is invisible for the same reason: `(x: string) => number` says nothing about failing. that symmetry is the entry: `make` and `scope` are not conveniences for tidiness, they are the two places where an unsafety the signature cannot state gets converted into one it can. o8 is the same bug seen from the call site, and it stays as it is, because the fix there is the wrapping closure and not a type.

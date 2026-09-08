@@ -67,7 +67,7 @@ these compress `.claude/style-kb.md`. go there for the examples.
 ### keywords
 
 - `export const` at the declaration. no trailing `export {}` blocks, except `index.ts`.
-- arrow consts only. no `function`, `class`, `constructor`, `this`, `new`, `extends`, `super`.
+- arrow consts only. no `function`, `class`, `constructor`, `this`, `new`, `extends`, `super`. the reason is not redundancy: a method carries a `this` requirement its type never states, so a torn-off method typechecks and throws, and `this: void` on the receiver does not catch it (o18).
 - `type`, never `interface`.
 - `make` owns every instantiation there is, native constructors included, even ones that cannot throw. the instance never escapes the module that built it.
 - `const` even when the value mutates; `let` only when reassignment is the design.
@@ -96,7 +96,7 @@ these compress `.claude/style-kb.md`. go there for the examples.
 - return early, in a funnel. no `else` unless both boolean cases are meaningful; no `switch` unless the union is total.
 - absence beats a branch. reach for `branch` only when presence/absence cannot carry it.
 - never tell `null` and `undefined` apart. presence and absence.
-- `try`/`catch` exists only inside `make` and `scope`. business code has none.
+- `try`/`catch` exists only inside `make` and `scope`. business code has none. a throw is invisible to a signature for the same reason a `this` requirement is, so these two are where an unsafety the types cannot state becomes a `Result` they can (o18).
 - never hide flow behind data. no `map`, `andThen`, `unwrap`, `match` on a branch.
 - "callbacks only as entrypoints" is about *your* code, not about the boundary modules. `make`, `scope` and `lease` take functions because they **are** the entrypoint (they are where `try`/`catch` lives). taking a function is not the thing being warned against; sequencing with functions is.
 - a function that cannot fail returns an unboxed value, not a result.
