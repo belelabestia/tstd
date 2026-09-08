@@ -20,7 +20,7 @@ export const make = <Args extends unknown[], Instance>(c: new (...args: Args) =>
 };
 
 /** safely call functions */
-export const scope = {
+export const call = {
   sync: <Args extends unknown[], Value>(f: (...args: Args) => Value, ...args: Args) => {
     try {
       return result.success(f(...args));

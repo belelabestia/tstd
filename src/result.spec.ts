@@ -1,5 +1,5 @@
 import { test } from 'node:test';
-import { make, Result, result, scope } from './result.js';
+import { make, Result, result, call } from './result.js';
 import * as assert from 'node:assert/strict';
 
 /*
@@ -41,18 +41,18 @@ test('init safely with the make api', () => {
   assert.equal(url.value.href, href);
 });
 
-test('execute safely with the scope api', () => {
+test('execute safely with the call api', () => {
   // this function needs an error boundary
   const div = (x: number, y: number) => {
     if (y === 0) throw new RangeError('div by zero');
     return x / y;
   };
 
-  const res = scope.sync(div, 1, 0);
+  const res = call.sync(div, 1, 0);
   assert.deepEqual(res.branch, 'error');
 });
 
-test('do resource management with the scope api', () => {
+test('do resource management with the call api', () => {
   // say we have an sdk connecting us to something
   const sdk = {
     connect: (x: boolean) => {
@@ -70,19 +70,19 @@ test('do resource management with the scope api', () => {
   };
 
   // we want to safely get a connection instance
-  let conn = scope.sync(sdk.connect, true);
+  let conn = call.sync(sdk.connect, true);
   assert.equal(conn.branch, 'error');
 
   // we can retry if it fails
-  conn = scope.sync(sdk.connect, false);
+  conn = call.sync(sdk.connect, false);
   assert.equal(conn.branch, 'success');
 
   // we can then use it; a method bound to `this` has to be wrapped,
-  // as scope calls it detached: one more reason not to write classes
-  const res = scope.sync(() => conn.value.query(true));
+  // as call invokes it detached: one more reason not to write classes
+  const res = call.sync(() => conn.value.query(true));
   assert.equal(res.branch, 'error');
 
   // and make sure we clean everything up
-  const cleanup = scope.sync(conn.value.close, false);
+  const cleanup = call.sync(conn.value.close, false);
   assert.equal(cleanup.branch, 'success');
 });

@@ -38,7 +38,7 @@ a method's `this` requirement is invisible. a class method is typed `(x: boolean
 
 a thrown exception is invisible in exactly the same way. nothing in `(x: string) => number` admits that the call can fail, so a throwing call typechecks and takes the process down.
 
-this is why constructors, `this` and `try`/`catch`/`finally` are confined to `make` and `scope` rather than merely discouraged. those two are the only places the unsafety is allowed to exist, and their job is to convert it into something the types can state: a `Result` that the signature returns. `lease` adds no `try` of its own; it is built out of `scope`.
+this is why constructors, `this` and `try`/`catch`/`finally` are confined to `make` and `call` rather than merely discouraged. those two are the only places the unsafety is allowed to exist, and their job is to convert it into something the types can state: a `Result` that the signature returns. `scope` adds no `try` of its own; it is built out of `call`.
 
 ## warning
 
@@ -97,7 +97,7 @@ to get the most out of `tstd`, you should consider to learn to code with the fol
 ### flow
 
 - always prefer flow over callbacks; use callbacks only as entrypoints
-- `try`, `catch` and `finally` appear only inside `make` and `scope`: a throw is as invisible to a signature as a `this` requirement, so it gets turned into a `Result` at the boundary instead of travelling as flow
+- `try`, `catch` and `finally` appear only inside `make` and `call`: a throw is as invisible to a signature as a `this` requirement, so it gets turned into a `Result` at the boundary instead of travelling as flow
 - never hide flow behind data: no `map`, `andThen`, `unwrap` or `match` on a branch
 - a function that cannot fail returns an unboxed value, not a result
 - delegate decisions to the caller by using `branch` and `Union`

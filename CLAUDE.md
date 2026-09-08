@@ -56,7 +56,7 @@ these compress `.claude/style-kb.md`. go there for the examples.
 ### naming
 
 - the same word, case-distinguished, for a type and its factory: `Branch`/`branch`, `Result`/`result`.
-- when a module has two candidate types, the module's name goes to **what the caller gets back**, not to what it takes. `Lease` is the outcome; the argument record stays inline and unnamed, even when that duplicates it across `sync` and `async`; `scope` duplicates its two signatures too.
+- when a module has two candidate types, the **exported** name goes to what the caller gets back, not to what it takes: `Scope` is the outcome. what it takes gets a local name that never leaves the file (`Resource` in `scope.ts`), because a shape written twice is duplication whether or not it is exported. keep it inline only while it is written once.
 - construct every branch of one union the same way. mixing `branch('open', ...)` with `result.success(...)` in one function reads as two unions.
 - namespace by nesting an object, never by prefixing a name: `result.success`, not `successResult`.
 - the container carries the prefix: `is.number`, not `isNumber`.
@@ -96,9 +96,9 @@ these compress `.claude/style-kb.md`. go there for the examples.
 - return early, in a funnel. no `else` unless both boolean cases are meaningful; no `switch` unless the union is total.
 - absence beats a branch. reach for `branch` only when presence/absence cannot carry it.
 - never tell `null` and `undefined` apart. presence and absence.
-- `try`/`catch` exists only inside `make` and `scope`. business code has none. a throw is invisible to a signature for the same reason a `this` requirement is, so these two are where an unsafety the types cannot state becomes a `Result` they can (o18).
+- `try`/`catch` exists only inside `make` and `call`. business code has none. a throw is invisible to a signature for the same reason a `this` requirement is, so these two are where an unsafety the types cannot state becomes a `Result` they can (o18).
 - never hide flow behind data. no `map`, `andThen`, `unwrap`, `match` on a branch.
-- "callbacks only as entrypoints" is about *your* code, not about the boundary modules. `make`, `scope` and `lease` take functions because they **are** the entrypoint (they are where `try`/`catch` lives). taking a function is not the thing being warned against; sequencing with functions is.
+- "callbacks only as entrypoints" is about *your* code, not about the boundary modules. `make`, `call` and `scope` take functions because they **are** the entrypoint (they are where `try`/`catch` lives). taking a function is not the thing being warned against; sequencing with functions is.
 - a function that cannot fail returns an unboxed value, not a result.
 - narrowing owns every failure; what comes after it is total. that is why decoding never fails.
 - a dependency is a resource that must be established once, like a connection; that gets an `init`. everything else is a **value** and travels as an argument, the way a schema and a zone do.

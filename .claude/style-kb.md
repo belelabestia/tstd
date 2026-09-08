@@ -4,32 +4,6 @@ working notes behind `CLAUDE.md`. every entry is grounded in a real line of this
 
 ## open work
 
-### `lease` treats a failed `use` as a success
-
-filed 2026-09-08, raised by the author, not yet ruled. **this is the first thing to pick up next session**, ahead of the cycle entry below it.
-
-`lease` branches on all four `scope` calls correctly, so this is not about throws. it is about the results business code actually returns:
-
-```ts
-const held = lease.sync({
-  open: () => connect(),
-  use: c => query(c),  // returns Result<Rows, DbError>
-  close: c => c.end(),
-  abort: c => c.kill()
-});
-// held is Lease<Result<Rows, DbError>>
-```
-
-`use` is typed `(r: R) => V`, so a `result.error` is just another `V`. `scope.sync` wraps it in `result.success`, `use.branch` reads `'success'`, and the close path runs. three consequences: `abort` never runs for a failure that did not throw, which is the case a lease exists for; `Lease<V>`'s error union never mentions that failure, so the signature says less than the value carries; and the caller branches twice, on two unions that mean the same thing.
-
-the code is short and the ruling is not, because each option costs something the readme cares about.
-
-having `lease` look for a `branch` property on `V` couples it to `Result`'s shape and turns it into `andThen`, which the refusal list forbids outright.
-
-giving `use` its own error parameter (`use: (r: R) => Result<V, E>`) makes the failing lease total and folds `E` into `Lease`, but then every caller has to box, including the ones whose `use` cannot fail, against the readme rule "a function that cannot fail returns an unboxed value, not a result".
-
-leaving it alone means `abort` covers throws only. that is defensible, since a domain error is not a leak and `close` is the right path for it, but then the doc comment "how a lease ends: with the value the use produced, or at the step that threw" is the whole contract and `abort` should say so too. written down, it stops being a hole and becomes a boundary.
-
 ### `is.json` recurses forever on a cyclic graph of plain objects
 
 filed 2026-09-08. the vacuity hole and the `NaN` hole that stood here are ruled and fixed (o17); this one is not. it is the single case where "what `JSON.stringify` tolerates" and "what the notation can spell" give the same answer, because both refuse a cycle.
@@ -43,7 +17,7 @@ every node in that graph is a plain record, so the prototype test passes and `js
 
 the fix wants a ruling because the obvious one is forbidden. cycle detection needs a set of visited objects, and e4 says validation does not allocate. a depth limit allocates nothing but wants a second parameter, which would make `json` the one guard in the file that does not fit `TypeGuard<T>`. do not fix it by weakening the type.
 
-the two designs that were open on 2026-09-06 are built and ruled: resources became `src/lease.ts` (o15), and the zoned form became a recipe in `src/form.spec.ts` with the machinery in `src/iso.ts` (o16).
+the two designs that were open on 2026-09-06 are built and ruled: resources became `src/scope.ts` (o15, then o19 and o20), and the zoned form became a recipe in `src/form.spec.ts` with the machinery in `src/iso.ts` (o16).
 
 ---
 
@@ -76,7 +50,7 @@ src/flat.ts     -> Flat
 src/is.ts       -> Json, TypeGuard, Schema, Model, Finite, + guards
 src/iso.ts      -> Date, Time, DateTime, Local, Duration, Timestamp, Zone, Unambiguous, + guards and operations
 src/form.ts     -> Field, Fields, Encoded, Decoded, plain, nest, model, models, decode, encode
-src/lease.ts    -> Lease, lease
+src/scope.ts    -> Scope, Exit, scope
 ```
 
 a type and the factory that produces it are one concept, so they live in one file. there is no `types.ts` and there must never be one.
@@ -108,7 +82,7 @@ export const createBranch = branch;
 export * from './branch.js';
 export * from './brand.js';
 export * from './flat.js';
-export * from './lease.js';
+export * from './scope.js';
 export * from './result.js';
 
 export * as is from './is.js';
@@ -165,8 +139,8 @@ note the parameter is also called `branch`, shadowing the function inside its ow
 ```ts
 export const successResult = ...
 export const errorResult = ...
-export const scopeSync = ...
-export const scopeAsync = ...
+export const callSync = ...
+export const callAsync = ...
 ```
 
 ✅ do an object literal as the container:
@@ -183,7 +157,7 @@ export const scope = {
 };
 ```
 
-reads as `result.success(...)`, `scope.async(...)`. `async` is a legal property name, so the container buys you keyword-shaped members for free.
+reads as `result.success(...)`, `call.async(...)`. `async` is a legal property name, so the container buys you keyword-shaped members for free.
 
 ### b3. the container carries the prefix, the member does not: house
 
@@ -281,11 +255,11 @@ export const make = <Args extends unknown[], Instance>(c: new (...args: Args) =>
 
 ```ts
 // we want to safely get a connection instance
-let conn = scope.sync(sdk.connect, true);
+let conn = call.sync(sdk.connect, true);
 assert.equal(conn.branch, 'error');
 
 // we can retry if it fails
-conn = scope.sync(sdk.connect, false);
+conn = call.sync(sdk.connect, false);
 ```
 
 `let` here because retry is the design. everything else in the repo is `const`.
@@ -427,6 +401,7 @@ catch (error) {
 readme: "native errors and values from outside are `unknown` by design: don't try to fix this, just narrow their type". the error is carried, unwrapped, un-normalised, and narrowed by the caller if it cares.
 
 ---
+
 
 ## e. type guards
 
@@ -586,23 +561,23 @@ export const absent = (x: unknown): x is undefined | null =>
 
 `present` narrowing to `{}` (not `object`, not `NonNullable<T>`) is the trick: `{}` is "anything but null/undefined". `Json` including `undefined` follows from this same rule; it is not an oversight.
 
-### f5. `try`/`catch` exists only inside `make` and `scope`: house
+### f5. `try`/`catch` exists only inside `make` and `call`: house
 
 ❌ instead of try/catch at call sites, or a `Result`-returning wrapper per api
 
 ✅ do push the boundary into the two utilities and use flow everywhere else:
 
 ```ts
-const res = scope.sync(div, 1, 0);
+const res = call.sync(div, 1, 0);
 if (res.branch === 'error') return res;
 res.value;
 ```
 
 ```ts
-const res = await scope.async(fetchThing, url);
+const res = await call.async(fetchThing, url);
 ```
 
-three constructs total: `make` for constructors, `scope.sync`, `scope.async`. business code contains no `try`. `lease` adds none of its own, it is built out of `scope`. the reason this is a boundary and not a preference is o18: a throw is invisible to a signature, so it has to be converted into a `Result` somewhere, and these are the somewhere.
+three constructs total: `make` for constructors, `call.sync`, `call.async`. business code contains no `try`. `scope` adds none of its own, it is built out of `call`. the reason this is a boundary and not a preference is o18: a throw is invisible to a signature, so it has to be converted into a `Result` somewhere, and these are the somewhere.
 
 ### f6. flow over callbacks; callbacks only as entrypoints: house
 
@@ -1016,16 +991,16 @@ f7 says imperative loops; `json` uses `Object.values(x).every(json)` and `x.ever
 
 **ruled: keep `.every`, and state the exception.** a guard body has to stay an expression (e1), because that is what keeps boolean algebra matching type algebra (d5); a `for` would force a statement body and break it. so `.every` inside a guard is sanctioned, and everywhere else you loop and return early. it is now a rule in `CLAUDE.md` rather than an accident in one file, and per o6b it goes in the docs, not in a comment.
 
-### o8. `scope.sync(instance.method, ...)` silently loses `this`
+### o8. `call.sync(instance.method, ...)` silently loses `this`
 
-`result.spec.ts` demonstrates `scope.sync(conn.value.query, true)`, which works only because the fake `sdk` returns closures. against a real class-based sdk it throws, and the throw is swallowed into `result.error`, disguising a wiring bug as a domain failure.
+`result.spec.ts` demonstrates `call.sync(conn.value.query, true)`, which works only because the fake `sdk` returns closures. against a real class-based sdk it throws, and the throw is swallowed into `result.error`, disguising a wiring bug as a domain failure.
 
 ✅ do keep the signature and fix the teaching line:
 
 ```ts
 // we can then use it; note that methods bound to `this` must be wrapped,
-// as scope.sync calls f detached (one more reason we don't write classes)
-const res = scope.sync(() => conn.value.query(true));
+// as call.sync calls f detached (one more reason we don't write classes)
+const res = call.sync(() => conn.value.query(true));
 ```
 
 ### o9. small stuff
@@ -1108,7 +1083,7 @@ iso.dateOf(x, rome);   // 2024-01-02
 iso.dateOf(x);         // 2024-01-01, utc is the answer that needs no decision
 ```
 
-**this was built as `iso.init(zone)` first, and that was wrong.** the readme's init rule reads like it applies, but `init` is for a *resource that has to be established once*, like a connection or a configured sdk, which is what "a dynamic one is just a closure" means. a zone is a **value**, and every configured operation in this library takes its value as a trailing argument: `is.model(x, schema)`, `is.models(x, schema)`, `form.model(x, forms)`, `form.decode(x, forms)`, `form.encode(x, forms)`, `make(c, ...args)`, `scope.sync(f, ...args)`. `iso.init` was the only `init` in the whole codebase: a single exception, written by following the readme's letter against the codebase's unanimous practice.
+**this was built as `iso.init(zone)` first, and that was wrong.** the readme's init rule reads like it applies, but `init` is for a *resource that has to be established once*, like a connection or a configured sdk, which is what "a dynamic one is just a closure" means. a zone is a **value**, and every configured operation in this library takes its value as a trailing argument: `is.model(x, schema)`, `is.models(x, schema)`, `form.model(x, forms)`, `form.decode(x, forms)`, `form.encode(x, forms)`, `make(c, ...args)`, `call.sync(f, ...args)`. `iso.init` was the only `init` in the whole codebase: a single exception, written by following the readme's letter against the codebase's unanimous practice.
 
 the rule that reconciles them, now in the readme: "a dependency is a resource that has to be established once, like a connection; everything else is a value and travels as an argument, the way a schema does".
 
@@ -1213,9 +1188,11 @@ what to know when writing one:
 
 on the name: **`form`** is the author's own word for the concept ("declare their form in memory or in json"), and it passes the literalness test `Json` and `iso` set, since the module declares the form a value takes on each side. `io` was the runner-up and was rejected because it names an activity the module never performs (it reads no file and opens no socket; it is a pure function on a value someone else moved) and because it invites the io-ts comparison this design inverts. the type is `Field`, not `Form`, so `satisfies form.Field<...>` does not stutter.
 
-### o15. a lease is a lifetime, and it branches per step: house (built by a subagent)
+### o15. a lease is a lifetime, and it branches per step: house (built by a subagent, superseded by o20)
 
-`make` covers building what throws, `scope` covers calling it; **`lease` covers holding something you must give back**. four steps, every one of which can throw, passed as one record:
+**`lease` no longer exists.** o20 replaced it with `scope`; this entry stays because the reasoning about `close` and `abort` survived the replacement unchanged.
+
+`make` covers building what throws, `call` covers calling it; **`lease` covers holding something you must give back**. four steps, every one of which can throw, passed as one record:
 
 ```ts
 lease.sync({
@@ -1229,7 +1206,7 @@ lease.sync({
 - **`close` and `abort`, never a `finally`.** zig's `defer`/`errdefer` split, renamed: `abort` names what happens to the *resource*, where `errdefer` names *when the callback fires*. commit/rollback maps onto close/abort exactly. when the two really are the same, pass the same named function twice; that states the sameness instead of hiding it, and a single release parameter would decide it for the caller.
 - **the outcome is a free branch union, not a `Result`**: `Union<{ success: V, open: unknown, use: unknown, close: unknown, abort: unknown }>`. one branch per step that can throw. `Result<V, unknown>` would erase the distinction the module exists to make: "the use failed" versus "you no longer hold the resource". every non-success payload is `unknown`, so the funnel still collapses in one line when a caller does not care.
 - **decide, never accumulate.** use ok + close throws → branch `close`, and the used value is dropped. use throws + abort throws → branch `abort`, and the use error is lost: the failed call is over, the resource is still out there. that loss is the price of refusing error accumulation, and the spec says so in prose rather than hiding it.
-- taking four functions is **not** the callback rule being broken. `lease` is a boundary module like `make` and `scope`; it is where `try`/`catch` lives, so it is an entrypoint by construction. this was the one thing the subagent had to guess at; it is now stated in `CLAUDE.md`.
+- taking four functions is **not** the callback rule being broken. `lease` is a boundary module like `make` and `call`; it is where `try`/`catch` lives, so it is an entrypoint by construction. this was the one thing the subagent had to guess at; it is now stated in `CLAUDE.md`.
 
 ### o16. a zoned form, and the brand that names its zone: house (ruled, built by a subagent)
 
@@ -1283,7 +1260,7 @@ deep enough nesting    RangeError: Maximum call stack size exceeded
 
 **ruled: throw-safety is the wrong definition, and fidelity is the right one.** three reasons, in ascending order of weight.
 
-it is not narrowable under this repo's own rules. of those five, only `BigInt` is a cheap `typeof`. cycle detection needs a visited set, which e4 forbids; a throwing getter can only be found by invoking it, and invoking it is the side effect that separates parsing from narrowing. "does not break `stringify`" has exactly one honest implementation, `try { JSON.stringify(x) } catch`, and f5 puts `try`/`catch` only in `make` and `scope`.
+it is not narrowable under this repo's own rules. of those five, only `BigInt` is a cheap `typeof`. cycle detection needs a visited set, which e4 forbids; a throwing getter can only be found by invoking it, and invoking it is the side effect that separates parsing from narrowing. "does not break `stringify`" has exactly one honest implementation, `try { JSON.stringify(x) } catch`, and f5 puts `try`/`catch` only in `make` and `call`.
 
 it is too weak to fix anything. `Date` becomes a string, `Map`, `Set` and `RegExp` become `{}`, a class instance becomes its bare enumerable fields, `NaN` and `Infinity` become `null`, `undefined` and function and symbol values get their keys dropped, an array hole becomes `null`, `-0` becomes `0`. none of that throws. throw-safety would have blessed the bug rather than closed it.
 
@@ -1331,4 +1308,76 @@ a class method never declares one, so nothing in the assignment is contravariant
 
 **so there is no `is.selfless`**, which the author asked about and this entry answers. `this` usage is not observable at runtime: `Function.prototype.toString` exposes source text, and source text is defeated by a closure, by a nested arrow inheriting an outer `this`, by `eval`, and by a method that touches `this` on one branch only. a guard built on it would claim more than it checks, which is the one thing d5 and o4b forbid, and the brand would be exactly the kind that o16 caught being unsound. do not propose it again.
 
-a throw is invisible for the same reason: `(x: string) => number` says nothing about failing. that symmetry is the entry: `make` and `scope` are not conveniences for tidiness, they are the two places where an unsafety the signature cannot state gets converted into one it can. o8 is the same bug seen from the call site, and it stays as it is, because the fix there is the wrapping closure and not a type.
+a throw is invisible for the same reason: `(x: string) => number` says nothing about failing. that symmetry is the entry: `make` and `call` are not conveniences for tidiness, they are the two places where an unsafety the signature cannot state gets converted into one it can. o8 is the same bug seen from the call site, and it stays as it is, because the fix there is the wrapping closure and not a type.
+
+### o19. a lease hands your result back whole, and never mixes it with a throw: house (ruled, superseded by o20)
+
+**`lease` no longer exists.** o20 replaced it with `scope`, which keeps every conclusion below and drops the module they were about.
+
+the hole filed on 2026-09-08 and ruled the next day. `use` was typed `(r: R) => V`, so business code that returned `result.error(...)` handed the lease an ordinary `V`: the close path ran, `abort` never did, and `Lease<V>` said nothing about a failure the value was carrying. the ruling boxes the use, and separates a failure you named from a throw nobody did.
+
+```ts
+export type Lease<U> = Union<{
+  done: U,
+  panic: Union<{
+    open: unknown,
+    use: unknown,
+    close: { thrown: unknown, done: U; },
+    abort: { thrown: unknown, after: Cause<U>; };
+  }>;
+}>;
+```
+
+- **`Result` stays binary.** a `panic` branch on `Result` itself was the first idea and it is wrong: every existing caller branches on `'success' | 'error'`, and a third member would break the two-way funnel the whole library is built on. `panic` lives on `Lease`, which is a different union with a different question to ask.
+- **the union is what saves the type.** folding a throw into the error side gives `E | unknown`, which *is* `unknown`: the named error is swallowed by the thing that carries no information. separate branches are the only shape where a named failure survives next to an unnamed one. `type Panic<V> = Result<V, unknown>` was floated as a name for what `call` returns and declined: nothing would use it, since return types are never declared.
+- **the lease reads your result but does not unwrap it.** it looks at the branch to pick the release, `close` when the use succeeded and `abort` when it did not, and then returns the result exactly as it was returned. flattening it into `success`/`error` branches of the lease's own union was built first and rejected: it is the `andThen` shape the refusal list bans, and it made `lease` the one place in the library that unwraps a `Result`. the caller branches twice now, on two genuinely different questions: did the resource behave, and did your call succeed.
+- **only `use` is boxed.** `open` returns the resource plainly and `close`/`abort` return nothing. an `open` that fails in a way you can name has produced nothing to release, so it is a branch the caller takes before asking for a lease at all; a release that fails has nothing to say but that it failed. this keeps the readme's rule intact: a step that cannot fail in a named way stays unboxed.
+- **a named failure aborts, exactly like a throw.** both failure paths run `abort`. that is the case a lease exists for, and it was the original bug.
+- **`abort` is told why, `close` is not.** zig's `errdefer |err|` capture, ported: `abort: (r: R, why: Cause<U>) => void`, where `Cause<U>` is `Union<{ error: Fail<U>, panic: unknown }>`. the union is what makes it expressible at all; one parameter carrying both would be `E | unknown` again. `close` is told nothing, because it runs only when nothing failed. an `abort` that does not care declares one parameter and typescript accepts it against the two-parameter type, so the reason costs nothing to ignore.
+- **the release wins the branch and keeps what it interrupted.** a failed `close` is still branch `close`, because a resource you no longer hold is the thing to act on, but its payload is `{ thrown, done }`: the use succeeded, so its result is still true and a caller can log the leak and go on with the value instead of losing work to a connection that would not shut. a failed `abort` carries `{ thrown, after }`, where `after` is the same `why` the abort was handed. this narrows o15's "decide, never accumulate": what gets decided is the branch, not what is kept, and the two payloads are different kinds of fact rather than two errors of the same kind.
+- **the reusable part of a lease is a value, not a wrapper.** three of the four steps belong to the resource and one belongs to the caller, so a `transaction` is an object holding `open`, `close` and `abort`, spread in at the call site: `lease.sync({ ...transaction, use: work })`. a generic `transaction(work)` function was written first and replaced: it added a type parameter and a closure to say what a spread already says, and it hid the four steps behind a name instead of naming three of them. a shared `abort` can still read `why.branch`; only an `abort` that wants the named payload has to know which use it belongs to.
+
+**the inference finding, which shaped the signature.** `Branch<B, V>` names its payload `value` in every branch, so inferring `V` and `E` out of a returned `Result<V, E>` cross-contaminates them: typescript feeds both members' payloads to both slots.
+
+```ts
+declare const f: <A, B>(x: () => Result<A, B>) => [A, B];
+const q = (x: boolean) => x ? result.error('cannot query' as const) : result.success('rows');
+
+f(q) // [string, string], not [string, 'cannot query']
+```
+
+verified against `Result`, against `Union<{ success: A, error: B }>`, and against a hand-written `Branch<'success', A> | Branch<'error', B>`: all three widen the same way, so this is the branch shape and not the `Flat` wrapper. **do not use `Result<V, E>` as an inference site.** take the returned union whole, as `U extends Result<unknown, unknown>`, and look inside it afterwards with `Extract`. narrowing `U` in the body loses the payload, because a generic narrows to its constraint and the constraint says `unknown`; the fix is not `as` but an annotated `const`, which is allowed where a declared return type is not.
+
+```ts
+type Fail<U> = Extract<U, Branch<'error', unknown>>['value'];
+
+const fail: Result<unknown, Fail<U>> = done;
+if (fail.branch === 'error') ... // fail.value is the named error, done is still whole
+```
+
+**`scope` became `call`.** it takes a function and calls it; `unsafe`, `bound` and `catcher` all name how it works rather than what it is, and `call` passes the literalness test `Json` and `iso` set. o15's second bullet is superseded here: the outcome is no longer one `Result` whose error side is a step union.
+
+**the argument record is named now.** `Steps<R, U>` is declared in `lease.ts` and never exported, with `Async<S>` mapping each step to its promise-returning twin, so the four lines are written once instead of twice. the old wording of the naming rule said the record "stays inline and unnamed", which confused *where a name is exported* with *whether a shape is repeated*; only the first is a rule. `CLAUDE.md` says so now.
+
+### o20. a scope holds many resources without nesting, and `lease` is gone: house (ruled)
+
+`lease` held exactly one resource, so two of them meant a lease inside a use and three meant three levels of lambda. that is the shape every language reaches for (`try`/`finally`, `with`, `withConnection(conn => ...)`), and it makes the code's indentation follow the number of things you hold rather than what you are doing. **`lease` was deleted, not deprecated**; `src/scope.ts` replaces it.
+
+```ts
+scope.sync(hold => {
+  const one = hold(first);
+  if (one.branch === 'error') return result.error('cannot hold the first' as const);
+
+  const two = hold(second);
+  if (two.branch === 'error') return result.error('cannot hold the second' as const);
+
+  return result.success(one.value.name + ' and ' + two.value.name);
+});
+```
+
+- **the work is handed `hold`, not an object with a `hold` on it.** there was no second member worth adding: zig's bare `defer` is the only candidate, and it is `hold` with nothing to open, which means you opened the thing somewhere else, which is the leak `hold` exists to prevent. an optional `open` was considered for the same reason and refused, since it would make `hold` return a `Result` that cannot fail.
+- **acquisition stays flat.** `hold` runs the open through `call` and returns a `Result`, so taking a resource is one line and one guard, exactly like every other narrowing in the library. resources nest without scopes nesting, which is the whole point of the module.
+- **the outcome is two facts, not one union.** two independent things happen: the work exits, and the releases either go back or leak. `Scope<U>` is `{ exit: Exit<U>, leaked: unknown[] }`, where `Exit<U>` is `Union<{ done: U, panic: unknown }>`. trying to say both in one union is what produced `lease`'s `panic/close` payload of `{ thrown, done }` and its `after`: all of that disappears here.
+- **`leaked` is a list, and that is not error accumulation.** the refusal is about accumulating errors from one failing operation; these are n resources each failing to go back, and reporting one would hide the rest. the count is runtime data, so it is an array and not a tuple: `hold` is called dynamically, so no arity exists at the type level.
+- **unwinding never stops early.** a release that throws costs you that resource and nothing else; the rest of the list still goes back, in reverse order.
+- **the mutable list is the price.** `taken` is a `const` array that grows, which c5 allows, and it is the one piece of state in the library. the guarantee it buys is the one a merged `open` cannot give: if the second resource refuses, the first is already held and is released on the way out.
