@@ -51,11 +51,17 @@ export const record = (x: unknown): x is Record<string, unknown> =>
 export const array = (x: unknown): x is unknown[] =>
   Array.isArray(x);
 
+/** whether a record is a plain one, and not an instance of something else */
+const plain = (x: Record<string, unknown>) =>
+  Object.getPrototypeOf(x) === Object.prototype ||
+  Object.getPrototypeOf(x) === null;
+
 export const json = (x: unknown): x is Json =>
-  typeof x === 'string' ||
-  typeof x === 'number' ||
-  typeof x === 'boolean' || (
+  string(x) ||
+  number(x) ||
+  boolean(x) || (
     record(x) &&
+    plain(x) &&
     Object.values(x).every(json)
   ) || (
     array(x) &&

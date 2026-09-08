@@ -34,6 +34,31 @@ test('demand a finite number', () => {
   assert.ok(!is.number(Infinity));
 });
 
+test('refuse what json notation cannot express', () => {
+  // `Json` is a notation, so the guard asks what the notation can spell,
+  // not what JSON.stringify happens to tolerate
+  assert.ok(is.json({ a: 1, b: ['_', true, null] }));
+
+  // a date does not break stringify, it comes back a string;
+  // that is not a value the notation can spell, so it is not json
+  assert.ok(!is.json(new Date()));
+  assert.ok(!is.json({ a: new Date() }));
+
+  // the same goes for anything else carrying a prototype of its own,
+  // which stringify quietly flattens to `{}`
+  assert.ok(!is.json(new Map()));
+  assert.ok(!is.json(new Set([1])));
+
+  // nan and infinity come back as null, which is why is.number refuses them too
+  assert.ok(!is.json(NaN));
+  assert.ok(!is.json(Infinity));
+
+  // a record with no prototype at all still spells a plain object
+  const bare = Object.create(null);
+  bare.a = 1;
+  assert.ok(is.json(bare));
+});
+
 test('validate model schemas', () => {
   // here's a more complex unknown variable
   const a: unknown = {

@@ -4,20 +4,18 @@ working notes behind `CLAUDE.md`. every entry is grounded in a real line of this
 
 ## open work
 
-### `is.json` claims `Json` for any object with no own enumerable properties
+### `is.json` recurses forever on a cyclic graph of plain objects
 
-filed 2026-09-07, found by a review agent, not yet fixed. it predates all of this work: `main` has the same bug byte for byte.
+filed 2026-09-08. the vacuity hole and the `NaN` hole that stood here are ruled and fixed (o17); this one is not. it is the single case where "what `JSON.stringify` tolerates" and "what the notation can spell" give the same answer, because both refuse a cycle.
 
 ```ts
-is.json(new Date())        // true
-is.json(new Map())         // true
-is.json(new Set([1]))      // true
-is.json({ a: new Date() }) // true
+const a: any = {}; a.self = a;
+is.json(a) // RangeError: Maximum call stack size exceeded
 ```
 
-`record(x) && Object.values(x).every(json)` is vacuously satisfied when there are no own enumerable properties, so the guard admits values that are not `Json`: `Date` is not assignable to `{ [key: string]: Json }`. two consequences. the predicate claims more than it checks, which is the one thing a guard must never do (e4, o4b). and the `JSON.parse(JSON.stringify(x))` round trip that `iso.spec.ts` and `form.spec.ts` asserted does not actually hold for everything the guard lets through. `form.Fields` now rests its `encode: (x: never) => is.Json` constraint on it, so the blast radius grew even though the bug did not.
+every node in that graph is a plain record, so the prototype test passes and `json` calls itself until the stack runs out. a guard that throws is worse than one that lies: `is.json` sits on the boundary between unknown input and `Json`, so a self-referential payload takes the process down instead of being refused, and `f5` says business code has no `try`/`catch` to catch it with. `JSON.parse` cannot build a cycle, so the reachable case is a value assembled in memory and handed to `is.json` or `form.encode` directly.
 
-the shape of a fix wants a ruling, because every option costs something the readme cares about: checking the prototype (`Object.getPrototypeOf(x) === Object.prototype`) is the cheap and correct test but reaches for machinery this library avoids; rejecting anything with a constructor other than `Object` is the same idea worse; and narrowing `record` itself would change what `is.record` means, which o5 already ruled against. do not fix it by weakening the type.
+the fix wants a ruling because the obvious one is forbidden. cycle detection needs a set of visited objects, and e4 says validation does not allocate. a depth limit allocates nothing but wants a second parameter, which would make `json` the one guard in the file that does not fit `TypeGuard<T>`. do not fix it by weakening the type.
 
 the two designs that were open on 2026-09-06 are built and ruled: resources became `src/lease.ts` (o15), and the zoned form became a recipe in `src/form.spec.ts` with the machinery in `src/iso.ts` (o16).
 
@@ -1242,3 +1240,38 @@ the algorithm was fuzzed over a year at thirty minute granularity against an ind
 ```
 
 plus one `git add --renormalize` pass, isolated in its own commit. a hard re-checkout is now clean even with `core.autocrlf=true` still set, so the repo is immune regardless of anyone's git config. **do not** change a global or system git setting to work around this; the attributes file is the fix.
+
+### o17. `Json` is a notation, so its guard tests fidelity, not throw-safety: house (ruled, and now fixed)
+
+the author raised the definition behind the bug that used to head this file: "to me, `Json` is simply something that could be passed to `JSON.stringify` and not break it", plus a doubt that it can throw at all. it can, five ways, all verified:
+
+```
+cyclic structure       TypeError: Converting circular structure to JSON
+a BigInt anywhere      TypeError: Do not know how to serialize a BigInt
+a toJSON that throws   propagates
+a getter that throws   propagates
+deep enough nesting    RangeError: Maximum call stack size exceeded
+```
+
+**ruled: throw-safety is the wrong definition, and fidelity is the right one.** three reasons, in ascending order of weight.
+
+it is not narrowable under this repo's own rules. of those five, only `BigInt` is a cheap `typeof`. cycle detection needs a visited set, which e4 forbids; a throwing getter can only be found by invoking it, and invoking it is the side effect that separates parsing from narrowing. "does not break `stringify`" has exactly one honest implementation, `try { JSON.stringify(x) } catch`, and f5 puts `try`/`catch` only in `make` and `scope`.
+
+it is too weak to fix anything. `Date` becomes a string, `Map`, `Set` and `RegExp` become `{}`, a class instance becomes its bare enumerable fields, `NaN` and `Infinity` become `null`, `undefined` and function and symbol values get their keys dropped, an array hole becomes `null`, `-0` becomes `0`. none of that throws. throw-safety would have blessed the bug rather than closed it.
+
+and the repo had already ruled it, for numbers. `JSON.stringify(NaN)` returns `null` without complaint, so under throw-safety `is.number` would accept `NaN` and `Finite` would have no reason to exist. it exists because a value belongs in `Json` when the notation can spell it and it comes back unchanged. the name says the same thing: `Json` is js object notation, and a notation is a set of spellings.
+
+so the `Json` type was always right and `is.json`'s contract was always right; only the body was loose, in two places rather than the one on file. the number arm tested `typeof x === 'number'` directly instead of calling `number(x)`, declared four lines above it, so `is.json(NaN)`, `is.json(Infinity)` and `is.json({ a: NaN })` were all `true`, contradicting `Finite` inside the same module.
+
+**the prototype objection dissolves once the definition is fidelity.** this entry used to call `Object.getPrototypeOf` "machinery this library avoids". it is not imported machinery: the prototype is the thing that distinguishes a record from an instance, so testing it is the direct test of the claim the guard makes. both arms are needed, because a null-prototype record still spells a plain object:
+
+```ts
+/** whether a record is a plain one, and not an instance of something else */
+const plain = (x: Record<string, unknown>) =>
+  Object.getPrototypeOf(x) === Object.prototype ||
+  Object.getPrototypeOf(x) === null;
+```
+
+module private, above its first user, per the `canonical` precedent in `iso.ts`. `record` is untouched, so o5 stands. the order of the disjunction is load bearing: an array fails `plain` (its prototype is `Array.prototype`) and falls through to the `array` arm, which is where it was always handled.
+
+what remains is the cycle case, at the top of this file. it is not a variant of this bug: fidelity says a cycle is not `Json`, and the guard agrees with that, it just says so by exhausting the stack instead of returning `false`.
