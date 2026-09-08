@@ -138,4 +138,4 @@ the test for a new helper: does it *compose* things, or does it only write lines
 - one commit per decision. if a message describes half the diff, split it.
 - version bumps are their own commit, named just the version. tags drive publishing.
 - ci runs `npm test` before it builds and publishes. keep it that way.
-- commit or push only when asked.
+- the session loop is fixed: you make the change, the author reviews it, then you commit and push it. never commit before the review; once it passes, commit and push without waiting to be asked again.
