@@ -6,29 +6,20 @@ import { call, result } from './result.js';
 /*
   holding things you have to give back
 
-  usually a resource is held by a block. java and c# write `try`/`finally`, python writes `with`,
-  go writes `defer`, zig writes `defer` and `errdefer`. one resource, one block, and the block is
-  also where the failure is caught, so the two questions get answered in the same construct.
+  usually a resource is held by a block: try/finally, with, defer. one resource, one block,
+  and the block catches the failure too, so both questions get answered in the same place.
 
-  the callback version of that block is the one javascript reaches for, and it is worse:
-  `withConnection(conn => withLock(lock => withFile(file => ...)))` puts every resource one lambda
-  deeper than the last, so by the third one you are indenting more than you are working.
-  the shape of the code follows the number of things you hold rather than what you are doing.
+  the callback version js reaches for is worse; withConnection(conn => withLock(lock => ...))
+  puts every resource one lambda deeper, so the indentation follows how much you hold.
 
-  here it is one call. the work is handed `hold`, and it holds what it needs one line at a time:
-  `hold` takes a resource (`open`, `close`, `abort`), runs the open through `call`, and gives you
-  back a `Result` you branch on the way you branch on anything else. a second resource is a second
-  line, not a second level, so resources nest without scopes nesting.
+  here it's one call. the work gets hold, and it holds what it needs a line at a time:
+  hold takes a resource, runs the open through call, and gives back a result you branch on.
+  a second resource is a second line, not a second level.
 
-  the scope keeps the list and gives everything back in reverse when the work returns, choosing
-  `close` when the work succeeded and `abort` when it did not: zig's `defer` and `errdefer`, decided
-  from the result instead of from where the callback sits. there is deliberately no single release,
-  since a transaction commits or rolls back and one function would decide that for you.
+  everything goes back in reverse when the work returns, closing if it succeeded and aborting
+  if it didn't; there's no single release, since a transaction commits or rolls back.
 
-  what comes out is two facts, not one, because two independent things happened. `exit` says how the
-  work left: `done` with the result you returned, whatever it says, or `panic` with the throw nobody
-  caught. `leaked` lists every release that threw on the way out. unwinding never stops early, so a
-  release that throws costs you that one resource and not the rest of the list.
+  and you get two facts, not one: exit says how the work left, leaked lists the releases that threw.
 */
 
 // say we have an sdk connecting us to something; a boolean picks failure, as usual

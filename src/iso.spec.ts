@@ -6,21 +6,17 @@ import * as iso from './iso.js';
 /*
   narrow, then map
 
-  schema validation gets complicated when a library tries to validate and transform in one step;
-  a codec like `NumberFromString` answers two very different questions at once:
-  is this string parseable, and what is the number.
+  validation gets complicated when a library validates and transforms in one step;
+  a codec like NumberFromString asks two questions at once: is this parseable, and what's the number.
 
-  in tstd those are two steps, and the brand is the receipt the first one hands to the second:
-  narrowing owns every failure, so mapping receives a value that has already been proven
-  and can return it unboxed.
+  in tstd those are two steps, and the brand is the receipt the first hands to the second;
+  narrowing owns the failure, so mapping gets a proven value and returns it unboxed.
 
-  that leaves nothing to transform for a date: an instant is a string, both on the wire and in memory,
-  and the only thing a date module owes you is functions that manipulate it without ever mutating it.
+  for a date that leaves nothing to transform: an instant is a string on the wire and in memory,
+  so all this module owes you is functions that manipulate it without mutating anything.
 
-  `iso` is named after the notation, exactly like `Json` is: these are all iso 8601 lexical forms.
-
-  the global `Date` never escapes this module: it gets built with `make`, which owns every
-  instantiation there is, and only its canonical string comes back out.
+  iso is named after the notation, like Json is. the global Date never escapes:
+  make builds it, and only its canonical string comes back out.
 */
 
 test('narrow before you map', () => {

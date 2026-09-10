@@ -7,18 +7,14 @@ import * as iso from './iso.js';
 /*
   the third job of a codec
 
-  a codec like `DateFromNumber` bundles three jobs: it validates, it converts forward,
-  and it remembers how to convert back. pulling validation out is what makes everything
-  downstream total, and `is` already owns that job.
+  a codec like DateFromNumber does three things: it validates, it converts forward,
+  and it remembers how to convert back. we pull validation out, since is already owns it.
 
-  the other two are inverses of each other, and two functions that must stay inverses
-  have to be declared in one place, or they drift apart the first time a field is renamed.
-  that pairing is a form.
+  the other two are inverses, and inverses drift apart if you declare them apart;
+  so a form is the pairing, written once.
 
-  a form is not a codec, because failure does not live in it: by the time `decode` runs,
-  the value has already been narrowed, so it cannot fail and returns unboxed.
-  that is also why there is no `Either` here, no error accumulation
-  and none of the combinator tower those two things force on a library.
+  a form isn't a codec: by the time decode runs the value is already narrowed,
+  so it can't fail and it returns unboxed. that's why there's no Either here, and no combinators.
 */
 
 // on the wire an instant is a timestamp; in memory we would rather read it
@@ -139,16 +135,14 @@ test('nest a model in another, twice over', () => {
 });
 
 /*
-  a field is four lines, so tstd ships none of them: here is the one for an instant
-  stored the way a zone writes it down, rather than the way utc does.
+  a field is four lines, so tstd ships none: here's the one for an instant stored
+  the way a zone writes it down, rather than the way utc does.
 
-  a zone is a value, so the factory takes one and closes over it; the field's guard is
-  an ordinary function, which is what lets it know about daylight saving. the brand names
-  the zone it was checked in, so a spelling proven in one zone cannot be read in another.
+  a zone is a value, so the factory takes one and closes over it; the guard is an ordinary
+  function, which is how it knows about daylight saving, and the brand names the zone it checked.
 
-  `iso.fromLocal` admits absence, because a brand pins its zone only when the zone is a literal
-  and a zone read at runtime can still disagree. here it cannot: the guard that admitted `x`
-  ran against this very `zone`, so the closure is the proof, and the cast says so.
+  fromLocal admits absence, because a brand pins its zone only when that zone is a literal;
+  here the guard ran against this very zone, so the closure is the proof and the cast says so.
 */
 const zoned = <Z extends string>(zone: Z & iso.Zone) => ({
   is: (x: unknown): x is iso.Local & iso.Unambiguous<Z> => iso.local(x) && iso.unambiguous(x, zone),
