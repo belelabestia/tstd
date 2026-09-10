@@ -35,7 +35,7 @@ test('branch everything', () => {
   type Res = Union<{ xs: { a: number; }, s: string, m: number, l: number[], xl: void; }>;
   const res: Res = toughDecision(0.3);
 
-  assert.deepEqual(res, { branch: 's', value: 'hello' });
+  assert.deepEqual(res, branch('s', 'hello'));
 
   // or passed as a union-typed argument
   const branchIsL = (res: Res) => res.branch === 'l';
@@ -55,13 +55,12 @@ test('branch something', () => {
   // now res might be undefined so you need to check
   if (res === undefined) assert.fail();
 
-  assert.deepEqual(res, { branch: 'small', value: 0.1 });
-
   // now ts will easily scaffold a switch statement:
   switch (res.branch) {
     case 'big':
       assert.fail();
     case 'small':
+      assert.deepEqual(res, branch('small', 0.1));
       return;
   }
 });

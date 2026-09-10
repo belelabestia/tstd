@@ -1461,3 +1461,24 @@ const loader = protocol.init({
 - **the word.** a protocol is an agreed sequence of exchanges, so it implies ordering and cannot be the umbrella for the orderless case. it is the umbrella for the *declaration*, and a union and a machine are the two things you can declare with one. a machine is a union that knows what follows what, which is what `machine.spec.ts` said in its first line before any of this was built.
 - **`unknown` is how a declaration says "whatever the caller brings".** a declared value is fixed, so `init` reads `unknown extends Declared<B>[K]` and hands back a generic factory instead. `src/result.ts` is built that way, and rebuilding its hand-written factories through `init` left every existing spec passing, which is what a replacement has to show.
 - **two types come off the factories, not off the declaration**, since the declaration is written inline in the call and has no name: `protocol.Of<typeof loader>` is every state and `protocol.Of<typeof loader, 'loading'>` is one, which is what a react `useState` or any other holder is written against. `Union<protocol.Model<typeof loader>>` is the same states as plain branches, which is the storage shape, and it stays a composition rather than a third export.
+
+### o23. `branch('x', 1)` is the literal notation for a branch: house (ruled)
+
+❌ instead of writing the shape by hand:
+
+```ts
+assert.deepEqual(done, { branch: 'success', value: 42 });
+const stored = { branch: loading.branch, value: loading.value };
+```
+
+✅ do call the factory, everywhere a branch value appears:
+
+```ts
+assert.deepEqual(done, branch('success', 42));
+const stored = branch(loading.branch, loading.value);
+```
+
+- **it is the value-level twin of a rule already in `claude.md`.** unions come from `Union<{ ... }>` and are never hand-written; branches come from `branch(...)` for the same reason, so the notation for a branch is one thing and not two.
+- **it cost five literals in the whole library**, two of them in `branch.spec.ts`, and `protocol.ts` was already building every state through the factory.
+- **it is value-level only.** a type still comes from `Union<{ ... }>` or `Branch<...>`, and inline against a union-typed target the factory infers its value from every member at once, so bind first and then assign.
+- **one collision, worth knowing.** `assert.deepEqual` is an assertion signature, `asserts actual is T`, so asserting against `branch('small', 0.1)` narrows the actual to that one branch and a later `switch` over the union stops compiling. the literal used to widen the tag to `string` and hid this. the fix is to assert inside the case rather than before the switch, which is what `branch.spec.ts` does now.
