@@ -941,6 +941,22 @@ the `.js` emit is byte-identical to 5.9; only two `.d.ts` differ, by an alpha-re
 - backtick every identifier and keyword
 - be honest about scope: the `## warning` section calling this a research project sets expectations instead of overselling
 
+### j2. spec prose, measured against the author's own specs: house
+
+`branch.spec.ts`, `result.spec.ts` and `is.spec.ts` are his. what they do, counted:
+
+- **the essay is two to four paragraphs, six to ten lines in total.** `result.spec.ts` opens with three lines and no title at all; `branch.spec.ts` has a title, "a little bit of theory", then four paragraphs of one or two lines each.
+- **sentences run twelve to twenty words**, joined with semicolons rather than split, and they stop when the point lands.
+- **contractions throughout**: "aren't", "it's", "doesn't", "everything's". the assistant writes none, which is the loudest tell of the two voices.
+- **person is casual and moves**: "we have many kinds of runtime type checks", "you can usually do free-branching", "i have a module that needs to be instantiated as a class".
+- **identifiers are bare in the prose**: "branch is a factory function used to make single branches of tagged union types". backticks are for the readme and for `claude.md`, not for a spec essay.
+- **comments inside tests are one line**, and they say what is about to happen rather than why it is right: "here's a bunch of unknown variables", "let's narrow them down", "now a is a number, and b is a string".
+- **nothing is restated.** the reader has the readme and the code in front of them. the essay says what the module is for and stops; it does not argue the design, list what was refused, or narrate what the types are doing.
+
+❌ instead of "a value cannot state a type: an object literal only has whatever happens to be in it. the one exception is a function parameter, a slot inside a value whose type is written by hand."
+
+✅ do "a value can't state a type; a function parameter can, so we declare with functions."
+
 ❌ instead of "This library provides a comprehensive set of utilities for type-safe error handling."
 
 ✅ do "`tstd` facilitates lean procedural code without sacrificing the overall type-safety and testability of the code."
