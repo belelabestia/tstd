@@ -82,6 +82,7 @@ these compress `.claude/style-kb.md`. go there for the examples.
 - brand the requirement, not the type: `Brand<'Trimmed'>` composed with `&`, never one branded type per shape.
 - when a guard checks more than its type can say, brand it: `is.number` narrows to `Finite`.
 - `satisfies` for literals that must keep their inferred type: schemas, forms, encode bodies.
+- a declaration written as functions states its types through their parameters: **the parameter declares what a branch carries, and the result names which branches may follow, or nothing**. `protocol.Model<T>` reads those parameters back, the same job `is.Model` does for a schema of guards, and `protocol.init` walks the same literal at runtime. a declaration with nothing following anything is a union; one with something following is a machine; there is one call for both. `unknown` in that parameter means "whatever the caller brings", and hands back a generic factory (o21, o22).
 - values from outside are `unknown` and stay `unknown`. carry the error, do not normalise it.
 
 ### guards

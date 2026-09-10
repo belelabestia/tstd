@@ -1422,24 +1422,42 @@ scope.sync(hold => {
 - **unwinding never stops early.** a release that throws costs you that resource and nothing else; the rest of the list still goes back, in reverse order.
 - **the mutable list is the price.** `taken` is a `const` array that grows, which c5 allows, and it is the one piece of state in the library. the guarantee it buys is the one a merged `open` cannot give: if the second resource refuses, the first is already held and is released on the way out.
 
-### o21. a lifecycle is written as functions because one function declares a type and yields a value at once: house (ruled)
 
-`src/machine.ts` takes its lifecycle as an object of functions, and none of them is written to do work:
+### o21. a declaration is written as functions, because a parameter is the only slot in a value that states a type: house (ruled)
+
+`protocol.Model` is one type and it is the whole device:
 
 ```ts
-const loader = machine.init({
-  idle: () => ['loading'],
-  loading: (value: { at: number; }) => ['success', 'error'],
-  success: (value: string[]) => [],
-  error: (value: unknown) => ['loading']
-}, 'idle');
+export type Model<T> = { [K in keyof T]: Parameters<Extract<T[K], (...args: never[]) => unknown>> extends [infer V] ? V : void };
 ```
 
-it reads as a trick, so it is worth being exact about which half is real.
+a value cannot state a type. an object literal holds a number, and nothing in it says the slot is a number and only ever will be. the one exception is a function parameter, a slot inside a value whose type is written by hand and kept, so an object of functions states one type per key and `Model` reads them back, which is the same job `is.Model` does for a schema of guards: the type a runtime object describes.
 
-- **the result is runtime data.** `init` calls the factory of every state it enters, and the tags that come back are what `to` is built from. nothing is faked there, and the call is not argument-less: the state's own value goes in.
-- **the parameter is a declaration.** an honest lifecycle ignores it. it exists so that what a state carries is written once, in the only place a value-level declaration can state a type, and `Value<B, K>` reads it back with `Parameters`.
-- **the ruling.** it is the most efficient way to collect all of the information at once and build both structures from it: the static one, which is `State<B, K>` and its `to`, and the dynamic one, which is the object `init` returns. the alternative is a type declaration beside a value declaration, which names every state twice and every transition twice, and lets the two drift.
-- **the lifecycle has to be written inline in the `init` call.** binding it to a `const` first widens each factory's return from `('success' | 'error')[]` to `string[]`, and `as const` does not rescue it, because it does not reach inside a function body. so `B` has no name a caller can write, `State` is not exported, and a spec names a state with `typeof loading`.
-- **a factory that varied its tags by value would leave the type a superset.** the return type is the full set, and `to` is built from the call, so returning fewer tags for some values would promise a transition that is not there. a lifecycle returns a constant array.
-- **the parameter is not checked against use.** a factory could read its parameter and the type would not say so. that is the residue of the trick, and it is the price of the line above.
+- **the point is not brevity.** a type declaration exists only at compile time and a plain object exists only at runtime; a declaration written as functions is there at both. one literal can be walked for its keys and read for its types, so what you build by walking it is typed by what it declared, and the two halves cannot drift.
+- **the result is runtime data.** `protocol.init` calls the factory of every branch it enters, with that branch's own value, and what comes back is the list `to` is built from. the call is not argument-less and nothing there is faked.
+- **the parameter is the declaration.** an honest one ignores it. it is there so that what a branch carries is written once.
+- **there is one way to say a branch goes nowhere: return nothing.** the result type is a non-empty list or `void`, so `=> []` is refused, and no empty tuple is allocated per entry into a leaf.
+- **two residues, both real.** nothing checks that the parameter goes unread, and a factory that varied its tags by value would leave the type a superset of what `to` actually holds. a declaration returns a constant list.
+
+### o22. one declaration is a union or a machine, and `protocol.init` is the only call: house (ruled)
+
+```ts
+const payment = protocol.init({
+  success: (value: number) => {},
+  rejected: () => {}
+});
+
+const loader = protocol.init({
+  idle: () => ['loading'],
+  loading: (value: { at: number; }) => ['success', 'error'],
+  success: (value: string[]) => {},
+  error: (value: unknown) => ['loading']
+});
+```
+
+- **the rule.** the parameter declares what a branch carries, and the result is for whatever else there is to say, which is which branches may follow. that is one rule for both shapes rather than one each.
+- **a union and a machine are one declaration.** where a branch names nothing after it, it is data alone and the family is a union; where it names others, it carries the factories for exactly those, and what comes back carries its own, which is a machine: the fixed point of the same declaration. so `init` is a single call and what you get is what you declared.
+- **three shapes were tried and refused, in order.** returning the value instead of the tags, which cannot apply to a machine whose result already carries them, and would have taught "the value is the parameter" in one module and "the value is the result" in the other. two modules, `machine` and `protocol`, which are the same idea with two entry surfaces. two constructors, `protocol.union` and `protocol.machine`, which is the same circle again: an all-void machine **is** the union, so one of them is redundant.
+- **the word.** a protocol is an agreed sequence of exchanges, so it implies ordering and cannot be the umbrella for the orderless case. it is the umbrella for the *declaration*, and a union and a machine are the two things you can declare with one. a machine is a union that knows what follows what, which is what `machine.spec.ts` said in its first line before any of this was built.
+- **`unknown` is how a declaration says "whatever the caller brings".** a declared value is fixed, so `init` reads `unknown extends Declared<B>[K]` and hands back a generic factory instead. `src/result.ts` is built that way, and rebuilding its hand-written factories through `init` left every existing spec passing, which is what a replacement has to show.
+- **two types come off the factories, not off the declaration**, since the declaration is written inline in the call and has no name: `protocol.Of<typeof loader>` is every state and `protocol.Of<typeof loader, 'loading'>` is one, which is what a react `useState` or any other holder is written against. `Union<protocol.Model<typeof loader>>` is the same states as plain branches, which is the storage shape, and it stays a composition rather than a third export.
