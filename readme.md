@@ -96,11 +96,12 @@ to get the most out of `tstd`, you should consider to learn to code with the fol
 
 ### flow
 
-- always prefer flow over callbacks; use callbacks only as entrypoints
+- always prefer flow over callbacks; use callbacks only as entrypoints, which is what `make`, `call` and `scope` are
 - `try`, `catch` and `finally` appear only inside `make` and `call`: a throw is as invisible to a signature as a `this` requirement, so it gets turned into a `Result` at the boundary instead of travelling as flow
 - never hide flow behind data: no `map`, `andThen`, `unwrap` or `match` on a branch
 - a function that cannot fail returns an unboxed value, not a result
-- delegate decisions to the caller by using `branch` and `Union`
+- delegate decisions to the caller by using `branch` and `Union`, declared once through `protocol.init`
+- hold resources in a `scope`, which gives them all back in reverse whatever happened to the work
 - return as early as possible
 - avoid `else` unless you're dealing with a boolean that's meaningful in both cases
 - avoid `switch` unless you're dealing with a union that's meaningful in all cases
@@ -111,6 +112,8 @@ to get the most out of `tstd`, you should consider to learn to code with the fol
 
 - a type is an expression the compiler evaluates: treat an alias as a comptime `const` and its parameters as that const's arguments
 - so name and reuse types the way you name and reuse values; a shape written twice is duplication, named or not, and a type worth naming is not always a type worth exporting
+- a declaration is written as functions, because a parameter is the only slot in a value that states a type: the parameter says what a branch carries, the result names which branches may follow, or nothing
+- nothing following anything is a union, something following is a machine, and `protocol.init` is the one call for both
 - prefer type narrowing (`x is T`) to parsing (`return x as T`) for validation as it is a cheaper abstraction
 - `as` is allowed exactly where it's the only way to obtain a peculiar typescript behavior, as in `branch`
 - native errors and values from outside are `unknown` by design: don't try to fix this, just narrow their type
