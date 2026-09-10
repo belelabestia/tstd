@@ -1,13 +1,16 @@
-import { branch, Union } from './branch.js';
+import { Union } from './branch.js';
+import * as protocol from './protocol.js';
+
+const shape = <S, E>() => ({
+  success: (value: S) => {},
+  error: (value: E) => {}
+});
 
 /** a particularly useful union type */
-export type Result<S, E> = Union<{ success: S; error: E; }>;
+export type Result<S, E> = Union<protocol.Model<typeof shape<S, E>>>;
 
 /** convenience factory api */
-export const result = {
-  success: <X = void>(x?: X) => branch('success', x),
-  error: <X = void>(x?: X) => branch('error', x)
-};
+export const result = protocol.init(shape());
 
 /** convert a constructor into a safe function call returning a result */
 export const make = <Args extends unknown[], Instance>(c: new (...args: Args) => Instance, ...args: Args) => {
