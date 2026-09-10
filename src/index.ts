@@ -7,4 +7,4 @@ export * from './scope.js';
 export * as is from './is.js';
 export * as form from './form.js';
 export * as iso from './iso.js';
-export * as machine from './machine.js';
+export * as protocol from './protocol.js';
