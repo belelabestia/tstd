@@ -1421,3 +1421,25 @@ scope.sync(hold => {
 - **`leaked` is a list, and that is not error accumulation.** the refusal is about accumulating errors from one failing operation; these are n resources each failing to go back, and reporting one would hide the rest. the count is runtime data, so it is an array and not a tuple: `hold` is called dynamically, so no arity exists at the type level.
 - **unwinding never stops early.** a release that throws costs you that resource and nothing else; the rest of the list still goes back, in reverse order.
 - **the mutable list is the price.** `taken` is a `const` array that grows, which c5 allows, and it is the one piece of state in the library. the guarantee it buys is the one a merged `open` cannot give: if the second resource refuses, the first is already held and is released on the way out.
+
+### o21. a lifecycle is written as functions because one function declares a type and yields a value at once: house (ruled)
+
+`src/machine.ts` takes its lifecycle as an object of functions, and none of them is written to do work:
+
+```ts
+const loader = machine.init({
+  idle: () => ['loading'],
+  loading: (value: { at: number; }) => ['success', 'error'],
+  success: (value: string[]) => [],
+  error: (value: unknown) => ['loading']
+}, 'idle');
+```
+
+it reads as a trick, so it is worth being exact about which half is real.
+
+- **the result is runtime data.** `init` calls the factory of every state it enters, and the tags that come back are what `to` is built from. nothing is faked there, and the call is not argument-less: the state's own value goes in.
+- **the parameter is a declaration.** an honest lifecycle ignores it. it exists so that what a state carries is written once, in the only place a value-level declaration can state a type, and `Value<B, K>` reads it back with `Parameters`.
+- **the ruling.** it is the most efficient way to collect all of the information at once and build both structures from it: the static one, which is `State<B, K>` and its `to`, and the dynamic one, which is the object `init` returns. the alternative is a type declaration beside a value declaration, which names every state twice and every transition twice, and lets the two drift.
+- **the lifecycle has to be written inline in the `init` call.** binding it to a `const` first widens each factory's return from `('success' | 'error')[]` to `string[]`, and `as const` does not rescue it, because it does not reach inside a function body. so `B` has no name a caller can write, `State` is not exported, and a spec names a state with `typeof loading`.
+- **a factory that varied its tags by value would leave the type a superset.** the return type is the full set, and `to` is built from the call, so returning fewer tags for some values would promise a transition that is not there. a lifecycle returns a constant array.
+- **the parameter is not checked against use.** a factory could read its parameter and the type would not say so. that is the residue of the trick, and it is the price of the line above.
