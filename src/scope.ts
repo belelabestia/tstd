@@ -31,7 +31,7 @@ export const scope = {
 
     const hold = <R>(x: Resource<R>) => {
       const open = call.sync(x.open);
-      if (open.branch === 'error') return open;
+      if (open.branch === 'err') return open;
 
       taken.push({ close: () => x.close(open.value), abort: () => x.abort(open.value) });
 
@@ -43,17 +43,17 @@ export const scope = {
 
       for (const release of [...taken].reverse()) {
         const gave = call.sync(release[kind]);
-        if (gave.branch === 'error') leaked.push(gave.value);
+        if (gave.branch === 'err') leaked.push(gave.value);
       }
 
       return leaked;
     };
 
     const done = call.sync(work, hold);
-    if (done.branch === 'error') return { exit: branch('panic', done.value), leaked: unwind('abort') };
+    if (done.branch === 'err') return { exit: branch('panic', done.value), leaked: unwind('abort') };
 
     const fail: Result<unknown, unknown> = done.value;
-    if (fail.branch === 'error') return { exit: branch('done', done.value), leaked: unwind('abort') };
+    if (fail.branch === 'err') return { exit: branch('done', done.value), leaked: unwind('abort') };
 
     return { exit: branch('done', done.value), leaked: unwind('close') };
   },
@@ -62,7 +62,7 @@ export const scope = {
 
     const hold = async <R>(x: Async<Resource<R>>) => {
       const open = await call.async(x.open);
-      if (open.branch === 'error') return open;
+      if (open.branch === 'err') return open;
 
       taken.push({ close: () => x.close(open.value), abort: () => x.abort(open.value) });
 
@@ -74,17 +74,17 @@ export const scope = {
 
       for (const release of [...taken].reverse()) {
         const gave = await call.async(release[kind]);
-        if (gave.branch === 'error') leaked.push(gave.value);
+        if (gave.branch === 'err') leaked.push(gave.value);
       }
 
       return leaked;
     };
 
     const done = await call.async(work, hold);
-    if (done.branch === 'error') return { exit: branch('panic', done.value), leaked: await unwind('abort') };
+    if (done.branch === 'err') return { exit: branch('panic', done.value), leaked: await unwind('abort') };
 
     const fail: Result<unknown, unknown> = done.value;
-    if (fail.branch === 'error') return { exit: branch('done', done.value), leaked: await unwind('abort') };
+    if (fail.branch === 'err') return { exit: branch('done', done.value), leaked: await unwind('abort') };
 
     return { exit: branch('done', done.value), leaked: await unwind('close') };
   }

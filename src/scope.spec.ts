@@ -54,17 +54,17 @@ test('hold two resources side by side', () => {
   const res = scope.sync(hold => {
     // one line per resource, and a branch you take yourself: no second level anywhere
     const one = hold(first);
-    if (one.branch === 'error') return result.error('cannot hold the first' as const);
+    if (one.branch === 'err') return result.err('cannot hold the first' as const);
 
     const two = hold(second);
-    if (two.branch === 'error') return result.error('cannot hold the second' as const);
+    if (two.branch === 'err') return result.err('cannot hold the second' as const);
 
-    return result.success(one.value.name + ' and ' + two.value.name);
+    return result.ok(one.value.name + ' and ' + two.value.name);
   });
 
   // the exit carries your own result, exactly as the work returned it
   if (res.exit.branch !== 'done') assert.fail();
-  if (res.exit.value.branch !== 'success') assert.fail();
+  if (res.exit.value.branch !== 'ok') assert.fail();
 
   assert.equal(res.exit.value.value, 'first and second');
 
@@ -81,17 +81,17 @@ test('give back what you took when the next one refuses', () => {
 
   const res = scope.sync(hold => {
     const one = hold(first);
-    if (one.branch === 'error') return result.error('cannot hold the first' as const);
+    if (one.branch === 'err') return result.err('cannot hold the first' as const);
 
     const two = hold(refuses);
-    if (two.branch === 'error') return result.error('cannot hold the second' as const);
+    if (two.branch === 'err') return result.err('cannot hold the second' as const);
 
-    return result.success(two.value.name);
+    return result.ok(two.value.name);
   });
 
   // the work named its own failure, so the exit is that result and the first resource is back
   if (res.exit.branch !== 'done') assert.fail();
-  if (res.exit.value.branch !== 'error') assert.fail();
+  if (res.exit.value.branch !== 'err') assert.fail();
 
   assert.equal(res.exit.value.value, 'cannot hold the second');
   assert.deepEqual(held, ['first']);
@@ -109,25 +109,25 @@ test('roll back what a failed work was holding', () => {
   // a failure the work names is still a failure, so the release takes the abort path
   const named = scope.sync(hold => {
     const conn = hold(transaction);
-    if (conn.branch === 'error') return result.error('cannot hold' as const);
+    if (conn.branch === 'err') return result.err('cannot hold' as const);
 
     const rows = call.sync(() => conn.value.query(true));
-    if (rows.branch === 'error') return result.error('cannot query' as const);
+    if (rows.branch === 'err') return result.err('cannot query' as const);
 
-    return result.success(rows.value);
+    return result.ok(rows.value);
   });
 
   if (named.exit.branch !== 'done') assert.fail();
 
-  assert.equal(named.exit.value.branch, 'error');
+  assert.equal(named.exit.value.branch, 'err');
   assert.deepEqual(settled, ['rollback']);
 
   // and a throw nobody caught rolls back too, but leaves as a panic instead of as your result
   const thrown = scope.sync(hold => {
     const conn = hold(transaction);
-    if (conn.branch === 'error') return result.error('cannot hold' as const);
+    if (conn.branch === 'err') return result.err('cannot hold' as const);
 
-    return result.success(conn.value.query(true));
+    return result.ok(conn.value.query(true));
   });
 
   assert.equal(thrown.exit.branch, 'panic');
@@ -149,17 +149,17 @@ test('lose one resource without losing the rest', () => {
 
   const res = scope.sync(hold => {
     const one = hold(sticks);
-    if (one.branch === 'error') return result.error('cannot hold the first' as const);
+    if (one.branch === 'err') return result.err('cannot hold the first' as const);
 
     const two = hold(second);
-    if (two.branch === 'error') return result.error('cannot hold the second' as const);
+    if (two.branch === 'err') return result.err('cannot hold the second' as const);
 
-    return result.success(two.value.name);
+    return result.ok(two.value.name);
   });
 
   // the work is untouched by any of it: its result is exactly what it returned
   if (res.exit.branch !== 'done') assert.fail();
-  if (res.exit.value.branch !== 'success') assert.fail();
+  if (res.exit.value.branch !== 'ok') assert.fail();
 
   assert.equal(res.exit.value.value, 'second');
 
@@ -181,13 +181,13 @@ test('hold something asynchronous', async () => {
 
   const res = await scope.async(async hold => {
     const conn = await hold(socket);
-    if (conn.branch === 'error') return result.error('cannot hold the socket' as const);
+    if (conn.branch === 'err') return result.err('cannot hold the socket' as const);
 
-    return result.success(conn.value.query(false));
+    return result.ok(conn.value.query(false));
   });
 
   if (res.exit.branch !== 'done') assert.fail();
-  if (res.exit.value.branch !== 'success') assert.fail();
+  if (res.exit.value.branch !== 'ok') assert.fail();
 
   assert.equal(res.exit.value.value, 'rows');
   assert.deepEqual(listening, ['socket']);
@@ -195,9 +195,9 @@ test('hold something asynchronous', async () => {
   // a rejected promise is a throw like any other, so it leaves as a panic and still releases
   const failed = await scope.async(async hold => {
     const conn = await hold(socket);
-    if (conn.branch === 'error') return result.error('cannot hold the socket' as const);
+    if (conn.branch === 'err') return result.err('cannot hold the socket' as const);
 
-    return result.success(await Promise.reject(new Error('gone')));
+    return result.ok(await Promise.reject(new Error('gone')));
   });
 
   assert.equal(failed.exit.branch, 'panic');

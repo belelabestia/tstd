@@ -55,7 +55,7 @@ test('stay generic where a branch carries unknown', () => {
   assert.equal(kept, 42);
 
   // result is built that way, so its payloads still travel
-  const rows: string[] = result.success(['a']).value;
+  const rows: string[] = result.ok(['a']).value;
 
   assert.deepEqual(rows, ['a']);
 });
@@ -63,9 +63,9 @@ test('stay generic where a branch carries unknown', () => {
 // here every branch says what may follow it, or nothing when it ends the machine
 const loader = protocol.init({
   idle: () => ['loading'],
-  loading: (value: { at: number; }) => ['success', 'error'],
-  success: (value: string[]) => {},
-  error: (value: unknown) => ['loading']
+  loading: (value: { at: number; }) => ['ok', 'err'],
+  ok: (value: string[]) => {},
+  err: (value: unknown) => ['loading']
 });
 
 test('walk a machine to its end', () => {
@@ -75,19 +75,19 @@ test('walk a machine to its end', () => {
 
   // going to a state takes the value that state declared
   const loading = idle.to.loading({ at: 1 });
-  const loaded = loading.to.success(['a', 'b']);
+  const loaded = loading.to.ok(['a', 'b']);
 
   assert.equal(loading.value.at, 1);
 
   // and where it ends there's no to at all, so a state is just a branch again
-  assert.deepEqual(loaded, branch('success', ['a', 'b']));
+  assert.deepEqual(loaded, branch('ok', ['a', 'b']));
 });
 
 test('enter a machine wherever you left it', () => {
-  const walked = loader.idle().to.loading({ at: 1 }).to.error(new Error('down'));
+  const walked = loader.idle().to.loading({ at: 1 }).to.err(new Error('down'));
 
   // every state is a factory, so you can start where something else stopped
-  const resumed = loader.error(new Error('down'));
+  const resumed = loader.err(new Error('down'));
 
   assert.deepEqual(Object.keys(resumed), Object.keys(walked));
   assert.equal(resumed.to.loading({ at: 2 }).branch, 'loading');
@@ -98,7 +98,7 @@ test('hold a machine in any of its states', () => {
   const held: protocol.Of<typeof loader> = loader.idle().to.loading({ at: 1 });
   if (held.branch !== 'loading') assert.fail();
 
-  assert.equal(held.to.success(['a']).branch, 'success');
+  assert.equal(held.to.ok(['a']).branch, 'ok');
 });
 
 test('let an event choose which transition to take', () => {
@@ -106,13 +106,13 @@ test('let an event choose which transition to take', () => {
 
   // the two ways out of loading carry what a result carries, so the result is the event
   const settle = (x: protocol.Of<typeof loader, 'loading'>, out: Result<string[], unknown>) => {
-    if (out.branch === 'error') return x.to.error(out.value);
+    if (out.branch === 'err') return x.to.err(out.value);
 
-    return x.to.success(out.value);
+    return x.to.ok(out.value);
   };
 
-  const failed = settle(loading, result.error(new Error('down')));
-  if (failed.branch !== 'error') assert.fail();
+  const failed = settle(loading, result.err(new Error('down')));
+  if (failed.branch !== 'err') assert.fail();
 
   assert.ok(failed.value instanceof Error);
 
@@ -120,9 +120,9 @@ test('let an event choose which transition to take', () => {
   const again = failed.to.loading({ at: 2 });
 
   // and a settled load is a result, same tags and same values, nothing wrapping anything
-  const done: Result<string[], unknown> = settle(again, result.success(['a']));
+  const done: Result<string[], unknown> = settle(again, result.ok(['a']));
 
-  assert.equal(done.branch, 'success');
+  assert.equal(done.branch, 'ok');
 });
 
 test('put a machine away as the data it is', () => {
@@ -136,11 +136,11 @@ test('put a machine away as the data it is', () => {
   // and coming back is entering at the state you stored
   if (stored.branch !== 'loading') assert.fail();
 
-  assert.equal(loader.loading(stored.value).to.success(['a']).branch, 'success');
+  assert.equal(loader.loading(stored.value).to.ok(['a']).branch, 'ok');
 });
 
 test('refuse what a declaration does not say', () => {
-  const loaded = loader.loading({ at: 1 }).to.success(['a']);
+  const loaded = loader.loading({ at: 1 }).to.ok(['a']);
 
   // @ts-expect-error the value is whatever the parameter said
   const wrong = () => payment.success('42');
@@ -148,10 +148,10 @@ test('refuse what a declaration does not say', () => {
   // @ts-expect-error a branch that carries nothing takes nothing
   const extra = () => payment.rejected(1);
 
-  // @ts-expect-error a load can't go straight from idle to success
-  const jump = loader.idle().to.success;
+  // @ts-expect-error a load can't go straight from idle to ok
+  const jump = loader.idle().to.ok;
 
-  // @ts-expect-error success ends the machine, so there's no to on it
+  // @ts-expect-error ok ends the machine, so there's no to on it
   const undo = loaded.to;
 
   // @ts-expect-error and you can only go where the declaration names a state

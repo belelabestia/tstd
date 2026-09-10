@@ -2,8 +2,8 @@ import { Union } from './branch.js';
 import * as protocol from './protocol.js';
 
 const shape = <S, E>() => ({
-  success: (value: S) => {},
-  error: (value: E) => {}
+  ok: (value: S) => {},
+  err: (value: E) => {}
 });
 
 /** a particularly useful union type */
@@ -15,10 +15,10 @@ export const result = protocol.init(shape());
 /** convert a constructor into a safe function call returning a result */
 export const make = <Args extends unknown[], Instance>(c: new (...args: Args) => Instance, ...args: Args) => {
   try {
-    return result.success(new c(...args));
+    return result.ok(new c(...args));
   }
   catch (error) {
-    return result.error(error);
+    return result.err(error);
   }
 };
 
@@ -26,18 +26,18 @@ export const make = <Args extends unknown[], Instance>(c: new (...args: Args) =>
 export const call = {
   sync: <Args extends unknown[], Value>(f: (...args: Args) => Value, ...args: Args) => {
     try {
-      return result.success(f(...args));
+      return result.ok(f(...args));
     }
     catch (error) {
-      return result.error(error);
+      return result.err(error);
     }
   },
   async: async <Args extends unknown[], Value>(f: (...args: Args) => Promise<Value>, ...args: Args) => {
     try {
-      return result.success(await f(...args));
+      return result.ok(await f(...args));
     }
     catch (error) {
-      return result.error(error);
+      return result.err(error);
     }
   }
 };
