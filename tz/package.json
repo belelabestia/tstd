@@ -1,0 +1,24 @@
+{
+  "name": "@belelabestia/tz",
+  "version": "0.0.0",
+  "type": "module",
+  "license": "MIT",
+  "private": true,
+  "bin": {
+    "tzc": "./dist/tzc.js",
+    "tzx": "./dist/tzx.js"
+  },
+  "scripts": {
+    "start": "tsc --watch",
+    "build": "tsc",
+    "test": "tsc --noEmit && tsx --test src/**/*.spec.ts"
+  },
+  "dependencies": {
+    "@belelabestia/tstd": "file:.."
+  },
+  "devDependencies": {
+    "@types/node": "^24.2.0",
+    "tsx": "^4.20.3",
+    "typescript": "^7.0.2"
+  }
+}

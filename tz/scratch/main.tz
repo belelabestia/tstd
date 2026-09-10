@@ -1,0 +1,6 @@
+import { say } from './load.js';
+import { label } from './signup.js';
+
+console.log(say('1'));
+console.log(say('2'));
+console.log(label(-3));

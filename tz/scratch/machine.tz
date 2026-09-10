@@ -1,0 +1,31 @@
+import { result, type Result, type Union } from '@belelabestia/tstd';
+
+type Get = (id: string) => Promise<Result<string, string>>;
+
+/** the states a load moves through */
+export type Load = Union<{ idle: void, loading: number, done: string, failed: string; }>;
+
+/** two awaits, two propagations, and nobody wrote async */
+export const both = (get: Get, a: string, b: string) => {
+  const one = try await get(a);
+  const two = try await get(b);
+  ok `${one} and ${two}`;
+};
+
+/** a promise that never suspends, which is the one thing inference cannot say */
+export const ready = (x: string) => {
+  async x;
+};
+
+/** the payload of the one branch that carries an answer, reached by refusing the rest */
+export const finished = (x: Load) => {
+  const rows = x on:idle on:loading on:failed;
+  return rows;
+};
+
+/** and the same question asked as an answer instead of a decline */
+export const describe = (x: Load) => match (x) {
+  :done (rows) => rows,
+  :failed (why) => `failed: ${why}`,
+  _ => 'still going'
+};

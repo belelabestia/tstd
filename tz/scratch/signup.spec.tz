@@ -1,0 +1,65 @@
+import { test } from 'node:test';
+import { branch, result } from '@belelabestia/tstd';
+import * as assert from 'node:assert/strict';
+import { active, clamp, label, say, signup } from './signup.js';
+import { claim, name } from './load.js';
+import { quiet, zone } from './fallback.js';
+import { describe, finished } from './machine.js';
+
+test('refuse a payload that is not a signup', () => {
+  const out = signup({ email: 'a@b.c' });
+
+  guard (out.branch == 'err') assert.fail();
+  assert.equal(out.value, 'malformed body');
+});
+
+test('accept one that is, and carry it narrowed', () => {
+  const out = signup({ email: 'a@b.c', age: 19 });
+
+  guard (out.branch == 'ok') assert.fail();
+  assert.equal(out.value.age, 19);
+});
+
+test('walk a list with a refusal per turn', () => {
+  assert.deepEqual(active(['a', '', 'b']), ['a', 'b']);
+});
+
+test('choose between two sides, and answer without refusing', () => {
+  assert.equal(label(-1), 'below');
+  assert.equal(label(0), 'nothing');
+  assert.equal(clamp(400), 100);
+  assert.equal(say(400), 'bad request');
+});
+
+test('propagate a failure without naming it twice', () => {
+  const found = name('1');
+
+  guard (found.branch == 'ok') assert.fail();
+  assert.equal(found.value, 'ada');
+
+  const missing = name('2');
+
+  guard (missing.branch == 'err') assert.fail();
+  assert.equal(missing.value, 'no row 2');
+});
+
+test('refuse what is already there', () => {
+  assert.equal(claim('x').branch, 'ok');
+  assert.equal(claim('x').branch, 'err');
+});
+
+test('substitute a value rather than refusing one', () => {
+  assert.equal(quiet(() => result.err('down')), 'localhost');
+  assert.equal(zone({}), 'utc');
+});
+
+test('reach one branch by refusing the others', () => {
+  // a branch infers its value from every member at once, so bind it before you hand it over
+  const done = branch('done', 'rows');
+  const idle = branch('idle');
+  const failed = branch('failed', 'down');
+
+  assert.equal(finished(done), 'rows');
+  assert.equal(finished(idle), undefined);
+  assert.equal(describe(failed), 'failed: down');
+});

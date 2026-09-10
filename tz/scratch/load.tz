@@ -1,0 +1,38 @@
+import { call, is, result } from '@belelabestia/tstd';
+
+const table: Record<string, string> = { '1': '{"name":"ada"}' };
+
+const claimed: Record<string, boolean> = {};
+
+const shape = { name: is.string } satisfies is.Schema;
+
+/** the row a key names, or why there is none */
+const row = (id: string) => {
+  const found = table[id] any:none err `no row ${id}`;
+  ok found;
+};
+
+/** the name a row carries, or why it could not be read */
+export const name = (id: string) => {
+  const raw = try row(id);
+  const parsed = try call.sync(() => JSON.parse(raw));
+  guard (is.model(parsed, shape)) err 'not a row';
+  ok parsed.name;
+};
+
+/** take a key, refusing one somebody already took */
+export const claim = (id: string) => {
+  claimed[id] any:some err `already claimed: ${id}`;
+  claimed[id] = true;
+  ok id;
+};
+
+/** read the outcome off its branch, and bind what the branch carries */
+export const say = (id: string) => {
+  const out = name(id);
+
+  return match (out) {
+    :ok (who) => `hello ${who}`,
+    _ (why) => `sorry, ${why}`
+  };
+};

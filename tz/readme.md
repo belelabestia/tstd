@@ -1,0 +1,67 @@
+# tz - the typezig prototype
+
+typescript with most of typescript taken away, plus a few constructs, transpiled back to
+typescript that imports `tstd`. the design notes are in `.claude/typezig.md`; this is the
+thing they describe, far enough along to write code in.
+
+it is a **sugar transpiler**: a token level rewriter that leaves every character it does not
+recognise alone. it never parses typescript, it lexes it. one line in makes one line out, so
+the line number is the whole source map. the emitter has no opinions, knows no types, and
+never writes an import.
+
+## running it
+
+```
+npm install
+npm run build
+npm test
+```
+
+then, from this directory:
+
+```
+node dist/tzc.js scratch                        # emit the .ts beside each .tz, then typecheck it
+node dist/tzx.js --test scratch/signup.spec.tz  # run a spec
+node dist/tzx.js scratch/main.tz                # run a program
+```
+
+`tzc` mirrors `tsc`: it emits, runs `tsc` on the emit, and moves every diagnostic back onto
+the `.tz` line and column it came from. `--out <dir>` mirrors the tree somewhere else and
+`--no-check` stops after the emit.
+
+`tzx` mirrors `tsx`: a node loader hook turns `.tz` into typescript in memory and lets node
+strip the types, so nothing lands on disk. every argument goes through to node, which is why
+`--test` works. a relative `./x.js` import resolves to `x.tz` when one is there, so a tz file
+writes the same specifier the emit will.
+
+two things to know when writing a `.tz` file:
+
+- **the emitter never writes an import.** a file that says `ok` imports `result`, one that says
+  `any:none` imports `is`. forget one and `tsc` tells you, in the usual way, on the right line.
+- **a type only import has to say `type`.** `tzx` leans on node's own type stripping, which
+  cannot tell a type from a value, so write `import { result, type Result } from ...`.
+
+## what is here
+
+- `guard`, and the implicit tail that makes it a decline
+- the `if` expression, and the statement `if` with no `else`
+- `match`, over a value or over a branch: a quoted arm matches a value, a `:tag` arm matches a
+  branch and binds what it carries
+- `ok`, `err`, `async`, and the one discipline per body they buy
+- `try`, `on:tag` and `any:none` / `any:some`, at the head of a statement, with `on:` chaining
+- the inferred lifts: an `await` makes a body async, an `ok` makes it fallible
+- the implied `ok` at the end of a fallible body
+- the ban list, `==` and `!=` emitting the strict ones
+- `tzc`, `tzx`, and diagnostics that land on the source
+
+`scratch/` shows every one of them and both commands run over it.
+
+## what is not
+
+`scope` and `protocol` are next. the lsp and the checks that need a type are after that:
+conditions must be boolean, a `Result` statement must be `void` prefixed, and a `match` over
+a union must be exhaustive. none of them belong in the emitter and one of them cannot be
+there at all.
+
+`tz` is self contained on purpose, so it can move to its own repo with a `git mv`. it depends
+on `tstd` the way any consumer does, through the package name.
