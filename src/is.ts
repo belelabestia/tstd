@@ -26,11 +26,11 @@ export type Finite = number & Brand<'Finite'>;
 /** the actual validated type */
 export type Model<T extends Schema> = { [K in keyof T]: T[K] extends TypeGuard<infer U> ? U : never };
 
-export const present = (x: unknown): x is {} =>
+export const some = (x: unknown): x is {} =>
   x !== undefined &&
   x !== null;
 
-export const absent = (x: unknown): x is undefined | null =>
+export const none = (x: unknown): x is undefined | null =>
   x === undefined ||
   x === null;
 
@@ -67,7 +67,7 @@ export const json = (x: unknown): x is Json =>
     array(x) &&
     x.every(json)
   ) ||
-  absent(x);
+  none(x);
 
 export const model = <T extends Schema>(x: unknown, schema: T): x is Flat<Model<T>> => {
   if (!record(x)) return false;

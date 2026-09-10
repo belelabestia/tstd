@@ -32,7 +32,7 @@ const canonical = (ms: number) => {
   if (Math.abs(ms) > 8.64e15) return;
 
   const instance = make(Date, ms);
-  if (instance.branch === 'error') return;
+  if (instance.branch === 'err') return;
 
   const out = instance.value.toISOString();
   if (out.length !== 24) return;
@@ -42,7 +42,7 @@ const canonical = (ms: number) => {
 
 export const timestamp = (x: unknown): x is Timestamp =>
   is.number(x) &&
-  is.present(canonical(x));
+  is.some(canonical(x));
 
 export const datetime = (x: unknown): x is DateTime =>
   is.string(x) &&
@@ -65,7 +65,7 @@ export const duration = (x: unknown): x is Duration =>
 
 export const zone = (x: unknown): x is Zone =>
   is.string(x) &&
-  make(Intl.DateTimeFormat, 'en-US', { timeZone: x }).branch === 'success';
+  make(Intl.DateTimeFormat, 'en-US', { timeZone: x }).branch === 'ok';
 
 /** the instant a foreign spelling points at, or nothing if there is none */
 export const parse = (x: string) => canonical(Date.parse(x)) as DateTime | undefined;
@@ -104,7 +104,7 @@ const parts = (x: DateTime, zone: Zone) => {
 
 /** the calendar date an instant falls on, in utc unless a zone says otherwise */
 export const dateOf = (x: DateTime, zone?: Zone) => {
-  if (is.absent(zone)) return x.slice(0, 10) as Date;
+  if (is.none(zone)) return x.slice(0, 10) as Date;
 
   const part = parts(x, zone);
   return `${part.year}-${part.month}-${part.day}` as Date;
@@ -112,7 +112,7 @@ export const dateOf = (x: DateTime, zone?: Zone) => {
 
 /** the wall clock time an instant falls at, in utc unless a zone says otherwise */
 export const timeOf = (x: DateTime, zone?: Zone) => {
-  if (is.absent(zone)) return x.slice(11, 23) as Time;
+  if (is.none(zone)) return x.slice(11, 23) as Time;
 
   const part = parts(x, zone);
   return `${part.hour}:${part.minute}:${part.second}.${part.fractionalSecond}` as Time;

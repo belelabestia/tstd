@@ -33,7 +33,7 @@ export const init = <B extends Protocol<B>>(protocol: B) => {
   const at = (tag: string, value: unknown) => {
     const goes = all[tag](value as never);
 
-    if (is.absent(goes)) return branch(tag, value);
+    if (is.none(goes)) return branch(tag, value);
 
     const to: Record<string, unknown> = {};
 

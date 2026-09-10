@@ -45,7 +45,7 @@ test('reject anything that is not canonical', () => {
   // nor an expanded year, which round trips but does not slice: a year is four digits
   assert.ok(!iso.datetime('-000001-01-01T00:00:00.000Z'));
   assert.ok(!iso.datetime('+275760-09-13T00:00:00.000Z'));
-  assert.ok(is.absent(iso.parse('-000001-01-01T00:00:00.000Z')));
+  assert.ok(is.none(iso.parse('-000001-01-01T00:00:00.000Z')));
   assert.ok(!iso.timestamp(-62167219200001));
 
   // the canonical forms pass
@@ -59,7 +59,7 @@ test('reject anything that is not canonical', () => {
   assert.equal(iso.parse('2024-01-02T03:04:05Z'), '2024-01-02T03:04:05.000Z');
 
   // and a spelling that points at nothing is absent, not an error worth explaining
-  assert.ok(is.absent(iso.parse('the day before yesterday')));
+  assert.ok(is.none(iso.parse('the day before yesterday')));
 });
 
 test('read the calendar in a zone', () => {
@@ -105,7 +105,7 @@ test('measure and move in time', () => {
   // and moving is total except at the very edge of representable time,
   // which is absence, not an error worth explaining
   assert.equal(iso.add(from, iso.days(1)), '2024-01-03T00:00:00.000Z');
-  assert.ok(is.absent(iso.add(from, iso.days(1e12))));
+  assert.ok(is.none(iso.add(from, iso.days(1e12))));
 });
 
 test('carry instants in models, never dates', () => {
