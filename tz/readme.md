@@ -41,6 +41,31 @@ two things to know when writing a `.tz` file:
 - **a type only import has to say `type`.** `tzx` leans on node's own type stripping, which
   cannot tell a type from a value, so write `import { result, type Result } from ...`.
 
+## the editor
+
+`editor/` is a vs code extension with no code in it: a language for `.tz`, a grammar that is one
+include of `source.ts`, and an injection that adds the words typescript does not have. point
+your extensions directory at it and reload the window.
+
+```
+New-Item -ItemType Junction -Path "$env:USERPROFILE\.vscode\extensions\typezig" -Target .\editor
+```
+
+the words are an injection rather than a pattern in the grammar because an include of
+`source.ts` only reaches the top level of a file, and a `guard` is always inside a body. an
+injection is merged into every rule at every depth instead, and `-comment -string` in its
+selector keeps it out of prose.
+
+it knows `guard`, `match`, `try`, `ok`, `err`, `async`, the `on:` and `any:` sigils, and the
+`:tag` and `_` arms of a match. `scope` and `protocol` are not in it, because they are not in
+the emitter either.
+
+two residues, both cosmetic. typescript's grammar reads a match arm as an object literal key,
+so a word in a quoted arm value arrives with no string scope on it and the selector cannot see
+it; the grammar refuses any word with a quote against it, which covers every spelling that
+occurs. and a tz word inside a template hole is not highlighted, because the whole template is
+a string to the selector.
+
 ## what is here
 
 - `guard`, and the implicit tail that makes it a decline

@@ -1,0 +1,47 @@
+{
+  "name": "typezig words",
+  "scopeName": "tz.words",
+  "injectionSelector": "L:source.tz -comment -string",
+  "patterns": [
+    { "include": "#guard" },
+    { "include": "#match" },
+    { "include": "#try" },
+    { "include": "#exit" },
+    { "include": "#sigil" },
+    { "include": "#arm" }
+  ],
+  "repository": {
+    "guard": {
+      "match": "(?<![.$\\w'\"`])guard\\b(?!['\"`])",
+      "name": "keyword.control.guard.tz"
+    },
+    "match": {
+      "match": "(?<![.$\\w'\"`])match\\b(?!['\"`])",
+      "name": "keyword.control.match.tz"
+    },
+    "try": {
+      "match": "(?<![.$\\w'\"`])try\\b(?!['\"`])",
+      "name": "keyword.control.trycatch.tz"
+    },
+    "exit": {
+      "match": "(?<![.$\\w'\"`])(?:ok|err|async)\\b(?!['\"`])",
+      "name": "keyword.control.flow.tz"
+    },
+    "sigil": {
+      "match": "(?<![.$\\w'\"`])(on|any)(:)([A-Za-z_$][\\w$]*)",
+      "captures": {
+        "1": { "name": "keyword.control.flow.tz" },
+        "2": { "name": "punctuation.separator.tag.tz" },
+        "3": { "name": "entity.name.tag.tz" }
+      }
+    },
+    "arm": {
+      "match": "^\\s*(?:(:)([A-Za-z_$][\\w$]*)|(_))(?=\\s*(?:\\(|=>))",
+      "captures": {
+        "1": { "name": "punctuation.separator.tag.tz" },
+        "2": { "name": "entity.name.tag.tz" },
+        "3": { "name": "keyword.control.match.tz" }
+      }
+    }
+  }
+}

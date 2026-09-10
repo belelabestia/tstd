@@ -1,0 +1,32 @@
+{
+  "name": "typezig",
+  "displayName": "typezig",
+  "description": "syntax highlighting for typezig",
+  "version": "0.1.0",
+  "publisher": "belelabestia",
+  "private": true,
+  "engines": { "vscode": "^1.90.0" },
+  "categories": ["Programming Languages"],
+  "contributes": {
+    "languages": [
+      {
+        "id": "tz",
+        "aliases": ["typezig", "tz"],
+        "extensions": [".tz"],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "tz",
+        "scopeName": "source.tz",
+        "path": "./syntaxes/tz.tmLanguage.json"
+      },
+      {
+        "scopeName": "tz.words",
+        "path": "./syntaxes/tz-words.tmLanguage.json",
+        "injectTo": ["source.tz"]
+      }
+    ]
+  }
+}

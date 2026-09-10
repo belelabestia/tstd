@@ -1,0 +1,5 @@
+{
+  "name": "typezig",
+  "scopeName": "source.tz",
+  "patterns": [{ "include": "source.ts" }]
+}

@@ -1671,7 +1671,15 @@ it is the fast path but it is a framework and a dependency tree. given the line-
 constraint, the mapping is nearly trivial, so hand-rolling on top of the `typescript` package
 is realistic and keeps the dependency list at one entry.
 
-syntax highlighting is a textmate grammar that includes `source.ts` and adds four keywords. ~30 lines.
+syntax highlighting is built, and it is not the grammar this said it would be. an include of
+`source.ts` only reaches the top level of a file, and every word tz adds lives inside a body, so
+the words are a second grammar **injected** into `source.tz` at every depth. that is the whole
+trick: `tz.tmLanguage.json` is three lines and `tz-words.tmLanguage.json` is the six patterns.
+
+the one surprise is that typescript's grammar reads a match arm as an object literal key, so a
+quoted arm value reaches the injection with no string scope on it and `-comment -string` cannot
+refuse it. a word with a quote against it is refused instead. it is written up in `tz/readme.md`
+along with the other residue.
 
 ### staging
 
@@ -1744,6 +1752,8 @@ two things the prototype got wrong or left out, ahead of what was already staged
   order: reading tz without it is what makes the language feel unfinished, and it is the one
   thing that costs nothing to have. a textmate grammar that includes `source.ts` and adds the
   words is about thirty lines and needs no language server at all. it moves to the front.
+  **built**, as `tz/editor/`, and the shape it wanted is written up under lsp.
 
 then `scope` and `protocol`, which are the last two constructs, and after those the lsp and
-the semantic pass that needs it.
+the semantic pass that needs it. the extension is already the place the lsp goes, so it stops
+being a new thing to stand up.
