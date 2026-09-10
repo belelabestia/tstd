@@ -65,7 +65,7 @@ the spec is the module's documentation; documentation lives next to what it docu
 
 ### a3. flat `src/`, no folders until nesting earns it: house
 
-eight modules, zero directories. my instinct would be `src/core/`, `src/types/`, `src/guards/`. don't. the readme's rule is "for namespacing, prefer nesting over prefixing". that is about *type and api* nesting (`result.success`), not directory nesting. add a directory only when a module genuinely grows sub-modules.
+eight modules, zero directories. my instinct would be `src/core/`, `src/types/`, `src/guards/`. don't. the readme's rule is "for namespacing, prefer nesting over prefixing". that is about *type and api* nesting (`result.ok`), not directory nesting. add a directory only when a module genuinely grows sub-modules.
 
 ### a4. `index.ts` is api shaping only: house
 
@@ -147,8 +147,8 @@ export const callAsync = ...
 
 ```ts
 export const result = {
-  success: <X = void>(x?: X) => branch('success', x),
-  error: <X = void>(x?: X) => branch('error', x)
+  ok: <X = void>(x?: X) => branch('ok', x),
+  err: <X = void>(x?: X) => branch('err', x)
 };
 
 export const scope = {
@@ -157,7 +157,7 @@ export const scope = {
 };
 ```
 
-reads as `result.success(...)`, `call.async(...)`. `async` is a legal property name, so the container buys you keyword-shaped members for free.
+reads as `result.ok(...)`, `call.async(...)`. `async` is a legal property name, so the container buys you keyword-shaped members for free.
 
 ### b3. the container carries the prefix, the member does not: house
 
@@ -184,15 +184,15 @@ if a name needs a category suffix to make sense, the concept is not sharp enough
 ❌ instead of:
 
 ```ts
-const present = (x: unknown) => ...;
-const absent = (x: unknown) => ...;
-export { present, absent };
+const some = (x: unknown) => ...;
+const none = (x: unknown) => ...;
+export { some, none };
 ```
 
 ✅ do:
 
 ```ts
-export const present = (x: unknown): x is {} =>
+export const some = (x: unknown): x is {} =>
   x !== undefined &&
   x !== null;
 ```
@@ -233,7 +233,7 @@ const url = new URL(href); // throws
 
 ```ts
 const url = make(URL, href);
-if (url.branch === 'error') return url;
+if (url.branch === 'err') return url;
 url.value.href;
 ```
 
@@ -256,7 +256,7 @@ export const make = <Args extends unknown[], Instance>(c: new (...args: Args) =>
 ```ts
 // we want to safely get a connection instance
 let conn = call.sync(sdk.connect, true);
-assert.equal(conn.branch, 'error');
+assert.equal(conn.branch, 'err');
 
 // we can retry if it fails
 conn = call.sync(sdk.connect, false);
@@ -295,8 +295,8 @@ export const string = (x: unknown): x is string =>
 
 ```ts
 type Result<S, E> =
-  | { branch: 'success'; value: S }
-  | { branch: 'error'; value: E };
+  | { branch: 'ok'; value: S }
+  | { branch: 'err'; value: E };
 ```
 
 ✅ do:
@@ -304,7 +304,7 @@ type Result<S, E> =
 ```ts
 export type Union<T extends Record<string, unknown>> = Flat<{ [P in keyof T]: Branch<Extract<P, string>, T[P]> }[keyof T]>;
 
-export type Result<S, E> = Union<{ success: S; error: E; }>;
+export type Result<S, E> = Union<{ ok: S; err: E; }>;
 ```
 
 the record literal is the notation: `Union<{ xs: { a: number; }, s: string, m: number, l: number[], xl: void; }>`. keys are branch tags, values are payloads, `void` for an unqualified branch.
@@ -394,7 +394,7 @@ same principle as d1: constrain without collapsing the inferred type.
 
 ```ts
 catch (error) {
-  return result.error(error);
+  return result.err(error);
 }
 ```
 
@@ -440,7 +440,7 @@ what follows from reading a type as a const:
 - **a shape written twice is duplication**, exactly as a repeated expression is, and naming it costs one line. nobody would inline the same four-line object literal in two functions to avoid declaring a `const`.
 - **naming and exporting are different decisions.** `Resource`, `Async`, `Release`, `Hold` and `Holds` are named and stay in `scope.ts`; only `Scope` and `Exit` leave it. the api surface rule is about what a caller can reach, not about what the author is allowed to name. the old wording of the naming rule ran the two together and said the argument record "stays inline and unnamed"; that was wrong and `CLAUDE.md` has been corrected.
 - **a generic type is a function call.** `Async<Resource<R>>` reads as one, and it is the reason the async half is not a second copy of the sync one.
-- **a computation is fine in a type.** a lookup like `Extract<U, Branch<'error', unknown>>['value']` is not cleverness; the alternative is `as` in the body, which loses what the compiler already knew (o19).
+- **a computation is fine in a type.** a lookup like `Extract<U, Branch<'err', unknown>>['value']` is not cleverness; the alternative is `as` in the body, which loses what the compiler already knew (o19).
 - **the same rules that govern values govern types**: one concept per name, no category suffixes, no `Type` on the end, lowercase file names, and no `types.ts`, because a const does not live in a `consts.ts` either.
 
 ## e. type guards
@@ -477,7 +477,7 @@ export const json = (x: unknown): x is Json =>
     array(x) &&
     x.every(json)
   ) ||
-  absent(x);
+  none(x);
 ```
 
 the `|| (` … `) ||` shape is the house way to nest. it keeps the expression an expression, which is what preserves the algebra in d5.
@@ -590,16 +590,16 @@ readme: "use `branch` only if checking against presence or absence of a return v
 ✅ do:
 
 ```ts
-export const present = (x: unknown): x is {} =>
+export const some = (x: unknown): x is {} =>
   x !== undefined &&
   x !== null;
 
-export const absent = (x: unknown): x is undefined | null =>
+export const none = (x: unknown): x is undefined | null =>
   x === undefined ||
   x === null;
 ```
 
-`present` narrowing to `{}` (not `object`, not `NonNullable<T>`) is the trick: `{}` is "anything but null/undefined". `Json` including `undefined` follows from this same rule; it is not an oversight.
+`some` narrowing to `{}` (not `object`, not `NonNullable<T>`) is the trick: `{}` is "anything but null/undefined". `Json` including `undefined` follows from this same rule; it is not an oversight.
 
 ### f5. `try`/`catch` exists only inside `make` and `call`: house
 
@@ -609,7 +609,7 @@ export const absent = (x: unknown): x is undefined | null =>
 
 ```ts
 const res = call.sync(div, 1, 0);
-if (res.branch === 'error') return res;
+if (res.branch === 'err') return res;
 res.value;
 ```
 
@@ -626,7 +626,7 @@ three constructs total: `make` for constructors, `call.sync`, `call.async`. busi
 ✅ do check the tag and return:
 
 ```ts
-if (res.branch === 'error') return res;
+if (res.branch === 'err') return res;
 ```
 
 there is deliberately no monadic api on `result`. do not add `map`, `andThen`, `unwrap`, or a `match` helper; the readme rejects that whole layer, and `branch`'s purpose is to "delegate decisions to the caller", not to sequence them.
@@ -1049,7 +1049,7 @@ f7 says imperative loops; `json` uses `Object.values(x).every(json)` and `x.ever
 
 ### o8. `call.sync(instance.method, ...)` silently loses `this`
 
-`result.spec.ts` demonstrates `call.sync(conn.value.query, true)`, which works only because the fake `sdk` returns closures. against a real class-based sdk it throws, and the throw is swallowed into `result.error`, disguising a wiring bug as a domain failure.
+`result.spec.ts` demonstrates `call.sync(conn.value.query, true)`, which works only because the fake `sdk` returns closures. against a real class-based sdk it throws, and the throw is swallowed into `result.err`, disguising a wiring bug as a domain failure.
 
 ✅ do keep the signature and fix the teaching line:
 
@@ -1149,7 +1149,7 @@ note the shape this produces: an optional trailing parameter with a guard clause
 
 ```ts
 export const dateOf = (x: DateTime, zone?: Zone) => {
-  if (is.absent(zone)) return x.slice(0, 10) as Date;
+  if (is.none(zone)) return x.slice(0, 10) as Date;
 
   const part = parts(x, zone);
   return `${part.year}-${part.month}-${part.day}` as Date;
@@ -1370,7 +1370,7 @@ a throw is invisible for the same reason: `(x: string) => number` says nothing a
 
 **`lease` no longer exists.** o20 replaced it with `scope`, which keeps every conclusion below and drops the module they were about.
 
-the hole filed on 2026-09-08 and ruled the next day. `use` was typed `(r: R) => V`, so business code that returned `result.error(...)` handed the lease an ordinary `V`: the close path ran, `abort` never did, and `Lease<V>` said nothing about a failure the value was carrying. the ruling boxes the use, and separates a failure you named from a throw nobody did.
+the hole filed on 2026-09-08 and ruled the next day. `use` was typed `(r: R) => V`, so business code that returned `result.err(...)` handed the lease an ordinary `V`: the close path ran, `abort` never did, and `Lease<V>` said nothing about a failure the value was carrying. the ruling boxes the use, and separates a failure you named from a throw nobody did.
 
 ```ts
 export type Lease<U> = Union<{
@@ -1384,7 +1384,7 @@ export type Lease<U> = Union<{
 }>;
 ```
 
-- **`Result` stays binary.** a `panic` branch on `Result` itself was the first idea and it is wrong: every existing caller branches on `'success' | 'error'`, and a third member would break the two-way funnel the whole library is built on. `panic` lives on `Lease`, which is a different union with a different question to ask.
+- **`Result` stays binary.** a `panic` branch on `Result` itself was the first idea and it is wrong: every existing caller branches on `'ok' | 'err'`, and a third member would break the two-way funnel the whole library is built on. `panic` lives on `Lease`, which is a different union with a different question to ask.
 - **the union is what saves the type.** folding a throw into the error side gives `E | unknown`, which *is* `unknown`: the named error is swallowed by the thing that carries no information. separate branches are the only shape where a named failure survives next to an unnamed one. `type Panic<V> = Result<V, unknown>` was floated as a name for what `call` returns and declined: nothing would use it, since return types are never declared.
 - **the lease reads your result but does not unwrap it.** it looks at the branch to pick the release, `close` when the use succeeded and `abort` when it did not, and then returns the result exactly as it was returned. flattening it into `success`/`error` branches of the lease's own union was built first and rejected: it is the `andThen` shape the refusal list bans, and it made `lease` the one place in the library that unwraps a `Result`. the caller branches twice now, on two genuinely different questions: did the resource behave, and did your call succeed.
 - **only `use` is boxed.** `open` returns the resource plainly and `close`/`abort` return nothing. an `open` that fails in a way you can name has produced nothing to release, so it is a branch the caller takes before asking for a lease at all; a release that fails has nothing to say but that it failed. this keeps the readme's rule intact: a step that cannot fail in a named way stays unboxed.
@@ -1397,18 +1397,18 @@ export type Lease<U> = Union<{
 
 ```ts
 declare const f: <A, B>(x: () => Result<A, B>) => [A, B];
-const q = (x: boolean) => x ? result.error('cannot query' as const) : result.success('rows');
+const q = (x: boolean) => x ? result.err('cannot query' as const) : result.ok('rows');
 
 f(q) // [string, string], not [string, 'cannot query']
 ```
 
-verified against `Result`, against `Union<{ success: A, error: B }>`, and against a hand-written `Branch<'success', A> | Branch<'error', B>`: all three widen the same way, so this is the branch shape and not the `Flat` wrapper. **do not use `Result<V, E>` as an inference site.** take the returned union whole, as `U extends Result<unknown, unknown>`, and look inside it afterwards with `Extract`. narrowing `U` in the body loses the payload, because a generic narrows to its constraint and the constraint says `unknown`; the fix is not `as` but an annotated `const`, which is allowed where a declared return type is not.
+verified against `Result`, against `Union<{ ok: A, err: B }>`, and against a hand-written `Branch<'ok', A> | Branch<'err', B>`: all three widen the same way, so this is the branch shape and not the `Flat` wrapper. **do not use `Result<V, E>` as an inference site.** take the returned union whole, as `U extends Result<unknown, unknown>`, and look inside it afterwards with `Extract`. narrowing `U` in the body loses the payload, because a generic narrows to its constraint and the constraint says `unknown`; the fix is not `as` but an annotated `const`, which is allowed where a declared return type is not.
 
 ```ts
-type Fail<U> = Extract<U, Branch<'error', unknown>>['value'];
+type Fail<U> = Extract<U, Branch<'err', unknown>>['value'];
 
 const fail: Result<unknown, Fail<U>> = done;
-if (fail.branch === 'error') ... // fail.value is the named error, done is still whole
+if (fail.branch === 'err') ... // fail.value is the named error, done is still whole
 ```
 
 **`scope` became `call`.** it takes a function and calls it; `unsafe`, `bound` and `catcher` all name how it works rather than what it is, and `call` passes the literalness test `Json` and `iso` set. o15's second bullet is superseded here: the outcome is no longer one `Result` whose error side is a step union.
@@ -1422,12 +1422,12 @@ if (fail.branch === 'error') ... // fail.value is the named error, done is still
 ```ts
 scope.sync(hold => {
   const one = hold(first);
-  if (one.branch === 'error') return result.error('cannot hold the first' as const);
+  if (one.branch === 'err') return result.err('cannot hold the first' as const);
 
   const two = hold(second);
-  if (two.branch === 'error') return result.error('cannot hold the second' as const);
+  if (two.branch === 'err') return result.err('cannot hold the second' as const);
 
-  return result.success(one.value.name + ' and ' + two.value.name);
+  return result.ok(one.value.name + ' and ' + two.value.name);
 });
 ```
 
@@ -1465,9 +1465,9 @@ const payment = protocol.init({
 
 const loader = protocol.init({
   idle: () => ['loading'],
-  loading: (value: { at: number; }) => ['success', 'error'],
-  success: (value: string[]) => {},
-  error: (value: unknown) => ['loading']
+  loading: (value: { at: number; }) => ['ok', 'err'],
+  ok: (value: string[]) => {},
+  err: (value: unknown) => ['loading']
 });
 ```
 

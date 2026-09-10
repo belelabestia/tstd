@@ -57,8 +57,8 @@ these compress `.claude/style-kb.md`. go there for the examples.
 
 - the same word, case-distinguished, for a type and its factory: `Branch`/`branch`, `Result`/`result`.
 - when a module has two candidate types, the **exported** name goes to what the caller gets back, not to what it takes: `Scope` is the outcome. what it takes gets a local name that never leaves the file (`Resource` in `scope.ts`), because a shape written twice is duplication whether or not it is exported. keep it inline only while it is written once.
-- construct every branch of one union the same way. mixing `branch('open', ...)` with `result.success(...)` in one function reads as two unions.
-- namespace by nesting an object, never by prefixing a name: `result.success`, not `successResult`.
+- construct every branch of one union the same way. mixing `branch('open', ...)` with `result.ok(...)` in one function reads as two unions.
+- namespace by nesting an object, never by prefixing a name: `result.ok`, not `okResult`.
 - the container carries the prefix: `is.number`, not `isNumber`.
 - one word, no category suffixes. no `flattenType`, no `validators`, no `resultUtils`.
 - name a module after what it literally is: `Json` is js object notation, `iso` is iso 8601 notation.
