@@ -24,7 +24,7 @@ this single decision is what makes the rest cheap, so it is a hard constraint, n
    `tsc` is the typechecker. an emitter that guesses is an emitter that lies.
 4. **the output is readable.** it is code a person could have written by hand, because it is
    exactly the code `src/scope.ts` already writes by hand.
-5. **the emitter never writes an import.** `ok` compiles to `result.success`, `protocol`
+5. **the emitter never writes an import.** `ok` compiles to `result.ok`, `protocol`
    compiles to `protocol.init` and `Union`, and a file that uses them imports them. an
    emitter that decides what your module imports has an opinion about your module, and the
    first time it guesses the wrong `tstd` it writes a bug that reads like a mystery.
@@ -82,8 +82,8 @@ const parse = (raw: string) => {
 ```ts
 const parse = (raw: string) => {
   const n = Number(raw);
-  if (!(is.number(n))) return result.error(`not a number: ${raw}`);
-  return result.success(n);
+  if (!(is.number(n))) return result.err(`not a number: ${raw}`);
+  return result.ok(n);
 };
 ```
 
@@ -135,7 +135,7 @@ const pick = (xs: string[], i: number) => {
 ```ts
 const pick = (xs: string[], i: number) => {
   if (!(i < xs.length)) return;
-  return result.success(xs[i]);
+  return result.ok(xs[i]);
 };
 ```
 
@@ -201,7 +201,7 @@ const label =
 ```
 
 so `?:` is banned from tz source. one conditional expression, one spelling, and it is the
-spelling that reads as words. `?.` is untouched. `??` is banned and `onnone` replaces it.
+spelling that reads as words. `?.` is untouched. `??` is banned and `any:none` replaces it.
 
 **both branches are expressions.** `const x = if (c) 42 else err 'no';` is refused: that is a
 decline hiding in an answer, and `guard (c) err 'no';` already says it. the partition holds
@@ -282,7 +282,7 @@ and 42 usually wants one of the three spellings that already exist:
 ```tz
 if (!is.number(n)) return 42;                  // an answer for a case you chose not to refuse
 const n = if (is.number(raw)) raw else 42;     // a two-sided choice, which is an expression
-const n = readPort() onerr (e) => 42;          // a failure you are deliberately swallowing
+const n = readPort() on:err (e) => 42;          // a failure you are deliberately swallowing
 ```
 
 the last two are the honest ones. a fallback is a decision, not a refusal, and writing it as
@@ -332,11 +332,11 @@ a `guard` that answers. they are written up under why not.
 
 "do some work, then put a fallback in `x`" is a real need and it already has a spelling:
 a block after the `=>`, which is an arrow body, which is what `=>` has introduced since the
-day it existed. it is written up under `onerr`.
+day it existed. it is written up under `on:`.
 
 so there is no when-to-use-which. **`=>` introduces an answer, and if that answer needs
 statements it is a block that returns.** that is the arm of a `match`, the fallback of an
-`onerr`, and nothing else so far. `break <expr>` is the other spelling, and a block expression
+`on:`, and nothing else so far. `break <expr>` is the other spelling, and a block expression
 in any position is the larger version of it; both are under why not.
 
 #### and so `return` always carries a value
@@ -409,13 +409,62 @@ const role = (() => { switch (name) {
 } })();
 ```
 
-`ok`, `err` and `async` are refused in an arm, the same as in an `onerr` fallback and for the
+`ok`, `err` and `async` are refused in an arm, the same as in an `on:` fallback and for the
 same mechanical reason: they would leave the iife rather than the function, so the exit would
 go nowhere.
 
 exhaustiveness is not the transpiler's job. `_` is mandatory precisely so it never has to be.
 this respects the readme's "avoid `switch` unless the union is meaningful in all cases":
 `match` is an expression, so it always produces a value, so the default always matters.
+
+#### a quoted arm matches a value, an arm that starts with `:` matches a branch
+
+```tz
+const role = match (out) {
+  :ok (user) => respond(201, user),
+  :rejected => respond(402),
+  _ (e) => respond(400, e)
+};
+```
+
+```ts
+const role = (() => { switch (out.branch) {
+  case 'ok': { const user = out.value; return respond(201, user); }
+  case 'rejected': return respond(402);
+  default: { const e = out.value; return respond(400, e); }
+} })();
+```
+
+the subject grows a `.branch` and each tag gets quoted. **the signal is syntactic**, so
+constraint 3 holds: the emitter reads the arms, never the type. a bare word would not do the
+job, because a `switch` case can be a variable, so `match (x) { admin => ... }` would silently
+become `case 'admin'` when the author meant the `const admin`. the sigil has no second reading.
+
+**the arm binds what the branch carries**, parenthesised and optional, the way `on:` binds and
+`scope` binds. `_` binds too, and its payload is the union of whatever branches are left,
+because `default:` narrows exactly that far.
+
+the binding is not decoration. **an expression subject has no other spelling for the payload**,
+since the thing holding it is a temp the source cannot name:
+
+```tz
+const role = match (register(req)) {
+  :ok (user) => respond(201, user),
+  _ (e) => respond(400, e)
+};
+```
+
+```ts
+const role = (() => { const $0 = register(req); switch ($0.branch) {
+  case 'ok': { const user = $0.value; return respond(201, user); }
+  default: { const e = $0.value; return respond(400, e); }
+} })();
+```
+
+a subject that is one identifier gets no temp, because `out.branch` and `out.value` are the
+lines a person would have written. anything longer gets `$0`, on the opening line, so the count
+still holds. mixing quoted arms and `:tag` arms in one `match` is refused: it reads branches or
+it reads values.
 
 ### ok, err and async
 
@@ -430,8 +479,8 @@ const pick = (xs: string[], i: number) => {
 
 ```ts
 const pick = (xs: string[], i: number) => {
-  if (!(i < xs.length)) return result.error('out of range');
-  return result.success(xs[i]);
+  if (!(i < xs.length)) return result.err('out of range');
+  return result.ok(xs[i]);
 };
 ```
 
@@ -439,11 +488,11 @@ three exits, one shape, each of them a `return` with the wrapping written for yo
 
 | | emits |
 | --- | --- |
-| `ok x` | `return result.success(x)` |
-| `err e` | `return result.error(e)` |
+| `ok x` | `return result.ok(x)` |
+| `err e` | `return result.err(e)` |
 | `async x` | `return Promise.resolve(x)` |
 
-bare `ok;` emits `return result.success();`, which is what a `Result<void, E>` wants, and bare
+bare `ok;` emits `return result.ok();`, which is what a `Result<void, E>` wants, and bare
 `async;` emits `return Promise.resolve();` for the same reason.
 
 `async x` is the exit for a body that hands back a promise **without suspending**. a body with
@@ -479,8 +528,8 @@ const check = (x: number) => {
 
 ```ts
 const check = (x: number) => {
-  if (!(x > 0)) return result.error('not positive');
-return result.success(); };
+  if (!(x > 0)) return result.err('not positive');
+return result.ok(); };
 ```
 
 three lines in, three lines out: the closing line carries the appended exit, the way a
@@ -493,13 +542,13 @@ falling off the end now means one thing everywhere:
 | body | falls off the end | type |
 | --- | --- | --- |
 | infallible | nothing is appended | `void` |
-| fallible | `return result.success();` | `Result<void, E>` |
+| fallible | `return result.ok();` | `Result<void, E>` |
 
 **falling off the end is the empty answer, in whatever shape the body answers.** the implicit
-tail of a *decline* is untouched by this: a guard or an `onerr` in a fallible body still may
+tail of a *decline* is untouched by this: a guard or an `on:` in a fallible body still may
 not leave with nothing, because declining with a success is not a decline.
 
-`err` and `onerr` are deliberately the same word twice: one produces the error, the other
+`err` and `on:err` are deliberately the same word twice: one produces the error, the other
 reacts to one, and `try` passes it along.
 
 ### the lifts are inferred
@@ -517,8 +566,8 @@ const load = (id: string) => {
 
 ```ts
 const load = async (id: string) => {
-  const $0 = await db.get(id); if ($0.branch === 'error') return $0; const user = $0.value;
-  return result.success(user.name);
+  const $0 = await db.get(id); if ($0.branch === 'err') return $0; const user = $0.value;
+  return result.ok(user.name);
 };
 ```
 
@@ -546,24 +595,46 @@ is where the decision is.
 `scope` reads the same count: a body with an `await` picks `scope.async` and takes an async
 callback, a body without one picks `scope.sync`. so there is no `scope async` spelling.
 
-### onerr
+### on:
 
 the primitive. `try` is sugar over it.
 
-`onerr` is `guard` for a result, and the claim is literal, not a metaphor. a guard tests a
-boolean and declines when it does not hold. an `onerr` tests a result and declines when it
-did not succeed. the polarity matches: `guard (c)` says c must hold, `x onerr` says x must
-succeed, and in both the block is the failure path.
+**`on:` names a branch you refuse.** `x on:err` declines when x is that branch and carries
+`.value` when it is not, and nothing in that sentence mentions `Result`: it works on any union
+at all, because the tag is written in the source and the emitter never has to know a type.
 
-| | `guard` | `onerr` |
+the sigil is a token pair: `on`, then `:`, then the tag, adjacent. so `on : err` is not the
+construct, and `{ on: x }` in an object literal is still an object literal, because a sigil is
+recognised only after something that ends an expression, which is where a value is landing.
+
+**refusals chain, and one `if` holds them all:**
+
+```tz
+const rows = load(id) on:idle on:loading on:failed;
+```
+
+```ts
+const $0 = load(id); if ($0.branch === 'idle' || $0.branch === 'loading' || $0.branch === 'failed') return; const rows = $0.value;
+```
+
+typescript narrows what is left of the union in one step, so `rows` is the payload of the one
+branch nobody refused. the tail belongs to the whole chain rather than to each link, because
+refusing three branches for three different reasons is three statements, not one.
+
+`on:` is `guard` for a union, and the claim is literal, not a metaphor. a guard tests a
+boolean and declines when it does not hold. an `on:` tests a branch and declines when it is
+the one named. the polarity matches: `guard (c)` says c must hold, `x on:err` says x must not
+be that branch, and in both the tail is the failure path.
+
+| | `guard` | `on:` |
 | --- | --- | --- |
-| tests | a boolean | a result |
-| emits | `if (!(c))` | `if ($0.branch === 'error')` |
+| tests | a boolean | a branch of a union |
+| emits | `if (!(c))` | `if ($0.branch === 'err')` |
 | declines with | nothing, `err`, `break`, `continue` | the same |
 | implicit tail | a bare `return;` | a bare `return;` |
 | illegal in a fallible body | the implicit tail | the implicit tail |
 | after it, you know | the narrowed type | the unwrapped value |
-| binds | nothing | the error, optionally |
+| binds | nothing | the payload, optionally |
 
 the same function declines twice, once for absence and once for failure, and the two lines
 read the same way:
@@ -572,7 +643,7 @@ read the same way:
 const load = (id: string) => {
   const raw = table[id];
   guard (is.some(raw));
-  const user = parse(raw) onerr;
+  const user = parse(raw) on:err;
   return user;
 };
 ```
@@ -581,14 +652,14 @@ const load = (id: string) => {
 const load = (id: string) => {
   const raw = table[id];
   if (!(is.some(raw))) return;
-  const $0 = parse(raw); if ($0.branch === 'error') return; const user = $0.value;
+  const $0 = parse(raw); if ($0.branch === 'err') return; const user = $0.value;
   return user;
 };
 ```
 
 one construct, two predicates. so why two words? because a guard is a statement and there is
-no value in flight, while an `onerr` sits in an initialiser and there is. that is also the
-only asymmetry in the table: `onerr` has an answering form and `guard` does not, because
+no value in flight, while an `on:` sits in an initialiser and there is. that is also the
+only asymmetry in the table: `on:` has an answering form and `guard` does not, because
 substituting a value only means something when a value was expected in the first place.
 
 everything else ruled for a guard is ruled here for the same reason. **the statement form
@@ -599,30 +670,30 @@ declines. the expression form answers.**
 **braces are not required.** one statement needs none:
 
 ```tz
-const user = db.get(id) onerr (e) err `no user ${id}`;
+const user = db.get(id) on:err (e) err `no user ${id}`;
 ```
 
 ```ts
-const $0 = db.get(id); if ($0.branch === 'error') { const e = $0.value; return result.error(`no user ${id}`); } const user = $0.value;
+const $0 = db.get(id); if ($0.branch === 'err') { const e = $0.value; return result.err(`no user ${id}`); } const user = $0.value;
 ```
 
 **the binding is parenthesised** for the reason `catch (e)` is: a keyword on the failure path,
 then the name it binds. every construct parenthesises what it tests or binds, `if (c)`,
-`guard (c)`, `match (x)`, `onerr (e)`, `scope (hold)`. `protocol result { ... }` is the one
+`guard (c)`, `match (x)`, `on:err (e)`, `scope (hold)`. `protocol result { ... }` is the one
 that does not, because it tests nothing and binds nothing: it declares a name, the way `const`
-and `type` do, and those take no parens either. parens also keep the tail legible: `onerr (e)
-err e` gives one job per token, where `onerr e err e` is three bare words in a row and the
+and `type` do, and those take no parens either. parens also keep the tail legible: `on:err (e)
+err e` gives one job per token, where `on:err e err e` is three bare words in a row and the
 reader has to sort out which is which.
 
-the binding is optional when the error goes unused, and so is the whole tail: an `onerr` with
+the binding is optional when the error goes unused, and so is the whole tail: an `on:err` with
 nothing after it gets the implicit bare `return;`, exactly as a guard does.
 
 ```tz
-const conn = connect(url) onerr;
+const conn = connect(url) on:err;
 ```
 
 ```ts
-const $0 = connect(url); if ($0.branch === 'error') return; const conn = $0.value;
+const $0 = connect(url); if ($0.branch === 'err') return; const conn = $0.value;
 ```
 
 that is how an infallible body walks away from a failed result. a fallible body would use
@@ -631,13 +702,13 @@ that is how an infallible body walks away from a failed result. a fallible body 
 braces come back only when a second statement does:
 
 ```tz
-const user = db.get(id) onerr (e) {
+const user = db.get(id) on:err (e) {
   log(e);
   err 'lookup failed';
 }
 ```
 
-whatever follows `onerr` is **inlined into the enclosing function**, not wrapped in an arrow.
+whatever follows the tag is **inlined into the enclosing function**, not wrapped in an arrow.
 so `err` inside it leaves the function, which is the whole point and is why it cannot be
 written as a callback. and like a guard it may leave with nothing, an `err`, a `break` or a
 `continue`, never with a value.
@@ -645,11 +716,11 @@ written as a callback. and like a guard it may leave with nothing, an `err`, a `
 #### the expression form answers
 
 ```tz
-const port = readPort() onerr (e) => 8080;
+const port = readPort() on:err (e) => 8080;
 ```
 
 ```ts
-const $0 = readPort(); const port = $0.branch === 'error' ? 8080 : $0.value;
+const $0 = readPort(); const port = $0.branch === 'err' ? 8080 : $0.value;
 ```
 
 no closure, no iife. the binding is not emitted at all: `e` is rewritten to `$0.value`
@@ -657,17 +728,17 @@ wherever the fallback mentions it, which is a token rename, which is the only th
 transpiler does anyway.
 
 ```tz
-const port = readPort() onerr (e) => defaultPort(e);
+const port = readPort() on:err (e) => defaultPort(e);
 ```
 
 ```ts
-const $0 = readPort(); const port = $0.branch === 'error' ? defaultPort($0.value) : $0.value;
+const $0 = readPort(); const port = $0.branch === 'err' ? defaultPort($0.value) : $0.value;
 ```
 
-this is where a fallback belongs, and it is the only shape of `onerr` that produces one.
+this is where a fallback belongs, and it is the only shape of `on:` that produces one.
 it is an expression, so it sits with `if`/`else` and `match` on the answering side of the
 language, and the earlier worry that it might not earn its keep is settled: without it,
-`onerr` could not answer at all.
+`on:` could not answer at all.
 
 the two forms are told apart by one token: `=>` right after the binding means value,
 anything else means statement. no backtracking.
@@ -675,14 +746,14 @@ anything else means statement. no backtracking.
 #### a fallback that needs statements is a block after the `=>`
 
 ```tz
-const port = readPort() onerr (e) => {
+const port = readPort() on:err (e) => {
   log(e);
   return 8080;
 };
 ```
 
 ```ts
-const $0 = readPort(); const port = $0.branch === 'error' ? (() => {
+const $0 = readPort(); const port = $0.branch === 'err' ? (() => {
   log($0.value);
   return 8080;
 })() : $0.value;
@@ -704,16 +775,17 @@ an `await` inside that block is allowed, and it is the one place the emitter wri
 of its own, because the iife it wrote has to be awaited:
 
 ```tz
-const port = readPort() onerr (e) => {
+const port = readPort() on:err (e) => {
   log(e);
   return await fallback(e);
 };
 ```
 
 ```ts
-const $0 = readPort(); const port = $0.branch === 'error' ? await (async () => {
+const $0 = readPort(); const port = $0.branch === 'err' ? await (async () => {
   log($0.value);
-  return await fallback($0.value); })() : $0.value;
+  return await fallback($0.value);
+})() : $0.value;
 ```
 
 that is not hidden suspension, which is the rule it has to answer to: there is an `await` on
@@ -722,8 +794,8 @@ form needs none of this, since a ternary holds an `await` on its own.
 
 ### try
 
-`try x` is `x onerr` with the propagation written for you: it returns the error branch itself,
-unchanged. it means what `x onerr (e) err e` means, and emits the cheaper thing, since the
+`try x` is `x on:err` with the propagation written for you: it returns the error branch itself,
+unchanged. it means what `x on:err (e) err e` means, and emits the cheaper thing, since the
 branch it already holds carries the same tag and the same value.
 
 ```tz
@@ -731,12 +803,12 @@ const user = try db.get(id);
 ```
 
 ```ts
-const $0 = db.get(id); if ($0.branch === 'error') return $0; const user = $0.value;
+const $0 = db.get(id); if ($0.branch === 'err') return $0; const user = $0.value;
 ```
 
 it returns the branch object, it does not rewrap. rewrapping allocates a second branch that
 carries the same value and loses nothing but gains nothing. `src/scope.ts` already writes
-`if (open.branch === 'error') return open;` five times; `try` is that line.
+`if (open.branch === 'err') return open;` five times; `try` is that line.
 
 consequences, all of them deliberate:
 
@@ -749,7 +821,7 @@ consequences, all of them deliberate:
 hidden flow, and the whole point is that flow is visible. the `await` you write is also what
 lifts the body, so the `async` on the arrow is inferred from that one token and nothing else.
 
-**position is restricted**: `try` and `onerr` appear only at the head of a statement, that is
+**position is restricted**: `try`, `on:` and `any:` appear only at the head of a statement, that is
 a `const`/`let` initialiser, an `ok`/`err`/`async`/`return`, or an expression statement. `g(try f())`
 is a syntax error. this keeps the desugar local to one statement and one line.
 
@@ -761,8 +833,8 @@ there are four things you can do with a result, and the fourth one has to be wri
 
 ```tz
 const user = try db.get(id);                     // propagate
-const user = db.get(id) onerr (e) => anonymous;  // answer
-save(user) onerr;                                // decline
+const user = db.get(id) on:err (e) => anonymous;  // answer
+save(user) on:err;                                // decline
 void save(user);                                 // drop it, on the record
 ```
 
@@ -776,21 +848,39 @@ already writes in front of a floating promise, and an unchecked result is that s
 synchronous coat. the hole it leaves is a result bound and never read, `const out = save(user);`,
 which is what `noUnusedLocals` is for, so `tz/` sets it.
 
-### onnone
+### any:
 
-the third decline, and the last one: `guard` tests a boolean, `onerr` tests a result,
-`onnone` tests for presence. it takes every form `onerr` takes and for the same reasons,
-minus the binding, because absence carries nothing to bind.
+the third decline, and the last one: `guard` tests a boolean, `on:` tests a branch,
+`any:` tests for presence. it takes every form `on:` takes and for the same reasons, minus
+the binding, because absence carries nothing to bind.
 
-**it replaces `??`, which is banned.** the operator is not good enough for the job: it is
-silent about which of the two things it is doing, it cannot run a statement, and it has
-precedence rules people get wrong. `onnone` is one word that says what happened and then
-lets you decline or answer, exactly like the other two.
+**`any:` takes `some` or `none`, and nothing else is legal.** it is a closed pair, not a
+namespace, and the closure is the feature. the word is free because the ban list took it: `any`
+is refused as a type, so the token can never still mean the old thing, which is the same reason
+`async` in keyword position is always the exit.
+
+`is:` was the other candidate and it is the worse one precisely because something *does* stand
+behind it. `is:string`, `is:json` and `is:model(shape)` would all suggest themselves and none
+of them works: the polarity inverts, since `is:string` would decline when a value *is* a
+string; what survives is useless, since "not a string" is nothing to go on with; and
+`is:model(shape)` needs the emitter to partially apply a two-argument guard, which means
+knowing its arity, which means knowing a type. a prefix that advertises a module and delivers
+two members is one member lying inside a syntax whose whole promise is generality. `any` has
+no module behind it, so it can be closed and stay closed.
+
+**`any:some` declines and never answers.** what survives it is absence, so there is nothing to
+bind and nothing to substitute. it is the line that refuses a value already sitting there:
+`cache[id] any:some err 'already claimed';`
+
+**`any:none` replaces `??`, which is banned.** the operator is not good enough for the job: it
+is silent about which of the two things it is doing, it cannot run a statement, and it has
+precedence rules people get wrong. `any:none` says what happened and then lets you decline or
+answer, exactly like the other two.
 
 #### declining
 
 ```tz
-const row = table[id] onnone;
+const row = table[id] any:none;
 ```
 
 ```ts
@@ -803,9 +893,9 @@ the absence-shaped `try`: nothing to propagate, so nothing is written.
 with a reason, in a fallible body, and with a block when a second statement wants one:
 
 ```tz
-const row = table[id] onnone err `no row ${id}`;
+const row = table[id] any:none err `no row ${id}`;
 
-const conn = pool[name] onnone {
+const conn = pool[name] any:none {
   log(`no pool ${name}`);
   err 'unconfigured';
 }
@@ -814,7 +904,7 @@ const conn = pool[name] onnone {
 #### answering
 
 ```tz
-const port = env('PORT') onnone => 8080;
+const port = env('PORT') any:none => 8080;
 ```
 
 ```ts
@@ -822,10 +912,10 @@ const $0 = env('PORT'); const port = is.none($0) ? 8080 : $0;
 ```
 
 that is the `??` line, and it costs one word more to read and nothing at all to understand.
-statements go in a block after the `=>`, the same as `onerr`:
+statements go in a block after the `=>`, the same as `on:`:
 
 ```tz
-const port = env('PORT') onnone => {
+const port = env('PORT') any:none => {
   log('defaulting the port');
   return 8080;
 };
@@ -836,8 +926,8 @@ const port = env('PORT') onnone => {
 | | tests | binds | emits |
 | --- | --- | --- | --- |
 | `guard (c)` | a boolean | nothing | `if (!(c))` |
-| `x onerr (e)` | a result | the error | `if ($0.branch === 'error')` |
-| `x onnone` | presence | nothing | `if (is.none($0))` |
+| `x on:tag (e)` | any branch of any union | the payload, optionally | `if ($0.branch === 'tag')` |
+| `x any:none` | presence | nothing | `if (is.none($0))` |
 
 one shape, three predicates. each declines with nothing, an `err`, a `break` or a `continue`,
 each takes a block when it needs statements, and the two that sit in an initialiser answer
@@ -845,19 +935,23 @@ with `=>`.
 
 `is.none` has to be imported, like everything else the emitter names. see constraint 5.
 
-### the rename this depends on
+### the two renames this depends on
 
-`is.present` and `is.absent` become **`is.some`** and **`is.none`**. they are the most typed
-guards in the language and they are the two longest words in the file; `some` and `none` say
+both are changes to `tstd` itself rather than to typezig, both have landed, and this document
+is written against the new names.
+
+**`is.present` and `is.absent` became `is.some` and `is.none`.** they are the most typed
+guards in the language and they were the two longest words in the file; `some` and `none` say
 the same thing in four letters.
 
-that is a change to `tstd` itself, not to typezig: `src/is.ts`, its spec, and every use.
-it lands there first, and this document is already written against the new names.
+**`Result`'s branches became `ok` and `err`.** you write `ok x` and then you test the tag, and
+with `success` there you were holding two names for one idea. now the vocabulary closes:
+`ok x`, `result.ok(x)`, `out.branch == 'ok'`, `x on:err`, `:err => ...`. one word per concept
+wherever it appears, which is the rule that drove the first rename too.
 
-the keyword follows the guards, so it is `onnone` and not `onabsent`. one concept, one word,
-wherever it appears: `is.none` in a condition, `onnone` in a decline. a language that called
-the guard `none` and the keyword `onabsent` would be asking you to hold two names for one
-idea, which is the thing the whole rename was for.
+the one cost worth knowing: **a tag is data.** a stored branch carries `"branch":"err"` on the
+wire and in the database for as long as the row lives, so unlike a keyword it is not cheap to
+change later. that was weighed and taken.
 
 ### scope
 
@@ -889,7 +983,7 @@ same one that decides everything else, an `await` in the body. see the lifts.
 
 #### hold is a value, not a keyword
 
-`hold` binds, the way `catch (e)` and `onerr (e)` bind, so it takes the parens the rest of the
+`hold` binds, the way `catch (e)` and `on:err (e)` bind, so it takes the parens the rest of the
 language takes. what it does not take is keyword status. `hold x` would read as syntax, and
 then the emitter has to answer which scope the resource belongs to, which is the one question a
 token-level rewriter has no business answering. as a value it answers nothing: `hold` is a
@@ -1000,7 +1094,7 @@ and the comma that separates entries is the one at paren depth zero.
 
 #### the import is yours
 
-the emit says `protocol.init`, `Union`, `result.success`. none of those arrive by magic:
+the emit says `protocol.init`, `Union`, `result.ok`. none of those arrive by magic:
 **the emitter never writes an import.** a tz file that says `ok` imports `result`, one that
 declares a `protocol` imports `protocol` and `Union`, and one that forgets gets told by `tsc`
 in the usual way.
@@ -1038,9 +1132,9 @@ const shape = {
 } satisfies is.Schema;
 
 const signup = (body: unknown) => {
-  if (!(is.model(body, shape))) return result.error('malformed body');
-  if (!(body.age >= 18)) return result.error('under age');
-  return result.success(body);
+  if (!(is.model(body, shape))) return result.err('malformed body');
+  if (!(body.age >= 18)) return result.err('under age');
+  return result.ok(body);
 };
 ```
 
@@ -1062,10 +1156,10 @@ const register = (req: Request) => {
 
 ```ts
 const register = async (req: Request) => {
-  const $0 = await read(req); if ($0.branch === 'error') return $0; const body = $0.value;
-  const $1 = signup(body); if ($1.branch === 'error') return $1; const user = $1.value;
-  const $2 = await db.insert(user); if ($2.branch === 'error') return $2; const saved = $2.value;
-  return result.success(saved);
+  const $0 = await read(req); if ($0.branch === 'err') return $0; const body = $0.value;
+  const $1 = signup(body); if ($1.branch === 'err') return $1; const user = $1.value;
+  const $2 = await db.insert(user); if ($2.branch === 'err') return $2; const saved = $2.value;
+  return result.ok(saved);
 };
 ```
 
@@ -1082,7 +1176,7 @@ const serve = (req: Request) => {
   const out = await register(req);
 
   return match (out.branch) {
-    'success' => respond(201, out.value),
+    'ok' => respond(201, out.value),
     _ => respond(400, out.value)
   };
 };
@@ -1093,7 +1187,7 @@ const serve = async (req: Request) => {
   const out = await register(req);
 
   return (() => { switch (out.branch) {
-    case 'success': return respond(201, out.value);
+    case 'ok': return respond(201, out.value);
     default: return respond(400, out.value);
   } })();
 };
@@ -1107,14 +1201,14 @@ narrows the union. again: typescript's job, not the transpiler's.
 four fallbacks, four shapes, and which one you use says what you meant.
 
 ```tz
-const host = env('HOST') onerr (e) => 'localhost';
+const host = env('HOST') on:err (e) => 'localhost';
 
-const port = env('PORT') onerr (e) => {
+const port = env('PORT') on:err (e) => {
   log(e);
   return 8080;
 };
 
-const zone = process.env.TZ onnone => 'utc';
+const zone = process.env.TZ any:none => 'utc';
 
 const mode = if (is.some(flag)) flag else 'production';
 ```
@@ -1160,9 +1254,9 @@ const copy = (from: string, to: string) => scope (hold) => {
 
 ```ts
 const copy = (from: string, to: string) => scope.sync(hold => {
-  const $0 = hold(openRead(from)); if ($0.branch === 'error') return $0; const src = $0.value;
-  const $1 = hold(openWrite(to)); if ($1.branch === 'error') return $1; const dst = $1.value;
-  return result.success(pump(src, dst));
+  const $0 = hold(openRead(from)); if ($0.branch === 'err') return $0; const src = $0.value;
+  const $1 = hold(openWrite(to)); if ($1.branch === 'err') return $1; const dst = $1.value;
+  return result.ok(pump(src, dst));
 });
 ```
 
@@ -1198,7 +1292,7 @@ wait: that guard leaves with a value, which is refused. it is an answer, so it i
 
 ```tz
 const settle = (x: protocol.Of<typeof loader, 'loading'>, out: Result<string[], unknown>) => {
-  if (out.branch == 'error') return x.to.error(out.value);
+  if (out.branch == 'err') return x.to.error(out.value);
   return x.to.success(out.value);
 };
 ```
@@ -1214,7 +1308,7 @@ specs are `.tz` too, and the narrowing idiom from `claude.md` becomes one line.
 test('refuse a payload that is not a signup', () => {
   const out = signup({ email: 'a@b.c' });
 
-  guard (out.branch == 'error') assert.fail();
+  guard (out.branch == 'err') assert.fail();
   assert.equal(out.value, 'malformed body');
 });
 ```
@@ -1223,8 +1317,7 @@ test('refuse a payload that is not a signup', () => {
 test('refuse a payload that is not a signup', () => {
   const out = signup({ email: 'a@b.c' });
 
-  if (!(out.branch === 'error')) { assert.fail();
-return; }
+  if (!(out.branch === 'err')) { assert.fail(); return; }
   assert.equal(out.value, 'malformed body');
 });
 ```
@@ -1281,7 +1374,7 @@ const $0 = isStr(x); if (!$0) return;          // x is string, aliased condition
 
 the annotation and the `satisfies` both replace the expression's type with plain `boolean`,
 and a type predicate is exactly what gets thrown away when that happens. an aliased `const`
-with no annotation keeps it, which is what the `try`/`onerr` temps rely on, and inline
+with no annotation keeps it, which is what the `try`/`on:err` temps rely on, and inline
 negation keeps it too, including through a conjunction: after `if (!(a && b)) return;`
 typescript has narrowed both. all four lines above were compiled; the two that work, work.
 
@@ -1315,13 +1408,13 @@ zero extra cost, with nothing to configure and no way to switch it off.
 | `enum` | a hierarchy in disguise | `Union` |
 | `var` | reassignment is a design decision, `let` states it | `const`, or `let` |
 | `namespace` `module` | files are modules | a file |
-| `any` | it is not a type, it is the absence of one | `unknown` |
+| `any` | it is not a type, it is the absence of one; the ban is what frees `any:` | `unknown` |
 | `instanceof` | there are no classes to be an instance of | a guard |
 | `function*` `yield` | flow hidden in a protocol | a loop |
 | `abstract` `implements` `private` `protected` `public` | class vocabulary | gone with `class` |
 | `else` after an `if` **statement** | the funnel is the flow | `guard`, or the `if` expression |
 | `?:` | one conditional expression is enough | `if (c) a else b` |
-| `??` | silent about which half it is doing, and cannot hold a statement | `onnone` |
+| `??` | silent about which half it is doing, and cannot hold a statement | `any:none` |
 | `switch` | | `match` |
 | `throw` | we do not throw | `err` |
 | `get x()` `set x()` `x() {}` in an object | a method is a `function` wearing a hat | `x: () => {}` |
@@ -1341,7 +1434,7 @@ is a funnel that refused to funnel: its `else if` chains are early returns nobod
 `match` is there for the case that is really a table.
 
 **no `?:`.** the `if` expression replaces it, so the ban is about having one spelling, not
-about the operator. `?.` is untouched (`??` is banned on its own account, see `onnone`).
+about the operator. `?.` is untouched (`??` is banned on its own account, see `any:none`).
 the lexer tells a conditional from an
 optional marker by the token after the `?`: a `:` means an optional (`name?: string`),
 anything else means a ternary. the one place it cannot tell is a conditional **type**
@@ -1387,14 +1480,23 @@ file boundary is visible in a way a comment is not.
 
 ### the new words
 
-none of `guard`, `match`, `scope`, `protocol`, `onerr`, `ok` or `err` is reserved in javascript,
-and two of them are already `tstd` exports: `scope.sync(...)` and `protocol.init(...)` appear in
-real code today. those four are **contextual**, recognised by what follows them:
+none of `guard`, `match`, `scope`, `protocol`, `on`, `any`, `ok` or `err` is reserved in
+javascript, and two of them are already `tstd` exports: `scope.sync(...)` and
+`protocol.init(...)` appear in real code today. those four are **contextual**, recognised by
+what follows them:
 
 - `match` then `(`, its matching `)`, then `{`
 - `scope` then `(`, its matching `)`, then `=>`
 - `protocol` then a name then `{`
-- `onerr` and `onnone` after an expression
+- `on` or `any` then `:` then a tag, all three adjacent, after something that ends an expression
+
+the sigils are the one place the language is whitespace sensitive, and it is confined to a
+token pair on purpose. `on : err` is three tokens and not the construct; `{ on: x }` is an
+object literal because the `on` follows a `{` rather than a value. a general `:tag` sigil
+everywhere would have cost more, since `{a:success}` would change meaning.
+
+a `:tag` inside a `match` arm needs none of that, because an arm cannot start with a `:` for
+any other reason.
 
 `scope.sync` is followed by `.`, so it stays an identifier. one token of lookahead, no backtracking.
 
@@ -1427,7 +1529,7 @@ refused, and it says so.
 
 ### shapes `guard` could have had
 
-**a postfix `guard`**, in the initialiser, symmetric with `onerr`:
+**a postfix `guard`**, in the initialiser, symmetric with `on:err`:
 
 ```tz
 const row = table[id] guard (is.some(row));
@@ -1442,7 +1544,7 @@ const row = table[id];
 guard (is.some(row));
 ```
 
-`onerr` needs the postfix position; that is not a preference. the value you want from it is
+`on:err` needs the postfix position; that is not a preference. the value you want from it is
 `.value`, not what the expression produced, so the unwrapping has to happen where the binding
 happens and there is no statement form that can do it. `guard` transforms nothing, so its
 statement form is already complete and a postfix spelling is a second way to say one thing.
@@ -1452,7 +1554,7 @@ that is the thing the braced-exiting-`if` ruling removed.
 sentence and it costs the language a word that means two things: a construct in one place, a
 marker in another. `guard (c) <exit>` says the same in fewer tokens and one meaning.
 
-**an answering `guard`**, `const n = parse(raw) guard (is.number(n)) => 0;`, the way `onerr`
+**an answering `guard`**, `const n = parse(raw) guard (is.number(n)) => 0;`, the way `on:err`
 answers with `=>`. this one is not the same as the lines it replaces, so the argument above
 does not touch it: the two-line spelling needs an extra name for the value being tested.
 
@@ -1464,8 +1566,8 @@ const n = if (is.number(p)) p else 0;
 it is refused for the partition instead. **a guard never answers** is the sentence that makes
 the flow model readable in one pass, and one saved name does not buy it back.
 
-`onerr` answering is not the counter-example it looks like. a failed result cannot be carried
-forward: you either decline or you substitute, and those are the only two moves, so `onerr`
+`on:err` answering is not the counter-example it looks like. a failed result cannot be carried
+forward: you either decline or you substitute, and those are the only two moves, so `on:err`
 needs both forms to be complete. a guarded value is already sitting there usable. choosing
 against it is not a refusal, it is a choice, and a choice is `if`/`else`.
 
@@ -1505,7 +1607,7 @@ that belongs to the editor, an inlay hint in step 6, not to every signature in t
 **`db.get(id) try`, chainable**, the way rust replaced `try!(x)` with `x?`. the motivation is
 real, and the two halves of it come apart.
 
-postfix at statement scope is free, and `onerr` is the proof: its operand is delimited on the
+postfix at statement scope is free, and `on:err` is the proof: its operand is delimited on the
 left by the `=` or the statement start, so the emitter scans forward to the `;` and never scans
 back. `const user = db.get(id) try;` would cost nothing to emit.
 
@@ -1516,7 +1618,7 @@ restriction, since a `try` in an argument list leaves the enclosing function fro
 argument list, which is what `g(try f())` was refused for.
 
 so the chainable spelling is the one that cannot be had, and the affordable one is paid for in
-word order: `x onerr` reads "x, on error", where `x try` reads backwards. rust got away with it
+word order: `x on:err` reads "x, on error", where `x try` reads backwards. rust got away with it
 because `?` is punctuation and punctuation has no word order. the postfix `guard` above was refused
 for saying the same thing twice; this one is refused for what it costs the lexer.
 
@@ -1526,7 +1628,7 @@ prefix, and then the lexer rewrites awaits wherever they appear, `(await f()).y`
 the one-statement desugar is over. the two only look alike anyway: `await` unwraps a promise the
 types already track, `try` unwraps a branch and leaves.
 
-what survives of the idea is already here. `x try` is `x onerr (e) err e`, so writing the tail
+what survives of the idea is already here. `x try` is `x on:err (e) err e`, so writing the tail
 out **is** the postfix spelling, and `try` is its prefix shorthand.
 
 ## toolchain
@@ -1576,11 +1678,11 @@ syntax highlighting is a textmate grammar that includes `source.ts` and adds fou
 1. lexer plus `guard` and `match`. smallest constructs, prove the pipeline, prove line preservation.
 2. the ban list. it is a lexer walk with a table, it is what makes the language a language,
    and every later check gets cheaper once `function` and method shorthand are gone.
-3. `ok`, `err`, `async`, `try`, `onerr`, `onnone`, the one-discipline-per-body check, the two
+3. `ok`, `err`, `async`, `try`, `on:err`, `any:none`, the one-discipline-per-body check, the two
    inferred lifts and the implied `ok`. the reason the language exists.
 4. cli, loader hook, diagnostics mapping. now it is usable for real code.
 5. `scope` and `protocol`.
-6. lsp, and with it the three code actions: `return result.success(x)` to `ok x`, `return
+6. lsp, and with it the three code actions: `return result.ok(x)` to `ok x`, `return
    Promise.resolve(x)` to `async x`, and an object literal with a `branch` to `branch(...)`.
 7. the semantic pass, on the `LanguageService` the lsp already holds.
 
@@ -1594,5 +1696,54 @@ one of them cannot be there at all, which is written up under equality.
 
 ## rulings needed
 
-none open. the last two were the fallible body's tail, answered by the implied `ok`, and the
-ban list's escape hatch, answered by the file boundary.
+two. the other two that stood here are ruled and built: `on:` and `any:` replaced `on:err` and
+`any:none` and generalised the first of them to any union, `:tag` arms read a branch inside a
+`match`, and `Result` became `ok`/`err` so the vocabulary closes.
+
+### an answering guard
+
+`guard (c) => 4;` for `if (!(c)) return 4;`, and `guard (c) => { return 4; }` for the block.
+this is **not** the answering guard refused under why not: that one was postfix and
+substituted a value in an initialiser, this one is a statement with an answering tail. it
+removes the de morgan cost from the one case that still pays it.
+
+what it costs is the partition. "a guard never answers and an if never declines" is what lets
+the first word of a line say what leaves; with an answering tail `guard` means "leaves, with
+anything", and in the block form `guard (c) { ... }` and `guard (c) => { ... }` sit two
+characters apart and both are followed by a brace. `if (bad) return y;` also becomes a second
+spelling of one statement, which is what the postfix guard was refused for.
+
+three ways: refuse it; take the expression form only, so the token after the `)` is a four way
+sign (`;`, `err`, `{`, `=>`) and only the second objection stands; or take both and rewrite
+the partition as polarity, which is swift's language, is coherent, and gives up the one pass
+read.
+
+### what a file top level is
+
+a `guard` at module top emits a `return` outside a function, which is not a program. wrapping
+the module in an iife would break `export`, hoisting and every top level `const`, which is an
+emitter with an opinion about your module. so **the prototype refuses declines and exits at
+file top level** and says to wrap them in an arrow, which is the shape real code has anyway.
+that is the cheapest answer; it may be the wrong one for a scratch file.
+
+### ruled and built
+
+the fallible body's tail, answered by the implied `ok`; the ban list's escape hatch, answered
+by the file boundary; `on:`, `any:` and `:tag` arms, which are in the emitter; and both
+`tstd` renames, which have landed.
+
+## next session
+
+two things the prototype got wrong or left out, ahead of what was already staged.
+
+- **the emit does not belong next to the source.** `tzc` writes `x.ts` beside `x.tz`, so the
+  directory lists everything twice and the generated half is the louder one. `--out` already
+  mirrors the tree somewhere else, so the question is what the default should be, and whether
+  the emit is something you keep at all now that `tzx` never writes one.
+- **syntax highlighting is urgent.** it sat at step 6 behind the lsp and that is the wrong
+  order: reading tz without it is what makes the language feel unfinished, and it is the one
+  thing that costs nothing to have. a textmate grammar that includes `source.ts` and adds the
+  words is about thirty lines and needs no language server at all. it moves to the front.
+
+then `scope` and `protocol`, which are the last two constructs, and after those the lsp and
+the semantic pass that needs it.
