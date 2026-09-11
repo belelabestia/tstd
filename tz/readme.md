@@ -56,9 +56,10 @@ the words are an injection rather than a pattern in the grammar because an inclu
 injection is merged into every rule at every depth instead, and `-comment -string` in its
 selector keeps it out of prose.
 
-it knows `guard`, `match`, `try`, `ok`, `err`, `async`, the `on:` and `any:` sigils, and the
-`:tag` and `_` arms of a match. `scope` and `protocol` are not in it, because they are not in
-the emitter either.
+it knows `guard`, `match`, `try`, `scope`, `protocol`, `ok`, `err`, `async`, the `on:` and
+`any:` sigils, the `:tag` and `_` arms of a match, and inside a `protocol` declaration it
+colors the branch names and the `=>` targets, so a machine reads as arrows between names
+instead of a block of white.
 
 two residues, both cosmetic. typescript's grammar reads a match arm as an object literal key,
 so a word in a quoted arm value arrives with no string scope on it and the selector cannot see
@@ -74,6 +75,8 @@ a string to the selector.
   branch and binds what it carries
 - `ok`, `err`, `async`, and the one discipline per body they buy
 - `try`, `on:tag` and `any:none` / `any:some`, at the head of a statement, with `on:` chaining
+- `scope`, which holds resources and hands them back in reverse
+- `protocol`, a union or a machine in one block, with `export` and generics
 - the inferred lifts: an `await` makes a body async, an `ok` makes it fallible
 - the implied `ok` at the end of a fallible body
 - the ban list, `==` and `!=` emitting the strict ones
@@ -83,10 +86,9 @@ a string to the selector.
 
 ## what is not
 
-`scope` and `protocol` are next. the lsp and the checks that need a type are after that:
-conditions must be boolean, a `Result` statement must be `void` prefixed, and a `match` over
-a union must be exhaustive. none of them belong in the emitter and one of them cannot be
-there at all.
+the lsp and the checks that need a type are next: conditions must be boolean, a `Result`
+statement must be `void` prefixed, and a `match` over a union must be exhaustive. none of them
+belong in the emitter and one of them cannot be there at all.
 
 `tz` is self contained on purpose, so it can move to its own repo with a `git mv`. it depends
 on `tstd` the way any consumer does, through the package name.

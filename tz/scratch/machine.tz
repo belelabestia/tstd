@@ -1,9 +1,14 @@
-import { result, type Result, type Union } from '@belelabestia/tstd';
+import { protocol, result, type Result, type Union } from '@belelabestia/tstd';
 
 type Get = (id: string) => Promise<Result<string, string>>;
 
-/** the states a load moves through */
-export type Load = Union<{ idle: void, loading: number, done: string, failed: string; }>;
+/** the states a load moves through, declared once and read twice */
+protocol load {
+  idle => loading,
+  loading<{ at: number }> => done | failed,
+  done<string>,
+  failed<string> => loading
+}
 
 /** two awaits, two propagations, and nobody wrote async */
 export const both = (get: Get, a: string, b: string) => {
@@ -28,4 +33,9 @@ export const describe = (x: Load) => match (x) {
   :done (rows) => rows,
   :failed (why) => `failed: ${why}`,
   _ => 'still going'
+};
+
+/** a failed load goes straight back to loading, which is where a retry belongs */
+export const retry = (x: protocol.Of<typeof load, 'failed'>) => {
+  return x.to.loading({ at: 1 });
 };

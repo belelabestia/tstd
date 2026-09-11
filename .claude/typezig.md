@@ -679,9 +679,12 @@ const $0 = db.get(id); if ($0.branch === 'err') { const e = $0.value; return res
 
 **the binding is parenthesised** for the reason `catch (e)` is: a keyword on the failure path,
 then the name it binds. every construct parenthesises what it tests or binds, `if (c)`,
-`guard (c)`, `match (x)`, `on:err (e)`, `scope (hold)`. `protocol result { ... }` is the one
-that does not, because it tests nothing and binds nothing: it declares a name, the way `const`
-and `type` do, and those take no parens either. parens also keep the tail legible: `on:err (e)
+`guard (c)`, `match (x)`, `on:err (e)`, `scope (hold)`. a plain `protocol result { ... }` is the
+one that does not, because it tests nothing and binds nothing: it declares a name, the way
+`const` and `type` do, and those take no parens either. a generic one declares the types it
+binds in angle brackets, `protocol result<S, E>`, because a type family takes the brackets a
+caller puts around a type argument, and every branch entry takes the same ones: `ok<S>` is the
+rule, `ok(string)` is, again, a value in parens. parens also keep the tail legible: `on:err (e)
 err e` gives one job per token, where `on:err e err e` is three bare words in a row and the
 reader has to sort out which is which.
 
@@ -1024,15 +1027,15 @@ exactly as `protocol.init` is one call for both.
 
 ```tz
 export protocol result<S, E> {
-  success(S),
-  error(E)
+  ok<S>,
+  err<E>
 }
 ```
 
 ```ts
 const $result = <S, E>() => ({
-  success: (value: S) => {},
-  error: (value: E) => {}
+  ok: (value: S) => {},
+  err: (value: E) => {}
 }); export type Result<S, E> = Union<protocol.Model<typeof $result<S, E>>>; export const result = protocol.init($result());
 ```
 
@@ -1040,38 +1043,56 @@ that is `src/result.ts` character for character, minus the retyping. four lines 
 out: the shape function takes the block, and the two declarations that read it ride the
 closing line.
 
+**a protocol declares its parameters and its branches in the same angle brackets,
+`result<S, E>` with `ok<S>`.** there is one marker for a type, the brackets a caller puts
+around a type argument, so a reader sees "this branch carries the parameter S" in two tokens.
+a parameter and a concrete type share a protocol, `a<S>, b<number>`, because both are type
+parameters of the factory the entry emits.
+
 #### a machine
 
 ```tz
 protocol loader {
-  idle() => loading,
-  loading({ at: number }) => success | error,
-  success(string[]),
-  error(unknown) => loading
+  idle => loading,
+  loading<{ at: number }> => success | error,
+  success<string[]>,
+  error<unknown> => loading
 }
 ```
 
 ```ts
-const $loader = () => ({
+const loader = protocol.init({
   idle: () => ['loading'],
   loading: (value: { at: number }) => ['success', 'error'],
   success: (value: string[]) => {},
   error: (value: unknown) => ['loading']
-}); type Loader = Union<protocol.Model<typeof $loader>>; const loader = protocol.init($loader());
-
+}); type Loader = Union<protocol.Model<typeof loader>>;
 ```
 
 `=> a | b` is the transition list and `|` is deliberate: it reads as "or" and it is already
-the character a reader associates with a set of alternatives. empty parens carry nothing, and
-emit no parameter at all, because `Carries` reads `[]` as `void`.
+the character a reader associates with a set of alternatives. a branch with nothing to carry
+spells nothing, `idle => loading`, and the emit gives it `idle: () => ['loading']`: the empty
+factory parens arrive, because `Carries` reads `[]` as `void`.
+
+**there are two shapes, one construct.** a block inlines into `protocol.init`, because only an
+inline object literal gets its transition arrays typed as tuples: a hand-written `$loader`
+const would infer `string[]` and fail init's constraint. a generic block gets the shape
+function, because its parameters have to bind somewhere, and a shape with no transitions
+compiles the way `src/result.ts` already proves. the data type reads the factory record either
+way, and `Union<protocol.Model<typeof loader>>` is the line `protocol.spec.ts` already writes.
 
 #### the three names
 
+for a generic block there are three, and the first is scaffolding:
+
 | name | what it is | who writes it |
 | --- | --- | --- |
-| `$loader` | the declaration literal | the emitter, hidden |
-| `Loader` | the union, as data | the emitter, from the name |
-| `loader` | the factories | the emitter, from the name |
+| `$result` | the shape function, only to bind the generics | the emitter, hidden |
+| `Result` | the union, as data | the emitter, from the name |
+| `result` | the factories | the emitter, from the name |
+
+a plain block has two, because there is no shape to hide: the literal sits in the init call,
+and the type reads the factory record it produces.
 
 the capitalisation is not a convention the language invented. `claude.md` already says: the
 same word, case-distinguished, for a type and its factory. `Branch`/`branch`, `Result`/`result`,
@@ -1082,15 +1103,17 @@ and what you store. the live form, the one carrying `to`, stays `protocol.Of<typ
 at the use site, the way `protocol.spec.ts` writes it. one name for the thing you put away,
 an expression for the thing you are walking.
 
-`export protocol` exports the type and the value. the shape function is never exported: it is
-scaffolding and it never escapes the file, which is the same rule `make` follows for instances.
+`export protocol` exports the type and the value. where there is a shape function it is never
+exported: it is scaffolding and it never escapes the file, which is the same rule `make`
+follows for instances.
 
 #### how it lexes
 
-`protocol`, a name, optional `<...>`, then `{`. inside, each entry is a name, a parenthesised
-type, an optional `=> a | b`, and a comma. the type between the parens is copied verbatim, so
-`success(Map<string, number>)` needs no angle-bracket matching at all: the parens delimit it
-and the comma that separates entries is the one at paren depth zero.
+`protocol`, a name, optional `<S, E>`, then `{`. inside, each entry is a name, a payload in
+angle brackets, an optional `=> a | b`, and a comma. a branch with nothing to carry spells
+nothing. the payload's type is copied verbatim through a depth count, so `c<Array<string>>`
+reads the `>>` as two closes and emits `c: (value: Array<string>)`: only the last character
+of the run becomes the factory's `)`.
 
 #### the import is yours
 
@@ -1276,10 +1299,10 @@ the declaration is the type, so nothing states it twice.
 
 ```tz
 protocol loader {
-  idle() => loading,
-  loading({ at: number }) => success | error,
-  success(string[]),
-  error(unknown) => loading
+  idle => loading,
+  loading<{ at: number }> => success | error,
+  success<string[]>,
+  error<unknown> => loading
 }
 
 const settle = (x: protocol.Of<typeof loader, 'loading'>, out: Result<string[], unknown>) => {
@@ -1487,7 +1510,7 @@ what follows them:
 
 - `match` then `(`, its matching `)`, then `{`
 - `scope` then `(`, its matching `)`, then `=>`
-- `protocol` then a name then `{`
+- `protocol` then a name then `{`, with `<S, E>` before the brace when it is generic
 - `on` or `any` then `:` then a tag, all three adjacent, after something that ends an expression
 
 the sigils are the one place the language is whitespace sensitive, and it is confined to a
@@ -1674,7 +1697,10 @@ is realistic and keeps the dependency list at one entry.
 syntax highlighting is built, and it is not the grammar this said it would be. an include of
 `source.ts` only reaches the top level of a file, and every word tz adds lives inside a body, so
 the words are a second grammar **injected** into `source.tz` at every depth. that is the whole
-trick: `tz.tmLanguage.json` is three lines and `tz-words.tmLanguage.json` is the six patterns.
+trick: `tz.tmLanguage.json` is three lines and `tz-words.tmLanguage.json` is the keyword
+patterns plus one region. the region opens when `protocol` is followed by a name or `<`, ends
+at a closing brace on its own line, and colors the declared name, every branch, and each `=>`
+target, which typescript leaves white.
 
 the one surprise is that typescript's grammar reads a match arm as an object literal key, so a
 quoted arm value reaches the injection with no string scope on it and `-comment -string` cannot
@@ -1689,7 +1715,9 @@ along with the other residue.
 3. `ok`, `err`, `async`, `try`, `on:err`, `any:none`, the one-discipline-per-body check, the two
    inferred lifts and the implied `ok`. the reason the language exists.
 4. cli, loader hook, diagnostics mapping. now it is usable for real code.
-5. `scope` and `protocol`.
+5. `scope` and `protocol`. built, with the reservation that a protocol generic is a shape
+   function when it has parameters and an inline literal when it does not, because only an
+   inline literal keeps its transition arrays typed as tuples.
 6. lsp, and with it the three code actions: `return result.ok(x)` to `ok x`, `return
    Promise.resolve(x)` to `async x`, and an object literal with a `branch` to `branch(...)`.
 7. the semantic pass, on the `LanguageService` the lsp already holds.

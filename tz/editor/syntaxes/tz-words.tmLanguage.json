@@ -6,6 +6,9 @@
     { "include": "#guard" },
     { "include": "#match" },
     { "include": "#try" },
+    { "include": "#scope" },
+    { "include": "#protocol-decl" },
+    { "include": "#protocol" },
     { "include": "#exit" },
     { "include": "#sigil" },
     { "include": "#arm" }
@@ -22,6 +25,58 @@
     "try": {
       "match": "(?<![.$\\w'\"`])try\\b(?!['\"`])",
       "name": "keyword.control.trycatch.tz"
+    },
+    "scope": {
+      "match": "(?<![.$\\w'\"`])scope\\b(?!['\"`])",
+      "name": "keyword.control.scope.tz"
+    },
+    "protocol": {
+      "match": "(?<![.$\\w'\"`])protocol\\b(?!['\"`])",
+      "name": "keyword.control.protocol.tz"
+    },
+    "protocol-decl": {
+      "begin": "(?<![.$\\w'\"`])(protocol)\\b(?!['\"`])(?:\\s+([A-Za-z_$][\\w$]*)|\\s*<[^\\n]*?>)",
+      "beginCaptures": {
+        "1": { "name": "keyword.control.protocol.tz" },
+        "2": { "name": "entity.name.type.tz" }
+      },
+      "end": "^\\s*\\}",
+      "endCaptures": {
+        "0": { "name": "punctuation.definition.block.end.tz" }
+      },
+      "patterns": [
+        { "include": "#protocol-entry" },
+        { "include": "#protocol-transition" },
+        { "include": "#protocol-payload" }
+      ]
+    },
+    "protocol-entry": {
+      "match": "^\\s*([A-Za-z_$][\\w$]*)",
+      "captures": {
+        "1": { "name": "entity.name.tag.tz" }
+      }
+    },
+    "protocol-transition": {
+      "begin": "=>",
+      "end": "(?=,|\\}|$)",
+      "patterns": [
+        { "match": "[A-Za-z_$][\\w$]*", "name": "entity.name.tag.tz" },
+        { "match": "\\|", "name": "punctuation.separator.tag.tz" }
+      ]
+    },
+    "protocol-payload": {
+      "name": "meta.type.annotation.ts",
+      "begin": "<",
+      "end": ">",
+      "beginCaptures": {
+        "0": { "name": "punctuation.definition.typeparameters.begin.ts" }
+      },
+      "endCaptures": {
+        "0": { "name": "punctuation.definition.typeparameters.end.ts" }
+      },
+      "patterns": [
+        { "include": "source.ts#type" }
+      ]
     },
     "exit": {
       "match": "(?<![.$\\w'\"`])(?:ok|err|async)\\b(?!['\"`])",

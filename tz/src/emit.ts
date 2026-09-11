@@ -78,6 +78,8 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
   const taken: number[] = [];
   const expressions: boolean[] = [];
   const consumed: boolean[] = [];
+  const sealed: boolean[] = [];
+  const scoped: boolean[] = [];
 
   const no = (at: number, message: string) => result.err(refusal(tokens[at].line, tokens[at].column, message));
 
@@ -409,6 +411,180 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
     if (!wild) return no(i, 'a match needs a _ arm; exhaustiveness is not the transpiler\'s job');
   };
 
+  const scoping = (i: number) => {
+    const t = tokens[i];
+    const p = after[i];
+    const close = twin[p];
+
+    const inner = after[p];
+    if (inner < 0 || inner >= close) return no(i, 'a scope binds one name');
+    if (tokens[inner].kind !== 'word' || after[inner] !== close) return no(i, 'a scope binds one name');
+
+    const arrow = after[close];
+    const open = after[arrow];
+    const end = twin[open];
+    if (end < 0) return no(i, 'a scope has no closing brace');
+
+    const f = holds[open];
+    const binding = source.slice(tokens[inner].from, tokens[inner].to);
+
+    scoped[f] = true;
+
+    const opens = frames[f].suspends ? '.async(async ' : '.sync(';
+    edits.push({ from: t.to, to: tokens[arrow].to, text: `${opens}${binding} =>` });
+    edits.push({ from: tokens[end].to, to: tokens[end].to, text: ')' });
+  };
+
+  const protocoling = (i: number) => {
+    const name = after[i];
+    if (name < 0 || tokens[name].kind !== 'word') return;
+
+    const angles = (at: number, until: number) => {
+      let depth = 0;
+
+      for (let s = at; s >= 0 && s < until; s++) {
+        const t = tokens[s];
+        if (t.kind === 'comment') continue;
+
+        if (t.text === '<' || t.text === '<<') depth += t.text.length;
+        if (t.text === '>' || t.text === '>>' || t.text === '>>>') depth -= t.text.length;
+
+        if (depth <= 0) return s;
+      }
+
+      return -1;
+    };
+
+    const word = tokens[name].text;
+    const g = after[name];
+    if (g < 0) return no(i, 'a protocol declares a block after its name');
+
+    let generic = '';
+    let block = g;
+
+    if (tokens[g].text === '<') {
+      const close = angles(g, tokens.length);
+      if (close < 0) return no(g, 'a protocol generic has no closing angle');
+
+      generic = source.slice(tokens[g].from + 1, tokens[close].to - 1);
+      block = after[close];
+    }
+    else if (tokens[g].text === '(') return no(g, 'a protocol declares its parameters in angle brackets');
+
+    if (block < 0 || tokens[block].text !== '{') return no(i, 'a protocol declares a block after its name');
+
+    const end = twin[block];
+    if (end < 0) return no(i, 'a protocol has no closing brace');
+
+    for (let s = after[block]; s >= 0 && s < end; s++) sealed[s] = true;
+
+    const head = before[i];
+    const exported = head >= 0 && tokens[head].text === 'export';
+    const at = exported ? head : i;
+    const typeName = word[0].toUpperCase() + word.slice(1);
+
+    if (generic === '') {
+      const before = exported ? 'export const' : 'const';
+      edits.push({ from: tokens[at].from, to: tokens[block].from, text: `${before} ${word} = protocol.init(` });
+      edits.push({ from: tokens[end].to, to: tokens[end].to, text: `); ${exported ? 'export type' : 'type'} ${typeName} = Union<protocol.Model<typeof ${word}>>;` });
+    }
+    else {
+      edits.push({ from: tokens[at].from, to: tokens[block].from, text: `const $${word} = <${generic}>() => (` });
+
+      const model = `Union<protocol.Model<typeof $${word}<${generic}>>>`;
+
+      edits.push({
+        from: tokens[end].to,
+        to: tokens[end].to,
+        text: `); ${exported ? 'export type' : 'type'} ${typeName}<${generic}> = ${model}; ${exported ? 'export const' : 'const'} ${word} = protocol.init($${word}());`
+      });
+    }
+
+    let j = after[block];
+
+    while (j >= 0 && j < end) {
+      if (tokens[j].kind !== 'word') return no(j, 'an entry names a branch');
+
+      let p = after[j];
+      while (p >= 0 && p < end && tokens[p].kind === 'comment') p = after[p];
+
+      let close = -1;
+
+      if (p >= 0 && p < end) {
+        if (tokens[p].text === '<') {
+          close = angles(p, end);
+          if (close < 0) return no(p, 'an entry has no closing angle');
+          if (after[p] === close) return no(p, 'an angle needs a type');
+        }
+        else if (tokens[p].text === '(') {
+          const shut = twin[p];
+          if (shut < 0) return no(p, 'an entry has no closing paren');
+
+          return no(p, after[p] === shut ? 'nothing to carry spells nothing' : 'an entry declares a payload in angle brackets');
+        }
+        else if (tokens[p].text !== ',' && tokens[p].text !== '=>') return no(p, 'an entry declares a payload in angle brackets or nothing');
+      }
+
+      edits.push({ from: tokens[j].to, to: tokens[j].to, text: close < 0 ? ': ()' : ': ' });
+
+      if (close >= 0) {
+        edits.push({ from: tokens[p].from, to: tokens[p].to, text: '(' });
+        edits.push({ from: tokens[p].to, to: tokens[p].to, text: 'value: ' });
+
+        const chars = tokens[close].text.length;
+        edits.push({ from: tokens[close].from, to: tokens[close].to, text: `${'>'.repeat(chars - 1)})` });
+      }
+
+      const scan = close >= 0 ? close + 1 : p;
+      const comma = find(scan, end, [',']);
+      const stop = comma >= 0 ? comma : end;
+      const arrow = find(scan, stop - 1, ['=>']);
+
+      if (arrow < 0) {
+        const tail = close >= 0 ? tokens[close].to : tokens[j].to;
+        edits.push({ from: tail, to: tail, text: ' => {}' });
+        j = comma >= 0 ? after[comma] : end;
+
+        continue;
+      }
+
+      const first = after[arrow];
+      if (first < 0 || first >= stop) return no(arrow, 'a transition names a branch');
+
+      const names: string[] = [];
+      let want = true;
+      let sig = first;
+      let pipe = -1;
+      let lastAt = first;
+
+      while (sig >= 0 && sig < stop) {
+        const tk = tokens[sig];
+        if (tk.kind === 'comment') { sig++; continue; }
+        if (tk.text === '|') {
+          if (want) return no(sig, 'a transition is a list of branch names separated by |');
+
+          want = true;
+          pipe = sig;
+          lastAt = sig;
+          sig++;
+          continue;
+        }
+        if (tk.kind !== 'word' || !want) return no(sig, 'a transition is a list of branch names separated by |');
+
+        names.push(tk.text);
+        want = false;
+        lastAt = sig;
+        sig++;
+      }
+
+      if (want) return no(pipe >= 0 ? pipe : arrow, 'a transition is a list of branch names separated by |');
+
+      edits.push({ from: tokens[first].from, to: tokens[lastAt].to, text: `[${names.map((n) => `'${n}'`).join(', ')}]` });
+
+      j = comma >= 0 ? after[comma] : end;
+    }
+  };
+
   const propagate = (i: number, init: number, land?: Landing) => {
     if (loose(i)) return no(i, 'a file has no body to leave; wrap it in an arrow');
 
@@ -628,6 +804,8 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
       continue;
     }
 
+    if (sealed[i]) continue;
+
     if (t.kind !== 'word' || !keyword(tokens, before, i)) continue;
 
     if (t.text === 'else' && !consumed[i]) return no(i, 'else after an if statement is refused; the funnel is the flow');
@@ -641,6 +819,20 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
 
     if (t.text === 'match' && after[i] >= 0 && tokens[after[i]].text === '(' && twin[after[i]] >= 0 && after[twin[after[i]]] >= 0 && tokens[after[twin[after[i]]]].text === '{') {
       const bad = matching(i);
+      if (bad !== undefined) return bad;
+
+      continue;
+    }
+
+    if (t.text === 'scope' && after[i] >= 0 && tokens[after[i]].text === '(' && twin[after[i]] >= 0 && after[twin[after[i]]] >= 0 && tokens[after[twin[after[i]]]].text === '=>' && after[after[twin[after[i]]]] >= 0 && tokens[after[after[twin[after[i]]]]].text === '{') {
+      const bad = scoping(i);
+      if (bad !== undefined) return bad;
+
+      continue;
+    }
+
+    if (t.text === 'protocol' && after[i] >= 0 && (tokens[after[i]].kind === 'word' || tokens[after[i]].text === '<')) {
+      const bad = protocoling(i);
       if (bad !== undefined) return bad;
 
       continue;
@@ -661,7 +853,7 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
     if (frame.promises && (frame.fallible || frame.answers)) return no(frame.open, 'a body answers with one of return, ok and err, or async; this one mixes them');
     if (frame.promises && frame.suspends) return no(frame.open, 'a body that awaits is a promise already; async x is for one that does not');
 
-    if (frame.suspends) {
+    if (frame.suspends && !scoped[f]) {
       const at = head(frame.open);
       if (at >= 0) edits.push({ from: at, to: at, text: 'async ' });
     }

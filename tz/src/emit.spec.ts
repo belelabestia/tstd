@@ -194,6 +194,72 @@ test('refuse the two lies the discipline check exists for', () => {
   assert.match(refused('const f = (xs: string[], i: number) => {\n  guard (i < xs.length);\n  ok xs[i];\n};'), /say how it failed/);
 });
 
+test('hold resources in a scope, one line for one line', () => {
+  // sync is the case with no await; the binding keeps its name and the close gains );
+  assert.equal(
+    out('const copy = (from: string, to: string) => scope (hold) => {\n  const src = try hold(openRead(from));\n  const dst = try hold(openWrite(to));\n  ok pump(src, dst);\n};'),
+    'const copy = (from: string, to: string) => scope.sync(hold => {\n  const $0 = hold(openRead(from)); if ($0.branch === \'err\') return $0; const src = $0.value;\n  const $1 = hold(openWrite(to)); if ($1.branch === \'err\') return $1; const dst = $1.value;\n  return result.ok(pump(src, dst));\n});'
+  );
+
+  // an await in the body picks scope.async and an async callback, by the same count as the lifts
+
+  assert.equal(
+    out('const f = (x: string) => scope (hold) => {\n  const a = try await hold(open(x));\n  ok a;\n};'),
+    'const f = (x: string) => scope.async(async hold => {\n  const $0 = await hold(open(x)); if ($0.branch === \'err\') return $0; const a = $0.value;\n  return result.ok(a);\n});'
+  );
+
+  // a scope binds one name, the way catch and on: bind one
+
+  assert.match(refused('const f = () => scope (a, b) => {\n  ok 1;\n};'), /binds one name/);
+  assert.match(refused('const f = () => scope () => {\n  ok 1;\n};'), /binds one name/);
+});
+
+test('declare a union or a machine, and name the three things a protocol makes', () => {
+  // a transition list after => makes a machine; its absence makes a union,
+  // and a branch with nothing to carry spells nothing
+  assert.equal(
+    out('protocol loader {\n  idle => loading,\n  loading<{ at: number }> => success | error,\n  success<string[]>,\n  error<unknown> => loading\n}'),
+    'const loader = protocol.init({\n  idle: () => [\'loading\'],\n  loading: (value: { at: number }) => [\'success\', \'error\'],\n  success: (value: string[]) => {},\n  error: (value: unknown) => [\'loading\']\n}); type Loader = Union<protocol.Model<typeof loader>>;'
+  );
+
+  // the same absence at the end of a one-branch union, which is just a name with a comma
+  assert.equal(
+    out('protocol quiet {\n  idle\n}'),
+    'const quiet = protocol.init({\n  idle: () => {}\n}); type Quiet = Union<protocol.Model<typeof quiet>>;'
+  );
+
+  // generics get shape functions, because only an inline object keeps its tuples typed;
+  // the parameters take angle brackets in the declaration, exactly as the branches do
+  assert.equal(
+    out('export protocol result<S, E> {\n  ok<S>,\n  err<E>\n}'),
+    'const $result = <S, E>() => ({\n  ok: (value: S) => {},\n  err: (value: E) => {}\n}); export type Result<S, E> = Union<protocol.Model<typeof $result<S, E>>>; export const result = protocol.init($result());'
+  );
+
+  // a parameter and a concrete type can share a protocol, each in the same angle brackets;
+  // a nested generic reads `>>` as two closes, so the last one becomes the factory's paren
+  assert.equal(
+    out('protocol thing<S> {\n  a<S>,\n  b<number>,\n  c<Array<string>>\n}'),
+    'const $thing = <S>() => ({\n  a: (value: S) => {},\n  b: (value: number) => {},\n  c: (value: Array<string>) => {}\n}); type Thing<S> = Union<protocol.Model<typeof $thing<S>>>; const thing = protocol.init($thing());'
+  );
+
+  assert.match(refused('protocol loader (idle)'), /angle brackets/);
+  assert.match(refused('protocol loader <idle }'), /no closing angle/);
+  assert.match(refused('protocol loader {\n  idle now\n}'), /angle brackets/);
+  assert.match(refused('protocol loader {\n  idle(string)\n}'), /angle brackets/);
+  assert.match(refused('protocol loader {\n  idle()\n}'), /spells nothing/);
+  assert.match(refused('protocol loader {\n  idle<number\n}'), /no closing angle/);
+  assert.match(refused('protocol loader {\n  idle<>\n}'), /needs a type/);
+  assert.match(refused('protocol loader {\n  idle =>\n}'), /names a branch/);
+});
+
+test('keep a keyword as a branch name', () => {
+  // the first entry follows a {, which is a statement start; sealing keeps it a name
+  assert.equal(
+    out('export protocol job<S, E> {\n  ok<S>,\n  err<E>\n}'),
+    'const $job = <S, E>() => ({\n  ok: (value: S) => {},\n  err: (value: E) => {}\n}); export type Job<S, E> = Union<protocol.Model<typeof $job<S, E>>>; export const job = protocol.init($job());'
+  );
+});
+
 test('carry a column home', () => {
   // the line is already right, so only the column moves, and the anchors say by how much
 

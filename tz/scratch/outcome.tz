@@ -1,0 +1,13 @@
+import { protocol, type Union } from '@belelabestia/tstd';
+
+/** a staged job in three states, declared once and read twice */
+export protocol outcome<T, E> {
+  pending<T>,
+  done,
+  failed<E>
+}
+
+/** each state has a factory, and the void branch is called with nothing */
+export const begin = (at: number) => outcome.pending(at);
+export const abandon = () => outcome.done();
+export const resign = (why: unknown) => outcome.failed(why);

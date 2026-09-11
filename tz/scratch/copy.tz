@@ -1,0 +1,17 @@
+import { result, scope } from '@belelabestia/tstd';
+
+/** connections that tell their own name */
+const pool = {
+  take: (name: string) => ({
+    open: () => name,
+    close: (conn: string) => void conn,
+    abort: (conn: string) => void conn
+  })
+};
+
+/** hold two, use both, and let the scope hand them back in reverse */
+export const both = (first: string, second: string) => scope (hold) => {
+  const a = try hold(pool.take(first));
+  const b = try hold(pool.take(second));
+  ok `${a} and ${b}`;
+};
