@@ -2,7 +2,8 @@
 
 typescript with most of typescript taken away, plus a few constructs, transpiled back to
 typescript that imports `tstd`. the design notes are in `.claude/typezig.md`; this is the
-thing they describe, far enough along to write code in.
+thing they describe, far enough along to write code in. the language walkthrough is in
+`tutorial.md`.
 
 it is a **sugar transpiler**: a token level rewriter that leaves every character it does not
 recognise alone. it never parses typescript, it lexes it. one line in makes one line out, so
