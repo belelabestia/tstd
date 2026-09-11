@@ -3,25 +3,20 @@
   "scopeName": "tz.words",
   "injectionSelector": "L:source.tz -comment -string",
   "patterns": [
-    { "include": "#guard" },
-    { "include": "#match" },
     { "include": "#try" },
     { "include": "#scope" },
     { "include": "#protocol-decl" },
     { "include": "#protocol" },
+    { "include": "#form" },
+    { "include": "#call" },
     { "include": "#exit" },
-    { "include": "#sigil" },
-    { "include": "#arm" }
+    { "include": "#else" },
+    { "include": "#matcher" },
+    { "include": "#branch" },
+    { "include": "#arm" },
+    { "include": "#arm-cond" }
   ],
   "repository": {
-    "guard": {
-      "match": "(?<![.$\\w'\"`])guard\\b(?!['\"`])",
-      "name": "keyword.control.guard.tz"
-    },
-    "match": {
-      "match": "(?<![.$\\w'\"`])match\\b(?!['\"`])",
-      "name": "keyword.control.match.tz"
-    },
     "try": {
       "match": "(?<![.$\\w'\"`])try\\b(?!['\"`])",
       "name": "keyword.control.trycatch.tz"
@@ -79,23 +74,47 @@
       ]
     },
     "exit": {
-      "match": "(?<![.$\\w'\"`])(?:ok|err|async)\\b(?!['\"`])",
+      "match": "(?<![.$\\w'\"`])(?:ok|err|async|return|break|continue)\\b(?!['\"`])",
       "name": "keyword.control.flow.tz"
     },
-    "sigil": {
-      "match": "(?<![.$\\w'\"`])(on|any)(:)([A-Za-z_$][\\w$]*)",
+    "else": {
+      "match": "(?<![.$\\w'\"`])else\\b(?!['\"`])",
+      "name": "keyword.control.flow.tz"
+    },
+    "form": {
+      "match": "(?<![.$\\w'\"`])form\\b(?!['\"`])",
+      "name": "keyword.control.form.tz"
+    },
+    "call": {
+      "match": "(?<![.$\\w'\"`])call\\b(?!['\"`])",
+      "name": "keyword.control.trycatch.tz"
+    },
+    "matcher": {
+      "match": "(\\?(?:none|some|true|false|:|\\())([A-Za-z_$][\\w$]*)?",
       "captures": {
         "1": { "name": "keyword.control.flow.tz" },
-        "2": { "name": "punctuation.separator.tag.tz" },
-        "3": { "name": "entity.name.tag.tz" }
+        "2": { "name": "entity.name.tag.tz" }
+      }
+    },
+    "branch": {
+      "match": "(?<=[(,\\[=:]|=>|(?:return|ok|err)\\s):([A-Za-z_$][\\w$]*)",
+      "captures": {
+        "1": { "name": "entity.name.tag.tz" }
       }
     },
     "arm": {
-      "match": "^\\s*(?:(:)([A-Za-z_$][\\w$]*)|(_))(?=\\s*(?:\\(|=>))",
+      "match": "^\\s*(?:(:)([A-Za-z_$][\\w$]*)|(_)|([0-9][\\w$.]*|'[^'\\n]*'|\"[^\"\\n]*\"))(?=\\s*(?:\\(|=>))",
       "captures": {
         "1": { "name": "punctuation.separator.tag.tz" },
         "2": { "name": "entity.name.tag.tz" },
-        "3": { "name": "keyword.control.match.tz" }
+        "3": { "name": "keyword.control.flow.tz" },
+        "4": { "name": "constant.other.tz" }
+      }
+    },
+    "arm-cond": {
+      "match": "^\\s*(\\()",
+      "captures": {
+        "1": { "name": "keyword.control.flow.tz" }
       }
     }
   }
