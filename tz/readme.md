@@ -38,7 +38,7 @@ writes the same specifier the emit will.
 two things to know when writing a `.tz` file:
 
 - **the emitter never writes an import.** a file that says `ok` imports `result`, one that says
-  `any:none` imports `is`. forget one and `tsc` tells you, in the usual way, on the right line.
+  `?none` imports `is`. forget one and `tsc` tells you, in the usual way, on the right line.
 - **a type only import has to say `type`.** `tzx` leans on node's own type stripping, which
   cannot tell a type from a value, so write `import { result, type Result } from ...`.
 
@@ -53,16 +53,17 @@ New-Item -ItemType Junction -Path "$env:USERPROFILE\.vscode\extensions\typezig" 
 ```
 
 the words are an injection rather than a pattern in the grammar because an include of
-`source.ts` only reaches the top level of a file, and a `guard` is always inside a body. an
+`source.ts` only reaches the top level of a file, and a matcher is always inside a body. an
 injection is merged into every rule at every depth instead, and `-comment -string` in its
 selector keeps it out of prose.
 
-it knows `guard`, `match`, `try`, `scope`, `protocol`, `ok`, `err`, `async`, the `on:` and
-`any:` sigils, the `:tag` and `_` arms of a match, and inside a `protocol` declaration it
-colors the branch names and the `=>` targets, so a machine reads as arrows between names
-instead of a block of white.
+it knows `try`, `scope`, `protocol`, `form`, `call`, `else`, the `ok`, `err`, `async`, `return`,
+`break` and `continue` exits, the `?none`, `?some`, `?true`, `?false`, `?:tag` and `?(cond)`
+matchers, the `:tag` construction, and the `:tag`, `_`, literal, quoted and `(cond)` arms of a
+`? {}` block, and inside a `protocol` declaration it colors the branch names and the `=>`
+targets, so a machine reads as arrows between names instead of a block of white.
 
-two residues, both cosmetic. typescript's grammar reads a match arm as an object literal key,
+two residues, both cosmetic. typescript's grammar reads a `? {}` arm as an object literal key,
 so a word in a quoted arm value arrives with no string scope on it and the selector cannot see
 it; the grammar refuses any word with a quote against it, which covers every spelling that
 occurs. and a tz word inside a template hole is not highlighted, because the whole template is
@@ -70,12 +71,19 @@ a string to the selector.
 
 ## what is here
 
-- `guard`, and the implicit tail that makes it a decline
-- the `if` expression, and the statement `if` with no `else`
-- `match`, over a value or over a branch: a quoted arm matches a value, a `:tag` arm matches a
-  branch and binds what it carries
+- the `?` side matchers, postfix on any value: `?none` / `?some`, `?true` / `?false`,
+  `?:tag`, `?literal`, `?(cond)`, with an exit, an expression, a block, or an `else`
+  after them, and a bare `?` block listing every arm; `=>` answers only where its value
+  lands, so a statement never uses it; `?some` and `?:tag` bind what they carry, and a
+  binding nothing uses is refused
+- the statement `if` with no `else`, for declining without a matcher
+- `? {}`, over a value, a branch, or `true`: quoted and literal arms for values, a `:tag`
+  arm matching a branch and binding what it carries, `(cond)` arms for computed cases,
+  `_` always required; identity blocks switch on the subject, condition blocks on `true`
+- `:tag` construction, the literal notation for a branch, with or without its value
 - `ok`, `err`, `async`, and the one discipline per body they buy
-- `try`, `on:tag` and `any:none` / `any:some`, at the head of a statement, with `on:` chaining
+- `try`, and `call` for the foreign boundary it isolates
+- `form`, declaring the wire shape and the domain shape once
 - `scope`, which holds resources and hands them back in reverse
 - `protocol`, a union or a machine in one block, with `export` and generics
 - the inferred lifts: an `await` makes a body async, an `ok` makes it fallible
@@ -88,7 +96,7 @@ a string to the selector.
 ## what is not
 
 the lsp and the checks that need a type are next: conditions must be boolean, a `Result`
-statement must be `void` prefixed, and a `match` over a union must be exhaustive. none of them
+statement must be `void` prefixed, and a `? {}` over a union must be exhaustive. none of them
 belong in the emitter and one of them cannot be there at all.
 
 `tz` is self contained on purpose, so it can move to its own repo with a `git mv`. it depends

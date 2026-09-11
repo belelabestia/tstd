@@ -258,6 +258,7 @@ the transpiler is a lexer, so it refuses unknown words line by line. every refus
 | `new` | `make` |
 | `interface` | `type` |
 | `enum` | `Union` |
+| `match` | `? {}` |
 | `var` | `const`, or `let` |
 | `namespace`, `module` | a file |
 | `any` | `unknown` |
@@ -265,7 +266,8 @@ the transpiler is a lexer, so it refuses unknown words line by line. every refus
 | `yield` | a loop |
 | `abstract`, `implements`, `private`, `protected`, `public`, `super`, `constructor` | gone with `class` |
 | `throw` | `err` |
-| `switch` | `match` |
+| `switch` | `? {}` |
+| `guard` | a `?false` or `?none` decline |
 | `catch`, `finally` | `call.sync`, `call.async`, or the tz `try` |
 | `get`, `set` | a function wearing a hat |
 | method shorthand `x() {}` | `x: () => {}` |
@@ -273,7 +275,7 @@ the transpiler is a lexer, so it refuses unknown words line by line. every refus
 then the punctuation and shape refusals:
 
 - `===` and `!==` are refused; you write `==` and `!=`, and they emit the strict ones. one spelling of equality, guarded by the transpiler instead of by habit.
-- `??` is refused; the absence matchers say which half it is doing. `?:` is refused; the `if` expression is the one conditional.
+- `??` is refused; the absence matchers say which half it is doing. `?:` is refused; answer with `?true => ... else ...`.
 - comparing against `null` or `undefined` is refused; `is.some` and `is.none` say presence.
 - a bare `return` is refused; every `return` is a decline, so it has to be a side matcher (`cond ?false return`, `val ?none return`).
 - the `async` modifier is refused; an `await` in the body infers it, and `async x` states the rest of the story.
@@ -281,6 +283,10 @@ then the punctuation and shape refusals:
 - typescript's own `try { } catch { }` is refused; use `call.sync`, `call.async`, or the tz `try`.
 
 naming the rejection is the point: each refusal is a rule you would otherwise keep in your head, and head-kept rules are the first a team forgets.
+
+## what tz adds
+
+a dozen words and two sigils, each with one job. `?` tests a value where it stands, with `none`, `some`, `true`, `false`, `:tag`, a literal or `(cond)` saying what failed; `=>` yields a value and `else` names the miss; `:tag` builds a branch the same colon matches; `ok`, `err` and `async` answer a body under one discipline; `try` propagates a failure without naming it; `? {}` answers exhaustively where `tsc` checks totality; `scope` holds resources and hands them back; `protocol` declares a union or a machine in one block; `form` declares the wire shape and the domain shape in one place; `call` isolates foreign code that can throw. the sections below take each in turn, simplest shape first.
 
 ## what tz brings
 
@@ -307,32 +313,37 @@ export const ready = (x: string) => {
 
 ### answer with a chain, decline with a statement
 
-when both boolean sides are meaningful, chain the matchers, each on its own line one indent in from the subject; the trailing `?false` is the fallthrough, so the chain always answers:
+when both boolean sides are meaningful, answer with `=>` and name the miss with `else`; an `else` holds another chain, so the subjects evaluate only on their miss:
 
 ```tz
 export const label = (n: number) =>
-  n < 0
-    ?true 'below'
-    ?false n == 0
-    ?true 'nothing'
-    ?false 'above';
+  n < 0 ?true => 'below' else n == 0 ?true => 'nothing' else 'above';
 ```
 
-as a statement the chain is an expression whose value is discarded: exactly one side runs, and sides longer than one expression are blocks:
+as a statement the two sides share one subject with `else` between them: exactly one side runs, one line or one block per side like an `if`, and a scope is not a value, so there is no `=>` on them:
 
 ```tz
 export const run = (cond: boolean) => {
   log('start');
-  cond
-    ?true => {
-      a();
-      b();
-    }
-    ?false => {
-      c();
-      d();
-    };
+  cond ?true {
+    a();
+    b();
+  } else {
+    c();
+    d();
+  };
   log('done');
+};
+```
+
+more than two sides list every arm under a bare `?`, one per line, the statement form of an exhaustive answer:
+
+```tz
+export const react = (cond: boolean, seen: (x: string) => void) => {
+  cond ? {
+    true seen('yes');
+    false seen('no');
+  };
 };
 ```
 
@@ -347,12 +358,12 @@ export const clamp = (n: number) => {
 };
 ```
 
-### match
+### ? {}: answer exhaustively
 
-`match` answers over a value or over a branch: quoted arms for values, `:tag` arms that bind the payload for branches. every `match` needs a `_` arm; exhaustiveness is `tsc`'s job, not the transpiler's:
+`? {}` answers over a value or over a branch: quoted and literal arms for values, `:tag` arms that bind the payload for branches, `(cond)` arms for computed cases. every block needs a `_` arm; exhaustiveness is `tsc`'s job, not the transpiler's:
 
 ```tz
-export const say = (code: number) => match (code) {
+export const say = (code: number) => code ? {
   200 => 'ok',
   400 => 'bad request',
   _ => 'something else'
@@ -360,10 +371,20 @@ export const say = (code: number) => match (code) {
 ```
 
 ```tz
-export const describe = (x: Load) => match (x) {
+export const describe = (x: Load) => x ? {
   :done (rows) => `rows: ${rows}`,
   :failed (why) => `failed: ${why}`,
   _ => 'still going'
+};
+```
+
+a condition arm names no tag and binds nothing; it tests strictly, the hit meaning `=== true`. a block with only identity arms switches on the subject, the way `match` used to; a block containing a condition switches on `true` instead, so literals beside conditions become boolean cases and the first hit wins:
+
+```tz
+export const word = (code: number) => code ? {
+  200 => 'ok',
+  (code > 500) => 'down',
+  _ => 'other'
 };
 ```
 
@@ -374,7 +395,7 @@ export const describe = (x: Load) => match (x) {
 ```tz
 export const name = (id: string) => {
   const raw = try row(id);
-  const parsed = try call JSON.parse(raw);
+  const parsed = try call => JSON.parse(raw);
   is.model(parsed, rowShape) ?false err 'not a row';
   ok parsed.name;
 };
@@ -411,7 +432,7 @@ leaving a scope, substituting a value, and answering conditionally could be thre
 
 ### one rule decides exit, fallback, and answer
 
-everything hangs on what follows the matcher. an exit keyword (`return`, `err`, `break`, `continue`) leaves the scope, carrying a value along if one is given; `=>` yields with land and triggers as a statement; a bare `{}` declines inline and must exit, refused without one; a bare value answers the expression on match, and on miss evaluation moves to the next matcher.
+everything hangs on what follows the matcher. an exit keyword (`return`, `ok`, `err`, `break`, `continue`) leaves the scope, carrying a value along if one is given; `=>` yields a value, and always needs a land; a bare `{}` runs inline, declining when it exits; `else` names the miss branch of a `=>` answer. a bare value answers nothing: expressions answer with `=>`, or they are refused.
 
 ```tz
 const user = db.find(id) ?none return;        // leaves the function
@@ -446,15 +467,33 @@ the difference between "leave, there is no answer" and "continue, with this inst
 
 ### the matchers
 
-five matchers, all postfix, all under `?`:
+seven matchers, all postfix, all under `?`:
 
 | matcher | what it matches | example |
 | --- | --- | --- |
 | `?none` / `?some` | presence and absence | `table[id] ?none err 'no row'` |
 | `?true` / `?false` | a boolean | `body.age >= 18 ?false err 'under age'` |
-| `?:label` | a branch of a tagged union | `pay() ?:err (e) err 'payment failed'` |
+| `?:label` | a branch of a tagged union | `pay() ?:err (e) err why` |
+| `?literal` | strict identity on a number or string | `x ?0 => -1` |
+| `?(cond)` | a computed boolean, strictly | `n ?(n < 0) => 0` |
 
-the guard's job splits between them: a boolean precondition declines with `?false`, a maybe-missing value with `?none`, an error branch with `?:err`. failures still narrow, and what follows stays total.
+a literal collapses `x == 4 ?true` into `x ?4`: numbers glue their sign, strings take quotes, templates are refused in favor of quotes. a condition names the bare subject it tests, which the emit renames onto the temp; the hit is `=== true`, never truthiness, and conditions chain and mix like any other matcher. the decline's job splits between them: a boolean precondition declines with `?false`, a maybe-missing value with `?none`, an error branch with `?:err`. failures still narrow, and what follows stays total.
+
+### bindings: name it or drop it
+
+`?some` and `?:tag` carry a value, so they bind one in parens, and the name reaches everywhere the tail reaches, template holes included:
+
+```tz
+request.body.email ?some (email) sendMail(email);
+```
+
+```tz
+const out = name(id) ?:err (why) err `no answer for ${id}: ${why}`;
+```
+
+a binding nothing uses is refused: `read() ?:err (e) => 'localhost'` does not compile, and neither does a `? {}` arm whose answer ignores its name. drop the parens and move on. `?none`, `?true` and `?false`, literals and conditions carry nothing, so they never bind at all.
+
+and one split to keep straight: the binding lives on the match side. an `else` branch runs on miss, where the bound value names nothing, so `x ?:e (e) => 1 else f(e)` is refused alongside the unused ones. the same goes for a `? {}` arm: bind what the answer carries, or nothing.
 
 ### the scenarios, rewritten
 
@@ -517,14 +556,14 @@ const port = process.env.PORT ?none => 8080;
 and presence with something to do is a trigger, binding what was there the way `:err` binds `(why)`:
 
 ```tz
-request.body.email ?some (email) => sendMail(email);
+request.body.email ?some (email) sendMail(email);
 ```
 
-what the matchers cover: declines (`?false return`, `?none err`, `?:err err`), fallbacks (`?none => dflt`), one-sided reactions (`?true => block`), conditional answers (`?true a ?false b`), and inline declines (`?true { log(); return; }`). `match` stays for the closed-world exhaustive case, where `tsc` checks totality.
+what the matchers cover: declines (`?false return`, `?none err`, `?:err err`, `?0 return`), fallbacks (`?none => dflt`, `?0 => -1`), conditions (`?(n < 0) => 0`), one-sided reactions (`?true log`, `?true { ... }`), two-sided statements (`?true a else b`), exhaustive statements (`? { true a; false b; }`, chaining with `else if` under conditions), conditional answers (`?true => a else b`, with an exit allowed on the miss side), exhaustive answers (`? { 200 => a, (x > 500) => b, _ => c }`), and inline declines (`?true { log(); return; }`). `? {}` stays for the closed-world exhaustive case, where `tsc` checks totality.
 
 ### in-argument unwrapping
 
-the matcher is postfix on any expression, so it works inside argument lists, where statement `guard` never could: the failure is enforced at the point of value initiation, which was the guard's original goal, kept this time:
+the matcher is postfix on any expression, so it works inside argument lists, where a statement never could: the failure is enforced at the point of value initiation, which was always the goal, kept this time:
 
 ```tz
 const receipt = processPayment(
@@ -535,53 +574,71 @@ const receipt = processPayment(
 
 ### the side-effect trigger
 
-one side is all you care about: `?true` (or `?false`) with a block, no exit, no unwrap:
+one side is all you care about: `?true` (or `?false`) with a single expression, no exit, no unwrap:
 
 ```tz
-status != 'ready' ?true => log('going down');
+status != 'ready' ?true log('going down');
 ```
 
-the single-branch `if (cond) { ... }` from typescript, kept because it reads forward: condition, then what fires, on one line. a trigger discards by design; an exit after `=>` as a statement is refused, it would be swallowed, and so are `break` and `continue`, the block is a function boundary.
+the single-branch `if (cond) { ... }` from typescript, kept because it reads forward: condition, then what fires, on one line. an expression must always be captured, so `=>` as a statement is refused: a statement runs an expression or a block. a `=>` block as a statement is refused too, scopes do not take `=>`; `break` and `continue` are exits like any other on a matcher tail, but a `=>` block is a function boundary, so they are refused on it. longer reactions take the bare block form, one line or one block per side with `else` between them, and longer matches list every arm under a bare `?`.
+
+### branches built with a colon
+
+the same colon that matches a branch constructs one, in any value position: after `(`, `,`, `[`, `=`, `=>`, another `:`, `return`, `ok` or `err`. `:idle` is a branch with nothing to carry, `:failed(why)` one with a value:
+
+```tz
+const idle = :idle;
+const failed = (why: string) => :failed(why);
+```
+
+exactly one value or nothing: `:err()` and `:err(a, b)` are both refused. and never in type position, where a colon already has a job. the pairing is the point: `?:tag` binds what `:tag(...)` builds, and a `? {}` arm answers with either.
+
+### what the matchers refuse
+
+the flip side of the ladder, in one place. an expression answers with `=>` and must always be captured, so `=>` as a statement is refused and a bare value after a matcher in an answer is refused; a statement runs an expression or a block, with `else` between its two sides and a bare `?` block listing every arm of a longer match; a matcher after a consumed tail belongs to no subject, so chain with `else` or start a new statement; matchers do not nest, so bind the inner value first; one `else` per answer; exits never hide in arrow bodies, `=>` blocks or `? {}` arms, and `try` never shares a statement with a matcher; bindings name values, not keywords, and the miss branch cannot borrow them. each refusal points at the line that needs restructuring, and `tsc` never sees the confusion.
 
 ### summary of the construct matrix
 
 | construct | syntax | role | replaces |
 | --- | --- | --- | --- |
 | postfix exit | `val ?none err 'msg'`, `cond ?false return` | early exit from scope on failure | an early `return`, an `if (!cond) return` clause |
-| postfix fallback | `val ?none => fallback`, `cond ?false => 'guest'` | inline value substitution | `??` |
-| conditional chain | `cond ?true a ?false b` | answer one of two values | ternary `?:` |
+| postfix fallback | `val ?none => fallback`, `cond ?false => 'guest'` | inline value substitution, with an exit allowed on the miss side | `??` |
+| conditional chain | `cond ?true => a else b` | answer one of two values | ternary `?:`, the `if` expression |
 | inline decline | `a ?true { log(); return; }` | effects plus an exit, inline | `if` with effects and an early exit |
-| side-effect trigger | `cond ?true => log('ok')` | run a block on match, keep going | single-branch `if` |
-| exhaustive match | `match (state) { :ok => ... }` | total coverage over closed unions | `switch`, `if/else` chains |
+| side-effect trigger | `cond ?true log('ok')`, `cond ?true { ... }` | run on match, keep going | single-branch `if` |
+| two-sided statement | `cond ?true a else b` | run one of two sides | two-branch `if`/`else` |
+| exhaustive statement | `cond ? { true a; false b; }` | run one of many sides, chaining with `else if` under conditions | `if`/`else` chains |
+| exhaustive answer | `x ? { 200 => a, (x > 500) => b, _ => c }` | total coverage over values, branches, and conditions | `switch`, `if/else` chains |
 
 ### form: declare the two forms once
 
-the `form` construct is the frontend for `form.ts`: one block instead of a wire type, a domain type, a guard, a decoder and an encoder. each field maps a wire guard to an optional domain representation:
+the `form` construct is the frontend for `form.ts`: one block instead of a wire type, a domain type, a guard, a decoder and an encoder. each field is either a guard, a triple, or a triple renamed with `as`:
 
 ```tz
 export form user {
   id: is.string,
-  created_at: is.number => createdAt: Date {
-    decode: (ms) => new Date(ms),
-    encode: (d) => d.getTime(),
-  },
+  created_at: {
+    is: iso.timestamp,
+    decode: iso.fromTimestamp,
+    encode: iso.toTimestamp
+  } as createdAt,
   roles: is.array,
   address: form.nest(addressForm)
 }
 ```
 
-no `=>`, no transform: `id` and `roles` are plain fields, identical on both sides, wrapped in `form.plain(...)`. `created_at` declares the two inverse conversions in one place, which was the point of the pairing; `address` delegates through `form.nest`.
+no `as`, no rename: `id` and `roles` are plain fields when the value is a guard, identical on both sides, wrapped in `form.plain(...)`. a triple is already a field, so it passes through untouched; `as` carries the memory key the way `form.as` does underneath. fields separate with a comma or a semicolon, the way an object literal accepts both. the conversions borrow their signatures straight from the library, no lambdas and no annotations; a hand-written lambda annotates its parameters the way any signature does. the `=>` spelling is retired: the guard and the type it implied are both inferable, so only the rename is declared.
 
 the derived forms come out on the closing line, named after the declaration:
 
 ```ts
 export const user = {
   id: form.plain(is.string),
-  created_at: {
-    is: is.number,
-    decode: (ms: number) => new Date(ms),
-    encode: (d: Date) => d.getTime(),
-  },
+  created_at: form.as({
+    is: iso.timestamp,
+    decode: iso.fromTimestamp,
+    encode: iso.toTimestamp
+  }, 'createdAt'),
   roles: form.plain(is.array),
   address: form.nest(addressForm)
 };
@@ -595,7 +652,7 @@ export type User = form.Decoded<typeof user>;
 const processPayload = (raw: unknown) => {
   form.model(raw, user) ?false err 'malformed wire format';
   const u = form.decode(raw, user);
-  log(`created at: ${u.createdAt.toISOString()}`);
+  log(`created at: ${u.createdAt}`);
   const payload = form.encode(u, user);
   ok payload;
 };
@@ -606,17 +663,32 @@ the field variations, in one table:
 | field | syntax | emitted |
 | --- | --- | --- |
 | plain | `id: is.string` | `id: form.plain(is.string)` |
-| transform | `raw: guard => name: Type { decode, encode }` | an inline `{ is, decode, encode }` field |
+| triple | `seen: { is, decode, encode }` | a `seen` field, as written |
+| renamed | `raw: { is, decode, encode } as name` | `raw: form.as({ is, decode, encode }, 'name')` |
 | nested | `address: form.nest(addressForm)` | `address: form.nest(addressForm)` |
 
-the emitter parses no typescript types here; field assignments, arrows and blocks are token structures. the whole transpiler design, applied to the one construct that looks like a declaration.
+the emitter parses no typescript types here; field assignments and blocks are token structures. the whole transpiler design, applied to the one construct that looks like a declaration. three refusals keep it honest: no generics on the declaration, no `=>` in a field, and no rename without a key; conversion bodies stay ordinary typescript, so the bans apply inside them too.
 
 ### call: the boundary that does not throw
 
 a throw is converted into a `Result` at two boundaries; this is the second one, promoted to a keyword. `call` isolates foreign or non-typezig code, sync or async, into an explicit, non-throwing `Result`:
 
+when the `Result` is the whole answer, answer it directly: no `try`, no `ok`, the closure the emit already opens is the value the body hands back:
+
 ```tz
-const raw = try call JSON.parse(file.readToString());
+export const parse = (raw: string) => call => JSON.parse(raw);
+```
+
+which emits, one line in one line out:
+
+```ts
+export const parse = (raw: string) => call.sync(() => JSON.parse(raw));
+```
+
+`try` is for when work continues after the boundary: it unwraps left, so `try call` takes `=>` the way a side matcher does:
+
+```tz
+const raw = try call => JSON.parse(file.readToString());
 ```
 
 which emits, one line in one line out:
@@ -630,14 +702,28 @@ const raw = $0.value;
 multi-line work takes the block form, and an async foreign call takes `await call`:
 
 ```tz
-const raw = try call {
+const raw = try call => {
   const content = file.readToString();
   return JSON.parse(content);
 };
 ```
 
 ```tz
-const response = try await call fetch(url);
+const response = try await call => fetch(url);
+```
+
+an `await` inside the closure picks `call.async` and the async closure on its own, keyword or no keyword, and the body lifts to `async` either way:
+
+```tz
+const response = try call => {
+  return await fetch(url);
+};
+```
+
+an arrow with no block cannot lift, so there `await` forwards the promise itself: `=> await call => fetch(url)` emits `=> call.async(() => fetch(url))`, the same `Promise` of `Result` the `async`/`await` variant hands back, with nothing to suspend:
+
+```tz
+export const get = (url: string) => await call => fetch(url);
 ```
 
 the boundary matrix, each row the same three lines of emitted typescript:
@@ -645,11 +731,27 @@ the boundary matrix, each row the same three lines of emitted typescript:
 | mechanism | syntax | target |
 | --- | --- | --- |
 | sync expression | `call expr` | `JSON.parse`, `fs.readFileSync` |
-| sync block | `call { ... }` | multi-line sync foreign work |
-| async expression | `await call expr` | `fetch`, third-party sdks |
-| async block | `await call { ... }` | multi-line async foreign work |
+| sync block | `call => { ... }` | multi-line sync foreign work |
+| async expression | `await call => expr` | `fetch`, third-party sdks |
+| async block | `await call => { ... }` | multi-line async foreign work |
 
-the keyword still needs the import, the way `ok` needs `result`: the emit calls `call.sync`, and the emitter never writes an import.
+the keyword still needs the import, the way `ok` needs `result`: the emit calls `call.sync`, and the emitter never writes an import. a block answers with its `return`, so a block that falls off the end is refused, and `try`, `ok` and `err` stay outside it: the boundary converts the panic, nothing else does. and since a bare `call` already wraps the closure, an uncaptured one dangles: a `call` with no land is refused, so `return` (or a binding) carries it, never silence. a call that yields nothing spells `void`, which discards the boundary on purpose and passes through:
+
+```tz
+export const forget = (save: (x: string) => void, x: string) => {
+  void call => save(x);
+  ok 'saved';
+};
+```
+
+`try` lands its ok, so a bare `try` statement is refused: the deliberate drop spells `void try`, which propagates the err and voids the ok on the record. the two spellings differ in exactly one thing, whether the failure climbs:
+
+```tz
+void call => save(x);   // drops the whole result, failure and all
+void try call => save(x);   // propagates the err, drops the ok
+```
+
+the deeper rule is type-level and belongs to the lsp, not the emitter: any expression statement whose value is a `Result` or a promise needs the `void`, whatever produced it. the emitter only catches the constructs that announce their product themselves, `call`, `scope` and `try`; whether some other dropped value, a plain call or an unwrapped `x.value`, hides a result is a question of types, and the lsp is where it gets asked.
 
 ### the whole pipeline
 
@@ -664,7 +766,7 @@ export form configForm {
 const loadConfig = (filePath: string) => scope (hold) => {
   const file = try hold(openFile(filePath));
 
-  const raw = try call JSON.parse(file.readToString());
+  const raw = try call => JSON.parse(file.readToString());
 
   form.model(raw, configForm) ?false err `invalid configuration structure in ${filePath}`;
 
@@ -674,23 +776,25 @@ const loadConfig = (filePath: string) => scope (hold) => {
 };
 ```
 
-and its consumer, the same matchers on the way out:
+and its consumer, the same matchers on the way out: a scope ends with an `exit`, not a `Result`, so `serve` refuses the panic first and propagates the work's answer after:
 
 ```tz
 const serve = (filePath: string) => {
-  const config = try loadConfig(filePath);
+  const held = loadConfig(filePath);
+  const done = held.exit ?:panic (why) err `panic: ${why}`;
+  const config = try done;
   config.port > 0 ?false err `a port has to be positive`;
   start(config);
   ok 'listening';
 };
 ```
 
-trace each line: `scope` holds the file and gives it back whatever happens; `try hold` acquires it, one guard; `try call` runs foreign code and turns the panic into a `Result`; `form.model` proves the shape, which lets `form.decode` be infallible and return the config unboxed. the two matchers are the only flow control in the file: one refuses a bad wire format, one refuses an impossible port.
+trace each line: `scope` holds the file and gives it back whatever happens; `try hold` acquires it, one guard; `try call` runs foreign code and turns the panic into a `Result`; `form.model` proves the shape, which lets `form.decode` be infallible and return the config unboxed. on the way out one matcher refuses the panic, `try` unwraps the work, and one more refuses an impossible port.
 
 ## scope, honestly
 
 two things are missing and both are by design.
 
-the lsp and the type-aware checks are next: boolean conditions, `void`-prefixed `Result` statements, exhaustive `match` over unions. none belong in the emitter, which has no types; the exhaustiveness check needs `tsc`, and `tsc` is already there, with diagnostics moved back onto the tz source.
+the lsp and the type-aware checks are next: boolean conditions, `void`-prefixed `Result` statements, exhaustive `? {}` over unions. none belong in the emitter, which has no types; the exhaustiveness check needs `tsc`, and `tsc` is already there, with diagnostics moved back onto the tz source.
 
 `tz` is self contained on purpose, so it can move to its own repo with a `git mv`. it depends on `tstd` like any consumer, and the sugar never gets ahead of the library: every construct is a hand-written tstd pattern, one step from the plain typescript it lowers to.
