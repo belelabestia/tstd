@@ -1,0 +1,36 @@
+import { call, result } from '@belelabestia/tstd';
+
+/** one throwing expression, isolated where it throws, answered straight back */
+export const parse = (raw: string) => call => JSON.parse(raw);
+
+/** several lines take the block, which opens with => so return answers it */
+export const read = (file: { read: () => string }) => call => {
+  const content = file.read();
+  return JSON.parse(content);
+};
+
+/** a rejecting promise forwards without a block, and nobody writes async */
+export const get = (url: string) => await call => fetch(url);
+
+/** two foreign throws in one funnel, each propagated where it throws */
+export const pair = (a: string, b: string) => {
+  const first = try call => JSON.parse(a);
+  const second = try call => JSON.parse(b);
+  ok [first, second];
+};
+
+/** fetch with try, parse with a decline that says why */
+export const remote = (url: string) => {
+  const res = try await call => fetch(url);
+  const text = try await call => res.text();
+  const out = call => JSON.parse(text);
+  const body = out ?:err (e) err `bad payload: ${e}`;
+  ok body;
+};
+
+/** fire and forget: void drops the whole boundary, void try propagates the err and drops the ok */
+export const forget = (save: (x: string) => void, x: string) => {
+  void call => save(x);
+  void try call => save(x);
+  ok 'saved';
+};

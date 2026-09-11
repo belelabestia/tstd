@@ -1,0 +1,24 @@
+import { form, is, iso, result } from '@belelabestia/tstd';
+
+/** one declaration for the wire and the memory, renames included */
+export form user {
+  id: is.string,
+  created_at: {
+    is: iso.timestamp,
+    decode: iso.fromTimestamp,
+    encode: iso.toTimestamp
+  } as createdAt
+}
+
+/** a model nests a model the way a field nests a field */
+export form team {
+  name: is.string,
+  lead: form.nest(user)
+}
+
+/** prove the shape, then map both ways without failing */
+export const greet = (raw: unknown) => {
+  form.model(raw, user) ?false err 'malformed wire format';
+  const u = form.decode(raw, user);
+  ok `hello ${u.id}, seen ${u.createdAt}`;
+};

@@ -1,22 +1,26 @@
 import { test } from 'node:test';
-import { branch, result } from '@belelabestia/tstd';
+import { branch, form, result } from '@belelabestia/tstd';
 import * as assert from 'node:assert/strict';
 import { active, clamp, label, say, signup } from './signup.js';
 import { claim, name } from './load.js';
 import { quiet, zone } from './fallback.js';
 import { describe, finished } from './machine.js';
+import { level, ping, port, react } from './chains.js';
+import { forget, get, pair, parse, read, remote } from './calls.js';
+import { greet, team, user } from './forms.js';
+import { failed, idle, nested } from './branches.js';
 
 test('refuse a payload that is not a signup', () => {
   const out = signup({ email: 'a@b.c' });
 
-  guard (out.branch == 'err') assert.fail();
+  out.branch == 'err' ?false assert.fail();
   assert.equal(out.value, 'malformed body');
 });
 
 test('accept one that is, and carry it narrowed', () => {
   const out = signup({ email: 'a@b.c', age: 19 });
 
-  guard (out.branch == 'ok') assert.fail();
+  out.branch == 'ok' ?false assert.fail();
   assert.equal(out.value.age, 19);
 });
 
@@ -34,12 +38,12 @@ test('choose between two sides, and answer without refusing', () => {
 test('propagate a failure without naming it twice', () => {
   const found = name('1');
 
-  guard (found.branch == 'ok') assert.fail();
+  found.branch == 'ok' ?false assert.fail();
   assert.equal(found.value, 'ada');
 
   const missing = name('2');
 
-  guard (missing.branch == 'err') assert.fail();
+  missing.branch == 'err' ?false assert.fail();
   assert.equal(missing.value, 'no row 2');
 });
 
@@ -63,3 +67,67 @@ test('reach one branch by refusing the others', () => {
   assert.equal(finished(idle), undefined);
   assert.equal(describe(failed), 'failed: down');
 });
+
+test('answer with else, nested or not', () => {
+  assert.equal(port({}), '8080');
+  assert.equal(port({ PORT: '1' }), '1');
+  assert.equal(level(-1), 'below');
+  assert.equal(level(0), 'nothing');
+  assert.equal(level(1), 'above');
+
+  const heard: string[] = [];
+  ping(true, (x) => void heard.push(x));
+  react(false, (x) => void heard.push(x));
+  assert.deepEqual(heard, ['up', 'no']);
+});
+
+test('isolate what throws, in one line or a block', () => {
+  assert.deepEqual(parse('{"a":1}').value, { a: 1 });
+  assert.equal(parse('{oops').branch, 'err');
+  assert.deepEqual(read({ read: () => '{"a":1}' }).value, { a: 1 });
+
+  const fetched = await get('data:text/plain,hi');
+  fetched.branch == 'ok' ?false assert.fail();
+  assert.ok(fetched.value.ok);
+
+  assert.deepEqual(pair('1', '2').value, [1, 2]);
+  assert.equal(pair('1', '{oops').branch, 'err');
+
+  const payload = await remote('data:application/json,{"a":1}');
+  payload.branch == 'ok' ?false assert.fail();
+  assert.deepEqual(payload.value, { a: 1 });
+
+  const garbled = await remote('data:text/plain,oops');
+  garbled.branch == 'err' ?false assert.fail();
+  assert.match(garbled.value as string, /bad payload/);
+
+  const kept: string[] = [];
+  assert.equal(forget((x) => void kept.push(x), 'hi').value, 'saved');
+  // both spellings fire: void drops the whole result, void try propagates the err
+  assert.deepEqual(kept, ['hi', 'hi']);
+});
+
+test('declare the two forms once, and read them twice', () => {
+  const raw: unknown = JSON.parse('{"id":"a","created_at":1704164645006}');
+
+  // the renamed key carries the domain type on the memory side
+  if (!form.model(raw, user)) assert.fail();
+  const u = form.decode(raw, user);
+  assert.equal(u.createdAt, '2024-01-02T03:04:05.006Z');
+  assert.deepEqual(form.encode(u, user), raw);
+
+  assert.equal(greet(raw).value, 'hello a, seen 2024-01-02T03:04:05.006Z');
+  assert.equal(greet({}).branch, 'err');
+
+  // nesting nests, because a nested model is a field like any other
+  const boss: unknown = JSON.parse('{"name":"t","lead":{"id":"a","created_at":0}}');
+  if (!form.model(boss, team)) assert.fail();
+  assert.equal(form.decode(boss, team).lead.createdAt, '1970-01-01T00:00:00.000Z');
+});
+
+test('build branches with a colon', () => {
+  assert.deepEqual(idle, branch('idle'));
+  assert.deepEqual(failed('down'), branch('failed', 'down'));
+  assert.deepEqual(nested, branch('outer', branch('inner', 1)));
+});
+

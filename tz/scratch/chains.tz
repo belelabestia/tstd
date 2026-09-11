@@ -1,0 +1,31 @@
+import { is } from '@belelabestia/tstd';
+
+/** a fallback, then a choice, then a choice of choices */
+
+export const port = (env: Record<string, string | undefined>) => {
+  const found = env.PORT ?none => '8080';
+  return found;
+};
+
+export const level = (n: number) =>
+  n < 0 ?true => 'below' else n == 0 ?true => 'nothing' else 'above';
+
+export const ping = (cond: boolean, log: (x: string) => void) => {
+  cond ?true log('up');
+  return cond;
+};
+
+export const react = (cond: boolean, seen: (x: string) => void) => {
+  cond ?true seen('yes') else seen('no');
+};
+
+/** a literal match, strict identity without a precondition */
+export const tick = (n: number) =>
+  n ?0 => 'zero' else n ?(n < 0) => 'neg' else 'pos';
+
+/** conditions answer together, switching on true only then */
+export const word = (code: number) => code ? {
+  200 => 'ok',
+  (code > 500) => 'down',
+  _ => 'other'
+};

@@ -4,13 +4,13 @@ type Read = () => Result<string, string>;
 
 /** a failure swallowed on purpose, and no closure to swallow it */
 export const quiet = (read: Read) => {
-  const found = read() on:err (e) => 'localhost';
+  const found = read() ?:err => 'localhost';
   return found;
 };
 
 /** the same, out loud, which is what a block after the => is for */
 export const loud = (read: Read) => {
-  const found = read() on:err (e) => {
+  const found = read() ?:err (e) => {
     console.log(e);
     return 'localhost';
   };
@@ -20,28 +20,28 @@ export const loud = (read: Read) => {
 
 /** not a failure at all, just something that was not there */
 export const zone = (env: Record<string, string>) => {
-  const found = env.TZ any:none => 'utc';
+  const found = env.TZ ?none => 'utc';
   return found;
 };
 
 /** a decline that says why, in a body that answers with a result */
 export const port = (read: Read) => {
-  const found = read() on:err (e) err `no port: ${e}`;
+  const found = read() ?:err (e) err `no port: ${e}`;
   ok found;
 };
 
 /** a decline that walks away, in a body that does not */
 export const maybe = (read: Read) => {
-  const found = read() on:err;
+  const found = read() ?:err return;
   return found;
 };
 
 /** a decline that does something first, then leaves */
 export const noisy = (read: Read) => {
-  const found = read() on:err (e) {
+  const found = read() ?:err (e) {
     console.log(e);
     err `gave up: ${e}`;
-  }
+  };
 
   ok found;
 };

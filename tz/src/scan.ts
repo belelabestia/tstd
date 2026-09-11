@@ -26,7 +26,7 @@ export type Scan = {
   before: number[],
   after: number[],
   holds: number[],
-  sigils: number[],
+  matcher: number[],
   tagged: number[];
 };
 
@@ -37,9 +37,9 @@ const objects = [
 
 const words = ['return', 'ok', 'err', 'async', 'satisfies', 'as', 'of', 'in', 'typeof', 'new', 'extends'];
 
-const tails = ['if', 'for', 'while', 'guard'];
+const tails = ['if', 'for', 'while'];
 
-const prefixes = ['on', 'any'];
+const matchers = ['none', 'some', 'true', 'false'];
 
 const values = ['word', 'string', 'number', 'template', 'regex'];
 
@@ -111,23 +111,54 @@ export const scan = (tokens: Token[]) => {
     }
   }
 
-  const sigils: number[] = [];
+  const matcher: number[] = [];
   const tagged: number[] = [];
 
-  for (let i = 0; i < tokens.length; i++) { sigils[i] = -1; tagged[i] = -1; }
+  for (let i = 0; i < tokens.length; i++) { matcher[i] = -1; tagged[i] = -1; }
 
   const ended = (j: number) =>
     j >= 0 && (values.includes(tokens[j].kind) || tokens[j].text === ')' || tokens[j].text === ']' || tokens[j].text === '}');
 
-  for (let i = 0; i + 2 < tokens.length; i++) {
+  for (let i = 0; i < tokens.length; i++) {
     const t = tokens[i];
-    if (t.kind !== 'word' || !prefixes.includes(t.text)) continue;
-    if (tokens[i + 1].text !== ':' || tokens[i + 2].kind !== 'word') continue;
-    if (t.to !== tokens[i + 1].from || tokens[i + 1].to !== tokens[i + 2].from) continue;
+    if (t.kind !== 'punct' || t.text !== '?') continue;
     if (!ended(before[i])) continue;
 
-    sigils[i] = i + 2;
-    tagged[i + 2] = i;
+    const n = after[i];
+    if (n < 0) continue;
+
+    if (tokens[n].kind === 'word' && matchers.includes(tokens[n].text) && t.to === tokens[n].from) {
+      matcher[i] = n;
+      tagged[n] = i;
+      continue;
+    }
+
+    if ((tokens[n].kind === 'number' || tokens[n].kind === 'string') && t.to === tokens[n].from) {
+      matcher[i] = n;
+      tagged[n] = i;
+      continue;
+    }
+
+    if ((tokens[n].text === '-' || tokens[n].text === '+') && t.to === tokens[n].from) {
+      const m = after[n];
+      if (m >= 0 && tokens[m].kind === 'number' && tokens[n].to === tokens[m].from) {
+        matcher[i] = n;
+        tagged[n] = i;
+        continue;
+      }
+    }
+
+    if (tokens[n].text === '(' && t.to === tokens[n].from) {
+      matcher[i] = n;
+      tagged[n] = i;
+      continue;
+    }
+
+    const c = tokens[n].text === ':' && t.to === tokens[n].from ? after[n] : -1;
+    if (c >= 0 && tokens[c].kind === 'word' && tokens[n].to === tokens[c].from) {
+      matcher[i] = c;
+      tagged[c] = i;
+    }
   }
 
   const frames = [frame('file', -1, -1)];
@@ -138,6 +169,8 @@ export const scan = (tokens: Token[]) => {
     if (p < 0) return 'block';
 
     const t = tokens[p];
+
+    if (t.text === 'call' && t.kind === 'word' && keyword(tokens, before, p)) return 'body';
 
     if (t.text === '=>') {
       const q = before[p];
@@ -211,7 +244,7 @@ export const scan = (tokens: Token[]) => {
 
       if (text === ')' && twin[i] >= 0) {
         const head = before[twin[i]];
-        if (head >= 0 && tagged[head] >= 0) { start = true; tail = true; }
+        if ((head >= 0 && tagged[head] >= 0) || tagged[twin[i]] >= 0) { start = true; tail = true; }
         else if (head >= 0 && tokens[head].kind === 'word' && tails.includes(tokens[head].text)) { start = true; tail = tokens[head].text !== 'if'; }
       }
 
@@ -220,10 +253,11 @@ export const scan = (tokens: Token[]) => {
 
     if (text === ';' && depth[depth.length - 1] === 0) { start = true; tail = false; continue; }
 
+    if (tagged[i] >= 0 && after[i] >= 0 && tokens[after[i]].text !== '(' && tokens[after[i]].text !== '=>' && matcher[after[i]] < 0) { start = true; tail = true; continue; }
+
     if (tokens[i].kind !== 'word') continue;
 
     if (text === 'else' || text === 'do') { start = true; tail = false; continue; }
-    if (tagged[i] >= 0 && after[i] >= 0 && tokens[after[i]].text !== '(' && tokens[after[i]].text !== '=>' && sigils[after[i]] < 0) { start = true; tail = true; continue; }
 
     const at = body[i];
 
@@ -238,9 +272,19 @@ export const scan = (tokens: Token[]) => {
     if (text === 'async' && starts[i] && !modifier(tokens, twin, after, i)) frames[at].promises = true;
   }
 
-  const out: Scan = { frames, owner, body, twin, starts, before, after, holds, sigils, tagged };
+  const out: Scan = { frames, owner, body, twin, starts, before, after, holds, matcher, tagged };
 
   for (let f = frames.length - 1; f > 0; f--) if (frames[f].kind === 'iife' && frames[f].suspends) frames[holder(frames[f].parent)].suspends = true;
+
+  for (let f = frames.length - 1; f > 0; f--) {
+    if (frames[f].kind !== 'body' || !frames[f].suspends) continue;
+
+    const arrow = before[frames[f].open];
+    const head = arrow >= 0 && tokens[arrow].text === '=>' ? before[arrow] : -1;
+    if (head >= 0 && tokens[head].kind === 'word' && tokens[head].text === 'call' && keyword(tokens, before, head)) {
+      frames[holder(frames[f].parent)].suspends = true;
+    }
+  }
 
   return out;
 };

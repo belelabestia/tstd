@@ -1,0 +1,9 @@
+import { branch } from '@belelabestia/tstd';
+
+/** the literal notation for a branch, with or without its value */
+
+export const idle = :idle;
+
+export const failed = (why: string) => :failed(why);
+
+export const nested = :outer(:inner(1));

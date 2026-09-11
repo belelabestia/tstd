@@ -1,6 +1,10 @@
 import { say } from './load.js';
 import { label } from './signup.js';
+import { level } from './chains.js';
+import { greet } from './forms.js';
 
 console.log(say('1'));
 console.log(say('2'));
 console.log(label(-3));
+console.log(level(0));
+console.log(greet({ id: 'a', created_at: 0 }));
