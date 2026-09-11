@@ -1498,3 +1498,25 @@ const stored = branch(loading.branch, loading.value);
 - **it cost five literals in the whole library**, two of them in `branch.spec.ts`, and `protocol.ts` was already building every state through the factory.
 - **it is value-level only.** a type still comes from `Union<{ ... }>` or `Branch<...>`, and inline against a union-typed target the factory infers its value from every member at once, so bind first and then assign.
 - **one collision, worth knowing.** `assert.deepEqual` is an assertion signature, `asserts actual is T`, so asserting against `branch('small', 0.1)` narrows the actual to that one branch and a later `switch` over the union stops compiling. the literal used to widen the tag to `string` and hid this. the fix is to assert inside the case rather than before the switch, which is what `branch.spec.ts` does now.
+
+### o24. a wire key is not always a memory key, so a field carries its rename: house (ruled)
+
+the `tz` form promised `created_at => createdAt` while `Encoded` and `Decoded` mapped the same keys on both sides, so the rename was dropped silently. silence is guessing, so the library learned the rename instead:
+
+❌ instead of same keys on both sides, with the domain spelling lost:
+
+```ts
+export type Decoded<T extends Fields> = Flat<{ [K in keyof T]: ... }>;
+```
+
+✅ do carry the memory key on the field, and remap the decoded side over it:
+
+```ts
+export const as = <E extends is.Json, D, A extends string>(field: Field<E, D>, as: A) => ({ ...field, as });
+
+export type Decoded<T extends Fields> = Flat<{ [K in keyof T as T[K] extends { as: infer A extends string } ? A : K]: ... }>;
+```
+
+- **the factory is the literal notation, the way `branch` is.** an inline `as: 'createdAt'` widens to `string` and the decoded side collapses to an index signature, so the rename travels through `form.as(...)` and the generic keeps the literal. `form.spec.ts` pins this with a `@ts-expect-error` on the wire spelling surviving decoding.
+- **no helper for the walk.** `decode` and `encode` remap through one local, `memory`, which reads the member or falls back to the wire key. plain fields never rename, so they never mention it.
+- **remapping cost the walkers their typing.** the remapped `Decoded` is no longer homomorphic, so the walkers accumulate into a `Record`, read and write through it, and brand the result once at the return. those casts are o6b working as designed: there is no other way to write into the remapped side.

@@ -191,3 +191,51 @@ test('refuse a local spelling that the zone does not name once', () => {
   if (!form.model(x, booking)) assert.fail();
   assert.equal(form.decode(x, booking).starts, '2024-10-27T02:30:00.000Z');
 });
+
+/*
+  a wire key is not always a memory key
+
+  databases love snake_case and memory loves camelCase, but the pairing still has to be
+  declared once: form.as carries the memory key alongside the field, so Encoded keeps the
+  wire spelling and Decoded answers under the memory one, and the two walkers rename both ways.
+*/
+const stored = {
+  is: iso.timestamp,
+  decode: (x: iso.Timestamp) => iso.fromTimestamp(x),
+  encode: (x: iso.DateTime) => iso.toTimestamp(x)
+};
+
+const row = {
+  id: form.plain(is.string),
+  created_at: form.as(stored, 'createdAt')
+} satisfies form.Fields;
+
+test('carry a field under another key in memory', () => {
+  // the wire spells it with an underscore and memory does not
+  type encoded = form.Encoded<typeof row>;
+  type decoded = form.Decoded<typeof row>;
+
+  const wire: encoded = { id: 'a', created_at: 1704164645006 as iso.Timestamp };
+  const held: decoded = { id: 'a', createdAt: '2024-01-02T03:04:05.006Z' as iso.DateTime };
+
+  // the guard still reads the wire, so a decoded value is not an encoded one
+  // @ts-expect-error it does not even typecheck as one
+  const bad: encoded = held;
+  assert.ok(!form.model(bad, row));
+
+  if (!form.model(wire, row)) assert.fail();
+
+  // decoding renames, and encoding puts the wire spelling back
+  assert.deepEqual(form.decode(wire, row), held);
+  assert.deepEqual(form.encode(held, row), wire);
+
+  // the wire spelling does not survive decoding, which is also what keeps the rename honest:
+  // were `as` widened to string, this access would typecheck through an index signature
+  // @ts-expect-error there is no created_at in memory
+  const kept = held.created_at;
+  assert.ok(is.none(kept));
+
+  // and the renamed key carries the domain type, not the wire one
+  const at: iso.DateTime = form.decode(wire, row).createdAt;
+  assert.equal(iso.dateOf(at), '2024-01-02');
+});
