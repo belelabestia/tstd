@@ -347,21 +347,57 @@ test('answer with a chain, decline with a statement', () => {
   // an expression answers with =>, and else names the miss branch
 
   assert.equal(
-    out('export const label = (n: number) =>\n  n < 0 ?true => `below` else `above`;'),
+    out('export const label = (n: number) =>\n  n < 0 ?true => `below` else => `above`;'),
     'export const label = (n: number) =>\n  (($0) => $0 === true ? `below` : `above`)(n < 0);'
   );
 
   // an else branch holds another chain, each subject evaluated only on its miss
 
   assert.equal(
-    out('export const label = (n: number) =>\n  n < 0 ?true => `below` else n == 0 ?true => `nothing` else `above`;'),
+    out('export const label = (n: number) =>\n  n < 0 ?true => `below` else n == 0 ?true => `nothing` else => `above`;'),
     'export const label = (n: number) =>\n  (($0) => $0 === true ? `below` : (($1) => $1 === true ? `nothing` : `above`)(n === 0))(n < 0);'
   );
 
-  // juxtaposed values are not a chain: after a value there is nothing to match
+  // a bare value answers nothing; the miss answers with => or an exit
 
-  assert.match(refused('export const label = (n: number) =>\n  n < 0 ?true `below` else `above`;'), /answers with =>/);
+  assert.match(refused('export const label = (n: number) =>\n  n < 0 ?true => `below` else `above`;'), /bare value answers nothing/);
+  assert.match(refused('export const label = (n: number) =>\n  n < 0 ?true `below` else => `above`;'), /answers with =>/);
   assert.match(refused('export const label = (n: number) =>\n  n < 0 ?true => `below` ?false => `above`;'), /chain with else/);
+});
+
+test('a chain declines as a ladder, captured as a let', () => {
+  // a captured chain stays a ternary while every answer is a value
+
+  assert.equal(
+    out('const f = (c: boolean, o: boolean) => {\n  const a = c ?true => 4 else o ?true => 6 else => 8;\n  return a;\n};'),
+    'const f = (c: boolean, o: boolean) => {\n  const $0 = c; const a = $0 === true ? 4 :   (() => { const $1 = o; return $1 === true ? 6 : 8; })();\n  return a;\n};'
+  );
+
+  // an exit in the final else flips the whole chain to a funnel: the value branches
+  // assign to a temp, the decline branch leaves, and the binding reads the temp
+
+  assert.equal(
+    out('const f = (c: boolean, o: boolean) => {\n  const a = c ?true => 4 else o ?true => 6 else return 8;\n  return a;\n};'),
+    'const f = (c: boolean, o: boolean) => {\n  let $1; const $0 = c; if ($0 === true) { $1 = 4; } else {   const $2 = o; if ($2 === true) { $1 = 6; } else { return 8; } } const a = $1;\n  return a;\n};'
+  );
+
+  // as a body there is no temp: the whole chain is the decline ladder
+
+  assert.equal(
+    out('export const level = (n: number) =>\n  n < 0 ?true => `below`\n  else n == 0 ?true => `nothing`\n  else return `above`;'),
+    'export const level = (n: number) =>\n  { const $0 = n < 0; if ($0 === true) return `below`; const $1 = n === 0; if ($1 === true) return `nothing`; return `above`; };'
+  );
+
+  // a chain inside an expression declines nowhere: there is no scope for the exit
+
+  assert.match(refused('const f = (c: boolean) => {\n  const r = g(c ?true => 4 else return 8);\n  ok r;\n};'), /cannot be a value here/);
+
+  // but a value chain nests anywhere, the else-compile reused
+
+  assert.equal(
+    out('const f = (c: boolean, o: boolean) => {\n  const r = g(c ?true => 4 else o ?true => 6 else => 8);\n  ok r;\n};'),
+    'const f = (c: boolean, o: boolean) => {\n  const $0 = c; const r = g(($0 === true ? 4 : (() => { const $1 = o; return $1 === true ? 6 : 8; })()) );\n  return result.ok(r);\n};'
+  );
 });
 
 test('run one side as a statement, and exit from a block', () => {
@@ -472,10 +508,14 @@ test('answer exhaustively with ? {}, over values as well as branches', () => {
     'const r = (() => { switch (name) {\n  case \'root\': return admin;\n  default: return deny(name);\n} })();'
   );
 
-  // no _, no mixing, and never uncaptured
+  // no _, no mixing, and never uncaptured; tsc owns totality, so a missing
+// branch lands as | undefined instead of a transpiler refusal
 
   assert.match(refused('const r = out ? {\n  :ok => 1,\n  `two` => 2,\n  _ => 3\n};'), /branches or reads values/);
-  assert.match(refused('const r = out ? {\n  :ok => 1\n};'), /needs a _ arm/);
+  assert.equal(
+    out('const r = out ? {\n  :ok => 1\n};'),
+    'const r = (() => { switch (out.branch) {\n  case \'ok\': return 1;\n} })();'
+  );
   assert.match(refused('const f = (x: X) => {\n  x ? {\n    :ok => 1,\n    _ => 2\n  };\n  return 0;\n};'), /must always be captured/);
 
   // an arm answers with a value, so exits are refused however they arrive

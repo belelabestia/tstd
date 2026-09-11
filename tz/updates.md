@@ -372,3 +372,39 @@ Two companion rules fell out of the same work. A bound name reaches into templat
 so `` `failed: ${e}` `` renames with the rest instead of dangling past it. And the binding
 lives on the match side: an `else` branch runs on miss, where the bound value names
 nothing, so using it there is refused alongside the unused ones.
+
+## 8. The Miss Branch Answers Like Any Matcher Tail
+
+An `else` now obeys the same rule as every matcher tail. `else => expression` yields a
+value, `else => { block }` is the catcher that resolves the block's exits inside its own
+iife, and an exit declines. a bare value after `else` answers nothing and is refused.
+an exit in the final else flips the whole chain to the funnel: the whole body becomes a
+decline ladder, a captured chain assigns its value branches to a `let` temp and the
+decline branch leaves, and a nested sub-expression refuses, because there is no scope for
+the exit there.
+
+the same law now runs through `? {}`, one matcher per arm. and `_` is no longer required:
+`tsc` owns totality, so an exhaustive block compiles bare and a missing branch lands as
+`| undefined`. `_` stays for the open case, a last resort.
+
+## 9. Open Work
+
+the design conversations settled directions not yet built. each is agreed, none is built:
+
+- **the `? {}` funnel.** an arm may decline (`:err (e) err e`), and the whole block turns
+  into the let-temp switch when captured, the all-returns switch when it is the whole
+  body, and a refusal when nested in an expression. `? {` arms written as matchers
+  (`?:idle return 1;`) parallel the side matchers: each arm is one `?`, matched branches
+  decline, and the unmatched remainder extracts `a.value`. the groundwork is in: arms
+  split on `;` as well as `,`, and matcher arms count as branch arms.
+- **the narrowing ruling.** `?:tag` guards must narrow the capturing constant: a guard on
+  a named subject checks the name directly, because `tsc` does not narrow through the
+  emitter's temp alias. verified: `const $0 = out; if ($0.branch === 'err') return;`
+  leaves `out` unnarrowed, while `if (out.branch === 'err') return;` narrows it. this
+  replaces the abandoned `?ok`/`?err` extraction matchers, and is why the manual funnel
+  (`out ?:err return; ... out.value`) currently does not typecheck.
+- **`true` and `false` are literals.** `?true`/`?false` should flow through the same
+  literal path as `?'hello'`/`?343`, not the special-cased word handling.
+- **the multi-tag chain already extracts.** `a ?:idle ?:loading <tail>` ORs its tags into
+  one binary test and extracts the survivor's `.value`; the `? {}` parallel form is the
+  remaining half.

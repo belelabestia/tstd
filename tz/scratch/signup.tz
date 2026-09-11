@@ -27,7 +27,7 @@ export const active = (rows: string[]) => {
 
 /** a two sided choice, so it is an expression and it needs its else */
 export const label = (n: number) =>
-  n < 0 ?true => 'below' else n == 0 ?true => 'nothing' else 'above';
+  n < 0 ?true => 'below' else n == 0 ?true => 'nothing' else => 'above';
 
 /** an answer for a case worth choosing rather than refusing */
 export const clamp = (n: number) => {

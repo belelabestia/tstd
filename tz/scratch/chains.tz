@@ -8,7 +8,7 @@ export const port = (env: Record<string, string | undefined>) => {
 };
 
 export const level = (n: number) =>
-  n < 0 ?true => 'below' else n == 0 ?true => 'nothing' else 'above';
+  n < 0 ?true => 'below' else => n == 0 ?true => 'nothing' else => 'above';
 
 export const ping = (cond: boolean, log: (x: string) => void) => {
   cond ?true log('up');
@@ -21,7 +21,7 @@ export const react = (cond: boolean, seen: (x: string) => void) => {
 
 /** a literal match, strict identity without a precondition */
 export const tick = (n: number) =>
-  n ?0 => 'zero' else n ?(n < 0) => 'neg' else 'pos';
+  n ?0 => 'zero' else => n ?(n < 0) => 'neg' else => 'pos';
 
 /** conditions answer together, switching on true only then */
 export const word = (code: number) => code ? {

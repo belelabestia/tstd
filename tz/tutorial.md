@@ -317,7 +317,27 @@ when both boolean sides are meaningful, answer with `=>` and name the miss with 
 
 ```tz
 export const label = (n: number) =>
-  n < 0 ?true => 'below' else n == 0 ?true => 'nothing' else 'above';
+  n < 0 ?true => 'below' else n == 0 ?true => 'nothing' else => 'above';
+```
+
+the miss answers like any matcher tail: `=> expression`, `=> { block }`, or an exit. a bare value answers nothing, so `else 'above'` is refused and reads `else => 'above'`. an exit in the final else flips the whole chain to a decline ladder: the value branches become returns, and the subjects evaluate only on their miss:
+
+```tz
+export const level = (n: number) =>
+  n < 0 ?true => 'below'
+  else n == 0 ?true => 'nothing'
+  else return 'above';
+```
+
+captured, the chain binds once: the value branches assign to a temp, the decline branch leaves, and the binding reads the temp after the funnel:
+
+```tz
+export const look = (n: number) => {
+  const tag = n < 0 ?true => 'below'
+    else n == 0 ?true => 'nothing'
+    else err 'above';
+  ok tag;
+};
 ```
 
 as a statement the two sides share one subject with `else` between them: exactly one side runs, one line or one block per side like an `if`, and a scope is not a value, so there is no `=>` on them:
@@ -360,7 +380,7 @@ export const clamp = (n: number) => {
 
 ### ? {}: answer exhaustively
 
-`? {}` answers over a value or over a branch: quoted and literal arms for values, `:tag` arms that bind the payload for branches, `(cond)` arms for computed cases. every block needs a `_` arm; exhaustiveness is `tsc`'s job, not the transpiler's:
+`? {}` answers over a value or over a branch: quoted and literal arms for values, `:tag` arms that bind the payload for branches, `(cond)` arms for computed cases. `_` is the open case, a last resort: when the arms cover the whole union `tsc` proves the block returns, and a missing branch lands as `| undefined`. exhaustiveness is `tsc`'s job, not the transpiler's:
 
 ```tz
 export const say = (code: number) => code ? {
@@ -559,7 +579,7 @@ and presence with something to do is a trigger, binding what was there the way `
 request.body.email ?some (email) sendMail(email);
 ```
 
-what the matchers cover: declines (`?false return`, `?none err`, `?:err err`, `?0 return`), fallbacks (`?none => dflt`, `?0 => -1`), conditions (`?(n < 0) => 0`), one-sided reactions (`?true log`, `?true { ... }`), two-sided statements (`?true a else b`), exhaustive statements (`? { true a; false b; }`, chaining with `else if` under conditions), conditional answers (`?true => a else b`, with an exit allowed on the miss side), exhaustive answers (`? { 200 => a, (x > 500) => b, _ => c }`), and inline declines (`?true { log(); return; }`). `? {}` stays for the closed-world exhaustive case, where `tsc` checks totality.
+what the matchers cover: declines (`?false return`, `?none err`, `?:err err`, `?0 return`), fallbacks (`?none => dflt`, `?0 => -1`), conditions (`?(n < 0) => 0`), one-sided reactions (`?true log`, `?true { ... }`), two-sided statements (`?true a else b`), exhaustive statements (`? { true a; false b; }`, chaining with `else if` under conditions), conditional answers (`?true => a else => b`, with an exit allowed on the miss side), exhaustive answers (`? { 200 => a, (x > 500) => b, _ => c }`), and inline declines (`?true { log(); return; }`). `? {}` stays for the closed-world exhaustive case, where `tsc` checks totality.
 
 ### in-argument unwrapping
 

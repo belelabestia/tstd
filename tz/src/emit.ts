@@ -456,7 +456,7 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
     for (let j = after[open]; j >= 0 && j < end;) {
       arms.push(j);
 
-      const comma = find(j, end - 1, [',']);
+      const comma = find(j, end - 1, [',', ';']);
       if (comma < 0) break;
 
       j = after[comma];
@@ -466,6 +466,7 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
     let hasCond = false;
     for (const arm of arms) {
       if (tokens[arm].text === ':') branching = true;
+      if (tokens[arm].text === '?' && matcher[arm] >= 0 && tokens[matcher[arm]].text === ':') branching = true;
       if (tokens[arm].text === '(') hasCond = true;
     }
 
@@ -493,7 +494,6 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
     edits.push({ from: tokens[end].from, to: tokens[end].to, text: '} })()' });
 
     const carried = named ? `${subject}.value` : `${name}.value`;
-    let wild = false;
 
     for (const arm of arms) {
       const stop = find(arm, end - 1, [',']);
@@ -515,7 +515,6 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
         return no(arm, 'none and some test presence; use a ?none matcher or a statement ? {}');
       }
 
-      if (wildcard) wild = true;
       if (!hasCond) {
         if (branching && !wildcard && !branch) return no(arm, 'a ? {} reads branches or reads values, never both');
         if (!branching && branch) return no(arm, 'a :tag arm needs a subject that carries branches');
@@ -633,8 +632,6 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
         edits.push({ from: tokens[last].to, to: tokens[last].to, text: shut });
       }
     }
-
-    if (!wild) return no(q, 'a ? {} needs a _ arm; exhaustiveness is not the transpiler\'s job');
 
     consumed[q] = true;
     return undefined;
@@ -1036,6 +1033,42 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
     return walk(from, to);
   };
 
+  const matcherTail = (j: number) => {
+    const operand = (p: number): boolean => {
+      if (p < 0) return false;
+
+      const t = tokens[p];
+      if (t.kind === 'comment') return operand(before[p]);
+      if (t.text === '?') return matcher[p] >= 0;
+      if (t.text === ')') {
+        const open = twin[p];
+        if (open >= 0 && operand(before[open])) return true;
+        return false;
+      }
+      if (t.text === '(' || t.text === '{' || t.text === '[' || t.text === '}' || t.text === ']' || t.text === ';' || t.text === ',' || t.text === '=') return false;
+      return operand(before[p]);
+    };
+
+    return operand(before[j]);
+  };
+
+  const falls = (from: number, to: number) => {
+    let depth = 0;
+
+    for (let j = from; j >= 0 && j <= to; j++) {
+      const t = tokens[j];
+      if (t.kind === 'comment') continue;
+      if (carries.includes(t.text)) { depth++; continue; }
+      if (closes.includes(t.text)) { depth--; continue; }
+      if (depth === 0 && t.kind === 'word' && t.text === 'else' && keyword(tokens, before, j)) {
+        const n = after[j];
+        if (n >= 0 && n <= to && tokens[n].kind === 'word' && ['return', 'ok', 'err', 'break', 'continue'].includes(tokens[n].text) && keyword(tokens, before, n)) return true;
+      }
+    }
+
+    return false;
+  };
+
   const elsewhere = (at: number, floor: number) => {
     const delims = [';', ',', '{', '}', '(', ')', '[', ']', ':', '=>', 'return', 'ok', 'err'];
 
@@ -1063,9 +1096,25 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
     return false;
   };
 
-  const chain: (i: number, from: number, last: number, span: { from: number, to: number }) => string | undefined | Failure = (i, from, last, span) => {
+  const chain: (i: number, from: number, last: number, span: { from: number, to: number }, box?: { temp: string }) => string | undefined | Failure = (i, from, last, span, box) => {
     const q = mark(from, last);
-    if (q < 0) return undefined;
+    if (q < 0) {
+      if (box === undefined) return undefined;
+
+      const t = tokens[from];
+      if (t.kind !== 'word' || !['return', 'ok', 'err', 'break', 'continue'].includes(t.text) || !keyword(tokens, before, from)) {
+        return no(from, 'a chain that declines ends with an exit');
+      }
+
+      const n = after[from];
+      const body = n >= 0 && n <= last && tokens[n].text !== ';' ? spell(n, before[last], '', '') : '';
+      span.from = from;
+      span.to = before[last];
+      dropped.push({ from, to: before[last] });
+      return t.text === 'break' || t.text === 'continue'
+        ? `${t.text}${body === '' ? '' : ` ${body}`};`
+        : `${wraps[t.text].open}${body}${wraps[t.text].close};`;
+    }
 
     const sub = temp(i);
     const subject = spell(from, before[q], '', '');
@@ -1203,47 +1252,65 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
     }
 
     let code = '';
+    let chainTo = tail;
 
     if (other >= 0) {
       consumed[other] = true;
       const inner = { from: -1, to: -1 };
-      const r = chain(i, after[other], last, inner);
+      const r = chain(i, after[other], last, inner, box);
       if (r !== undefined && typeof r !== 'string') return r;
 
       if (typeof r === 'string') {
         code = r;
+        chainTo = inner.to;
         if (bound !== '' && uses(answer, tail, bound) === 0) {
           return no(bindAt, `(${bound}) is never used; drop the binding`);
         }
       }
       else {
-        let k = after[other];
-        let end = -1;
+        const n = after[other];
+        if (n >= 0 && tokens[n].text === '=>') {
+          const answer = after[n];
+          if (answer < 0) return no(n, 'an else branch answers with =>; it needs a value');
 
-        while (k >= 0 && k <= last) {
-          const t = tokens[k];
-          if (t.kind === 'comment') { k++; continue; }
-          if (carries.includes(t.text)) { k = jump(k); continue; }
-          if (t.kind === 'word' && t.text === 'else' && keyword(tokens, before, k)) {
-            return no(k, 'else chains a => answer; one else per answer');
+          if (tokens[answer].text === '{') {
+            const close = twin[answer];
+            if (close < 0) return no(answer, 'an else block has no closing brace');
+            if (nested(answer, close)) return no(answer, 'a block manages its own matchers; bind the value first');
+            const opens = frames[holds[answer]].suspends ? 'await (async () => ' : '(() => ';
+            code = `${opens}${spell(answer, close, '', '')})()`;
+            chainTo = close;
           }
-          if (t.text === ',') {
-            return no(k, 'an else branch is one value');
+          else {
+            let k = answer;
+            let eend = -1;
+
+            while (k >= 0 && k <= last) {
+              const u = tokens[k];
+              if (u.kind === 'comment') { k++; continue; }
+              if (carries.includes(u.text)) { k = jump(k); continue; }
+              if (u.kind === 'word' && u.text === 'else' && keyword(tokens, before, k)) {
+                return no(k, 'else chains a => answer; one else per answer');
+              }
+              if (u.text === ',') {
+                return no(k, 'an else branch is one value');
+              }
+              if (u.text === ';' || closes.includes(u.text)) { eend = k; break; }
+              k++;
+            }
+
+            if (eend < 0) return no(other, 'a fallback needs a semicolon');
+            if (nested(answer, before[eend])) return no(other, 'matchers do not nest; bind the inner value first');
+            code = spell(answer, before[eend], '', '');
+            chainTo = before[eend];
           }
-          if (t.text === ';' || closes.includes(t.text)) { end = k; break; }
-          k++;
         }
-
-        if (end < 0) return no(other, 'a fallback needs a semicolon');
-        if (nested(after[other], before[end])) return no(other, 'matchers do not nest; bind the inner value first');
-        if (bound !== '' && uses(answer, tail, bound) === 0) {
-          if (uses(after[other], before[end], bound) > 0) {
-            return no(after[other], `the else branch runs on miss, where (${bound}) names nothing`);
-          }
-          return no(bindAt, `(${bound}) is never used; drop the binding`);
+        else if (n >= 0 && tokens[n].kind === 'word' && ['return', 'ok', 'err', 'break', 'continue'].includes(tokens[n].text) && keyword(tokens, before, n)) {
+          return no(other, 'a chain that declines cannot be a value here; bind it or keep the funnel');
         }
-
-        code = source.slice(tokens[after[other]].from, tokens[before[end]].to);
+        else {
+          return no(other, 'a bare value answers nothing; answer with => or an exit');
+        }
       }
     }
     else {
@@ -1261,8 +1328,12 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
 
     const opens = suspends ? 'await (async () => ' : '(() => ';
     span.from = from;
-    span.to = tail;
-    dropped.push({ from, to: tail });
+    span.to = chainTo;
+    dropped.push({ from, to: chainTo });
+
+    if (box !== undefined) {
+      return `const ${sub} = ${subject}; if (${test}) { ${box.temp} = ${yielded}; } else { ${code} }`;
+    }
 
     return `${opens}{ const ${sub} = ${subject}; return ${test} ? ${yielded} : ${code}; })()`;
   };
@@ -1501,10 +1572,31 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
             if (bound !== '') rename(answer, before[other], bound, hold);
             return undefined;
           }
+          if (falls(after[other], last)) {
+            if (bound !== '' && uses(after[other], last, bound) > 0) {
+              return no(after[other], `the else branch runs on miss, where (${bound}) names nothing`);
+            }
+
+            const value = temp(i);
+            const inner = { from: -1, to: -1 };
+            const r = chain(i, after[other], last, inner, { temp: value });
+            if (r !== undefined && typeof r !== 'string') return r;
+            if (r === undefined) return no(other, 'a chain that declines ends with an exit');
+
+            edits.push({ from: tokens[i].from, to: tokens[i].from, text: `let ${value}; ` });
+            edits.push({ from: anchor, to: tokens[answer].from, text: `; if (${test}) { ${value} = ` });
+            edits.push({ from: tokens[before[other]].to, to: tokens[before[other]].to, text: `; } else { ` });
+            edits.push({ from: tokens[other].from, to: tokens[other].to, text: '' });
+            edits.push({ from: tokens[inner.from].from, to: tokens[inner.to].to, text: r });
+            edits.push({ from: tokens[before[last]].to, to: tokens[before[last]].to, text: ` } ${land.open}${value}${land.close}` });
+            dropped.push({ from: other, to: last });
+            if (bound !== '') rename(answer, before[other], bound, hold);
+            return undefined;
+          }
           const inner = { from: -1, to: -1 };
           const r = chain(i, after[other], last, inner);
           if (r !== undefined && typeof r !== 'string') return r;
-          if (typeof r === 'string') edits.push({ from: inner.from, to: inner.to, text: r });
+          if (typeof r === 'string') edits.push({ from: tokens[inner.from].from, to: tokens[inner.to].to, text: r });
 
           const missAt = typeof r === 'string' ? -1 : after[other];
 
@@ -1795,7 +1887,18 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
     return b;
   };
 
-  const linkBody: (i: number, from: number, to: number, bound: string, hold: string) => string | Failure = (i, from, to, bound, hold) => {
+  const linkBody: (i: number, from: number, to: number, bound: string, hold: string, box?: { top: boolean, ladder: boolean }) => string | Failure = (i, from, to, bound, hold, box) => {
+    if (box !== undefined && box.ladder) {
+      const t = tokens[from];
+      if (t.kind === 'word' && ['return', 'ok', 'err', 'break', 'continue'].includes(t.text) && keyword(tokens, before, from)) {
+        const n = after[from];
+        const body = n >= 0 && n <= to ? spell(n, to, '', '') : '';
+        return t.text === 'break' || t.text === 'continue'
+          ? `${t.text}${body === '' ? '' : ` ${body}`};`
+          : `${wraps[t.text].open}${body}${wraps[t.text].close};`;
+      }
+    }
+
     const parts: string[] = [];
     let pos = from;
     let j = from;
@@ -1819,7 +1922,7 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
         flush(j - 1);
         parts.push(tokens[j].text);
 
-        const inner = linkBody(i, j + 1, close - 1, bound, hold);
+        const inner = linkBody(i, j + 1, close - 1, bound, hold, { top: false, ladder: false });
         if (typeof inner !== 'string') return inner;
 
         parts.push(inner);
@@ -1837,7 +1940,7 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
           flush(j - 1);
           parts.push(tokens[j].text);
 
-          const inner = linkBody(i, j + 1, close - 1, bound, hold);
+          const inner = linkBody(i, j + 1, close - 1, bound, hold, { top: false, ladder: false });
           if (typeof inner !== 'string') return inner;
 
           parts.push(inner);
@@ -1857,6 +1960,17 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
         const n = after[j];
 
         if (n < 0 || n > to || tokens[n].text === '{') {
+          if (n >= 0 && n <= to && tokens[n].text === '{' && matcherTail(j) && twin[n] >= 0) {
+            const close = twin[n];
+            if (close >= 0 && close <= to && !hoisted(n, close)) {
+              const opens = frames[holds[n]].suspends ? 'await (async () => ' : '(() => ';
+              flush(j - 1);
+              parts.push(`${opens}${spell(n, close, bound, hold)})()`);
+              pos = close + 1;
+              j = close + 1;
+              continue;
+            }
+          }
           if (n >= 0 && n <= to && tokens[n].text === '{' && twin[n] >= 0 && hoisted(n, twin[n])) {
             return no(n, 'a block manages its own matchers; bind the value first');
           }
@@ -1865,11 +1979,12 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
           continue;
         }
 
-        flush(j);
-        parts.push(tokens[j].text);
+        const isTail = matcherTail(j);
+        flush(isTail ? j - 1 : j);
+        if (!isTail) parts.push(tokens[j].text);
 
         const end = bodyEnd(j, to);
-        const inner = linkBody(i, n, end, bound, hold);
+        const inner = linkBody(i, n, end, bound, hold, { top: false, ladder: false });
         if (typeof inner !== 'string') return inner;
 
         parts.push(inner);
@@ -1886,14 +2001,14 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
       }
 
       if (matcher[j] >= 0 && !consumed[j]) {
-        const box = { code: '', end: j, start: j };
-        const bad = linkOne(i, j, to, from, box);
+        const link = { code: '', end: j, start: j };
+        const bad = linkOne(i, j, to, from, link, box);
         if (bad !== undefined) return bad;
 
-        flush(box.start - 1);
-        parts.push(box.code);
-        pos = box.end + 1;
-        j = box.end + 1;
+        flush(link.start - 1);
+        parts.push(link.code);
+        pos = link.end + 1;
+        j = link.end + 1;
         continue;
       }
 
@@ -1904,7 +2019,7 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
     return parts.join('');
   };
 
-  const linkOne = (i: number, at: number, last: number, floor: number, out: { code: string, end: number, start: number }) => {
+  const linkOne = (i: number, at: number, last: number, floor: number, out: { code: string, end: number, start: number }, box?: { top: boolean, ladder: boolean }) => {
     const sub = temp(i);
 
     let s = before[at];
@@ -2065,7 +2180,7 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
 
       if (j > last) tail = last;
 
-      const inner = linkBody(i, answer, tail, bound, hold);
+      const inner = linkBody(i, answer, tail, bound, hold, { top: false, ladder: false });
       if (typeof inner !== 'string') return inner;
 
       yielded = inner;
@@ -2074,6 +2189,7 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
     let code = hold;
     let end = tail;
     let rend = -1;
+    let ladder = false;
 
     if (other >= 0) {
       consumed[other] = true;
@@ -2088,12 +2204,32 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
         k++;
       }
 
-      const rest = linkBody(i, after[other], bound2, '', '');
-      if (typeof rest !== 'string') return rest;
+      if ((box !== undefined && box.ladder) || falls(after[other], bound2)) {
+        if (box !== undefined && box.top === false) {
+          return no(after[other], 'a chain that declines cannot be a value here; bind it or keep the funnel');
+        }
 
-      code = rest;
-      end = bound2;
-      rend = bound2;
+        const rest = linkBody(i, after[other], bound2, '', '', { top: true, ladder: true });
+        if (typeof rest !== 'string') return rest;
+
+        code = rest;
+        end = bound2;
+        rend = bound2;
+        ladder = true;
+      }
+      else {
+        const n = after[other];
+        if (n < 0 || (tokens[n].text !== '=>' && mark(n, bound2) < 0)) {
+          return no(other, 'a bare value answers nothing; answer with => or an exit');
+        }
+
+        const rest = linkBody(i, after[other], bound2, '', '', box);
+        if (typeof rest !== 'string') return rest;
+
+        code = rest;
+        end = bound2;
+        rend = bound2;
+      }
     }
 
     if (bound !== '' && uses(answer, tail, bound) === 0) {
@@ -2103,13 +2239,19 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
       return no(bindAt, `(${bound}) is never used; drop the binding`);
     }
 
-    out.code = `((${sub}) => ${test} ? ${yielded} : ${code})(${subject})`;
+    const ladderCode = `const ${sub} = ${subject}; if (${test}) return ${yielded}; ${code}`;
+    out.code = ladder && (box === undefined || !box.ladder) ? `{ ${ladderCode} }` : (ladder ? ladderCode : `((${sub}) => ${test} ? ${yielded} : ${code})(${subject})`);
     out.end = end;
     out.start = start;
     return undefined;
   };
 
   const arrowing = (i: number, j: number, b: number, out: { end: number }) => {
+    if (matcherTail(j)) {
+      out.end = j;
+      return undefined;
+    }
+
     const n = after[j];
     if (n < 0 || n > b || tokens[n].text === '{') {
       out.end = j;
@@ -2121,7 +2263,7 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
 
     if (!hoisted(n, end)) return undefined;
 
-    const code = linkBody(i, n, end, '', '');
+    const code = linkBody(i, n, end, '', '', { top: true, ladder: false });
     if (typeof code !== 'string') return code;
 
     edits.push({ from: tokens[n].from, to: tokens[end].to, text: code });
@@ -2444,6 +2586,15 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
       if (!vused && other < 0) return no(bindAt, `(${bound}) is never used; drop the binding`);
 
       if (other >= 0) {
+        consumed[other] = true;
+        const eAfter = after[other];
+        if (eAfter >= 0 && tokens[eAfter].kind === 'word' && ['return', 'ok', 'err', 'break', 'continue'].includes(tokens[eAfter].text) && keyword(tokens, before, eAfter)) {
+          return no(other, 'a chain that declines cannot be a value here; bind it or keep the funnel');
+        }
+        if (falls(after[other], tokens.length - 1)) {
+          return no(other, 'a chain that declines cannot be a value here; bind it or keep the funnel');
+        }
+
         const inner = { from: -1, to: -1 };
         const r = chain(i, after[other], tokens.length - 1, inner);
         if (r !== undefined && typeof r !== 'string') return r;
@@ -2456,23 +2607,30 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
           if (!vused) return no(bindAt, `(${bound}) is never used; drop the binding`);
           const k = ending(inner.to + 1);
           stop = k >= 0 ? before[k] : inner.to;
+          edits.push({ from: tokens[other].from, to: tokens[stop].to, text: '' });
         }
         else {
-          const k = ending(after[other]);
-          if (k < 0) return no(other, 'a fallback needs a semicolon');
-          stop = before[k];
+          const n = after[other];
+          if (n >= 0 && tokens[n].text === '=>') {
+            const answer = after[n];
+            const k = ending(answer);
+            if (k < 0) return no(other, 'a fallback needs a semicolon');
+            stop = before[k];
+            code = spell(answer, stop, '', '');
+            edits.push({ from: tokens[other].from, to: tokens[stop].to, text: '' });
+          }
+          else {
+            return no(other, 'a bare value answers nothing; answer with => or an exit');
+          }
+
           if (bound !== '' && uses(answer, end, bound) === 0) {
-            if (uses(after[other], stop, bound) > 0) {
-              return no(after[other], `the else branch runs on miss, where (${bound}) names nothing`);
-            }
             return no(bindAt, `(${bound}) is never used; drop the binding`);
           }
-          code = spell(after[other], stop, '', '');
         }
 
         edits.push({ from: anchor, to: anchor, text: `const ${name} = ${subject}; ` });
         edits.push({ from: tokens[start].from, to: tokens[end].to, text: `(${test} ? ${spell(answer, end, bound, hold)} : ${code})` });
-        dropped.push({ from: start, to: end });
+        dropped.push({ from: start, to: stop });
 
         out.at = stop + 1;
         return undefined;

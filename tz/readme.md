@@ -73,13 +73,15 @@ a string to the selector.
 
 - the `?` side matchers, postfix on any value: `?none` / `?some`, `?true` / `?false`,
   `?:tag`, `?literal`, `?(cond)`, with an exit, an expression, a block, or an `else`
-  after them, and a bare `?` block listing every arm; `=>` answers only where its value
+  chain after them, whose miss answers with `=>` or an exit (a bare value answers
+  nothing); a bare `?` block lists every arm; `=>` answers only where its value
   lands, so a statement never uses it; `?some` and `?:tag` bind what they carry, and a
   binding nothing uses is refused
 - the statement `if` with no `else`, for declining without a matcher
 - `? {}`, over a value, a branch, or `true`: quoted and literal arms for values, a `:tag`
   arm matching a branch and binding what it carries, `(cond)` arms for computed cases,
-  `_` always required; identity blocks switch on the subject, condition blocks on `true`
+  and `_` for the open case, with `tsc` owning totality; identity blocks switch on the
+  subject, condition blocks on `true`
 - `:tag` construction, the literal notation for a branch, with or without its value
 - `ok`, `err`, `async`, and the one discipline per body they buy
 - `try`, and `call` for the foreign boundary it isolates

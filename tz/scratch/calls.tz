@@ -21,7 +21,7 @@ export const pair = (a: string, b: string) => {
 
 /** fetch with try, parse with a decline that says why */
 export const remote = (url: string) => {
-  const res = try await call => fetch(url);
+  const res = try await call => { return fetch(url) };
   const text = try await call => res.text();
   const out = call => JSON.parse(text);
   const body = out ?:err (e) err `bad payload: ${e}`;
