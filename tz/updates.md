@@ -72,18 +72,19 @@ const receipt = processPayment(
 
 | Construct | Syntax Example | Role & Semantics | Replaces |
 | --- | --- | --- | --- |
-| **Postfix Exit** | `val ?none err 'msg'`<br>
-
-<br>`cond ?false return` | Early exit from scope on failure state. | `guard`, `if (!cond) return` |
-| **Postfix Fallback** | `val ?none => fallback`<br>
-
-<br>`cond ?false => 'guest'` | Substitutes inline value on failure state. | `??`, ternary `?:` |
-| **Side-Effect Trigger** | `cond ?true log('ok')` | Executes expression or block on match without exiting. | Single-branch `if (cond)` |
+| **Postfix Exit** | `val ?none err 'msg'` | Early exit from scope on failure state. | `guard`, `if (!cond) return` |
+| **Postfix Exit** | `cond ?false return` | Early exit from scope on failure state; booleans are strict. | `guard`, `if (!cond) return` |
+| **Postfix Fallback** | `val ?none => fallback` | Substitutes an inline value on failure state. | `??` |
+| **Postfix Fallback** | `cond ?false => 'guest'` | Substitutes an inline value on failure state. | ternary `?:` |
+| **Side-Effect Trigger** | `cond ?true log('ok')` | Runs an expression or block on match without exiting; a statement of its own. | the one-sided `if` it runs alongside, which stays |
+| **Branch Matcher** | `out ?:err (e) err 'failed'` | Matches a `:tag` and binds what the branch carries. | `on:`, `match` arms |
+| **Branch Construction** | `const failed = :failed(why)` | Constructs a branch in value position; pairs with `?:tag`. | `branch('failed', why)` |
 | **Literal Matcher** | `x ?0 => -1` | Strict identity on numbers and quoted strings. | `x == 0 ?true` |
 | **Condition Matcher** | `n ?(n < 0) => 0` | Computed boolean tested strictly (`=== true`). | `n < 0 ?true` |
+| **Full Conditional** | `cond ?true => a else => b` | The miss branch is `else`, and it holds another chain. | `if (c) a else b` |
 | **Two-Sided Statement** | `cond ?true a else b` | Runs one of two sides, one line or one block each. | Two-branch `if`/`else` |
-| **Exhaustive Statement** | `cond ? { true a; false b; }` | Runs one of many sides, chaining with `else if` under conditions. | `if`/`else` chains |
-| **Exhaustive Answer** | `x ? { 200 => a, (x > 500) => b, _ => c }` | Total coverage over values, branches, and conditions. | `switch`, `if/else if` chains |
+| **Exhaustive Statement** | `cond ? { true a; false b; }` | Runs one of many sides; arms are triggers or declines with explicit exits. | `if`/`else` chains |
+| **Exhaustive Answer** | `x ? { 200 => a, (x > 500) => b, _ => c }` | Total coverage over values, branches, and conditions; `_` is the open case, `tsc` owns totality. | `switch`, `if/else if` chains |
 
 
 ---
@@ -273,10 +274,10 @@ const $0 = await call.async(() => fetch(url)); if ($0.branch === 'err') return $
 
 | Mechanism | Syntax Pattern | Transpiled Output | Target Operations |
 | --- | --- | --- | --- |
-| **Sync Expression** | `call expr` | `call.sync(() => expr)`<br> | Foreign sync throws (`JSON.parse`, `fs.readFileSync`) |
-| **Sync Block** | `call => { ... }` | `call.sync(() => { ... })`<br> | Multi-line sync foreign operations |
-| **Async Expression** | `await call => expr` | `call.async(() => expr)`<br> | Foreign async rejections (`fetch`, third-party SDKs) |
-| **Async Block** | `await call => { ... }` | `call.async(async () => { ... })`<br> | Multi-line async foreign operations |
+| **Sync Expression** | `call expr` | `call.sync(() => expr)` | Foreign sync throws (`JSON.parse`, `fs.readFileSync`) |
+| **Sync Block** | `call => { ... }` | `call.sync(() => { ... })` | Multi-line sync foreign operations |
+| **Async Expression** | `await call => expr` | `call.async(() => expr)` | Foreign async rejections (`fetch`, third-party SDKs) |
+| **Async Block** | `await call => { ... }` | `call.async(async () => { ... })` | Multi-line async foreign operations |
 
 An `await` inside the closure picks `call.async` and the async closure on its own, with or without the `await` keyword, and the enclosing body lifts to `async` either way.
 
