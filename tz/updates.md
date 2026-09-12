@@ -387,24 +387,26 @@ the same law now runs through `? {}`, one matcher per arm. and `_` is no longer 
 `tsc` owns totality, so an exhaustive block compiles bare and a missing branch lands as
 `| undefined`. `_` stays for the open case, a last resort.
 
-## 9. Open Work
+## 9. the funnel, built
 
-the design conversations settled directions not yet built. each is agreed, none is built:
+all four agreed items shipped. the shape they settled on:
 
-- **the `? {}` funnel.** an arm may decline (`:err (e) err e`), and the whole block turns
-  into the let-temp switch when captured, the all-returns switch when it is the whole
-  body, and a refusal when nested in an expression. `? {` arms written as matchers
-  (`?:idle return 1;`) parallel the side matchers: each arm is one `?`, matched branches
-  decline, and the unmatched remainder extracts `a.value`. the groundwork is in: arms
-  split on `;` as well as `,`, and matcher arms count as branch arms.
-- **the narrowing ruling.** `?:tag` guards must narrow the capturing constant: a guard on
-  a named subject checks the name directly, because `tsc` does not narrow through the
-  emitter's temp alias. verified: `const $0 = out; if ($0.branch === 'err') return;`
-  leaves `out` unnarrowed, while `if (out.branch === 'err') return;` narrows it. this
-  replaces the abandoned `?ok`/`?err` extraction matchers, and is why the manual funnel
-  (`out ?:err return; ... out.value`) currently does not typecheck.
-- **`true` and `false` are literals.** `?true`/`?false` should flow through the same
-  literal path as `?'hello'`/`?343`, not the special-cased word handling.
-- **the multi-tag chain already extracts.** `a ?:idle ?:loading <tail>` ORs its tags into
-  one binary test and extracts the survivor's `.value`; the `? {}` parallel form is the
-  remaining half.
+- **the `? {}` funnel.** an arm may decline, and the block is always a switch. captured
+  (`const r = out ? {...}`) it is the let-temp switch: answer arms land in a temp and
+  decline arms leave the function, then the binding reads the temp. as the whole body
+  (`=> out ? {...}`) it is the all-returns switch, returns leaving the function directly.
+  nested in an argument the funnel hoists before the statement, no iife. the statement
+  form is a switch too (over the subject, over `.branch`, or `switch (true)` for
+  conditions), arms running as triggers or declines with explicit exits only.
+- **matcher arms.** `?:idle ?:loading return;` are more cases that decline, and the
+  remainder (`_` or the survivor) extracts `a.value`. a matcher arm only declines.
+- **the narrowing ruling.** a guard on a named subject checks the name directly, no temp:
+  `out ?:err return;` emits `if (out.branch === 'err') return;`, so tsc narrows `out`
+  across the statement and the manual funnel typechecks. the switch narrows its subject
+  per case the same way.
+- **`true` and `false` are literals.** `?true`/`?false` ride the literal path, so a
+  binds-nothing refusal reads "a literal binds nothing".
+- **the multi-tag chain answers on the miss.** `x ?:a ?:b ?:c return else (v) => ...`
+  declines on match, `else (v)` binds the survivor, and the miss continues into a new
+  subject, mixing declines and fallbacks. exits are explicit everywhere; the emitter adds
+  none.

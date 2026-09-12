@@ -1732,56 +1732,21 @@ one of them cannot be there at all, which is written up under equality.
 
 ## rulings needed
 
-two. the other two that stood here are ruled and built: `on:` and `any:` replaced `on:err` and
-`any:none` and generalised the first of them to any union, `:tag` arms read a branch inside a
-`match`, and `Result` became `ok`/`err` so the vocabulary closes.
-
-### an answering guard
-
-`guard (c) => 4;` for `if (!(c)) return 4;`, and `guard (c) => { return 4; }` for the block.
-this is **not** the answering guard refused under why not: that one was postfix and
-substituted a value in an initialiser, this one is a statement with an answering tail. it
-removes the de morgan cost from the one case that still pays it.
-
-what it costs is the partition. "a guard never answers and an if never declines" is what lets
-the first word of a line say what leaves; with an answering tail `guard` means "leaves, with
-anything", and in the block form `guard (c) { ... }` and `guard (c) => { ... }` sit two
-characters apart and both are followed by a brace. `if (bad) return y;` also becomes a second
-spelling of one statement, which is what the postfix guard was refused for.
-
-three ways: refuse it; take the expression form only, so the token after the `)` is a four way
-sign (`;`, `err`, `{`, `=>`) and only the second objection stands; or take both and rewrite
-the partition as polarity, which is swift's language, is coherent, and gives up the one pass
-read.
-
-### what a file top level is
-
-a `guard` at module top emits a `return` outside a function, which is not a program. wrapping
-the module in an iife would break `export`, hoisting and every top level `const`, which is an
-emitter with an opinion about your module. so **the prototype refuses declines and exits at
-file top level** and says to wrap them in an arrow, which is the shape real code has anyway.
-that is the cheapest answer; it may be the wrong one for a scratch file.
-
-### ruled and built
-
-the fallible body's tail, answered by the implied `ok`; the ban list's escape hatch, answered
-by the file boundary; `on:`, `any:` and `:tag` arms, which are in the emitter; and both
-`tstd` renames, which have landed.
+none left. the answering guard died with `guard`, which is gone. what a file top level is is
+ruled: top level is a main function, so a decline there is an early exit of the iife and an
+exit means the main throws on its `?:err`; the ruling is filed, not built. the funnel and the
+narrowing are built, and the earlier four that stood here are ruled and built too: `on:` and
+`any:` replaced `on:err` and `any:none` and generalised the first of them to any union, `:tag`
+arms read a branch inside a `match`, and `Result` became `ok`/`err` so the vocabulary closes.
 
 ## next session
 
-two things the prototype got wrong or left out, ahead of what was already staged.
-
-- **the emit does not belong next to the source.** `tzc` writes `x.ts` beside `x.tz`, so the
-  directory lists everything twice and the generated half is the louder one. `--out` already
-  mirrors the tree somewhere else, so the question is what the default should be, and whether
-  the emit is something you keep at all now that `tzx` never writes one.
-- **syntax highlighting is urgent.** it sat at step 6 behind the lsp and that is the wrong
-  order: reading tz without it is what makes the language feel unfinished, and it is the one
-  thing that costs nothing to have. a textmate grammar that includes `source.ts` and adds the
-  words is about thirty lines and needs no language server at all. it moves to the front.
-  **built**, as `tz/editor/`, and the shape it wanted is written up under lsp.
-
-then `scope` and `protocol`, which are the last two constructs, and after those the lsp and
-the semantic pass that needs it. the extension is already the place the lsp goes, so it stops
-being a new thing to stand up.
+the funnel is built (the `? {}` switch, the captured let-temp and all-returns forms, the
+hoisted nested one, matcher arms, and the `else (v)` miss continuation), the narrowing
+ruling shipped with it (a guard on a named subject tests the name directly), and `?true`/
+`?false` ride the literal path. what remains is the lsp and the semantic pass that needs it:
+conditions must be boolean, a `Result` statement must be `void`-prefixed, and a `? {}` over
+a union must be exhaustive. the extension is already the place the lsp goes, so it stops
+being a new thing to stand up. the emit-next-to-source question stays open: `tzc` writes
+`x.ts` beside `x.tz` unless `--out` mirrors the tree, and it may be worth asking whether the
+emit is something you keep at all now that `tzx` never writes one.
