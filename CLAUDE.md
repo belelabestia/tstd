@@ -4,14 +4,14 @@
 
 two documents govern this repo, and both are binding:
 
-- `readme.md`: the principles and the style rules. it is a **specification**, not aspiration. code that contradicts it is a bug, and so is a rule you follow only halfway.
-- `.claude/style-kb.md`: worked entries, each grounded in a real line here, in ❌ instead of / ✅ do form. **read it before writing anything**, including prose. it also carries the open work at the top.
+- `README.md`: the principles and the style rules. it is a **specification**, not aspiration. code that contradicts it is a bug, and so is a rule you follow only halfway.
+- `.claude/STYLE-KB.md`: worked entries, each grounded in a real line here, in ❌ instead of / ✅ do form. **read it before writing anything**, including prose. it also carries the open work at the top.
 
 when the two disagree, say so instead of picking one silently.
 
 ## how to work here
 
-- read `readme.md` and `.claude/style-kb.md` first. they are short.
+- read `README.md` and `.claude/STYLE-KB.md` first. they are short.
 - match the surrounding code exactly: naming, comment density, blank lines, idiom.
 - do not add tooling. no eslint, no prettier, no bundler, no test framework, no `.editorconfig`. the readme says an eslint ruleset "might" come; that is the author's call, not a gap to fill.
 - do not add features the readme rejects. see **what to refuse** below.
@@ -42,7 +42,7 @@ types are the product, so a claim about a type is a claim to be checked.
 
 ## the rules
 
-these compress `.claude/style-kb.md`. go there for the examples.
+these compress `.claude/STYLE-KB.md`. go there for the examples.
 
 ### files
 
