@@ -129,6 +129,10 @@ the pipeline, in two commands:
 
 do not use the compiler api to typecheck in-memory at first. shell out to `tsc --pretty false`, read the exit code, parse the lines. `claude.md` already says judge a typecheck by its exit code.
 
+### coherence
+
+the journal catches drift when humans notice; the coherence spec does it mechanically. it exports the vocabulary the lexer, the ban list and the emitter actually own, then walks README.md, DESIGN.md and TUTORIAL.md and asserts four things: every backticked identifier is a known construct (with a whitelist for the tstd members and variables the docs legitimately backtick), every "the X expression/statement" claim matches the role the handler plays, every construct has a spec entry, and every construct is mentioned in DESIGN.md. the plan is COHERENCE.md; the code is `src/coherence.spec.ts`; it runs in `npm test`.
+
 ### lsp
 
 the cheap path is a proxy, not a language server. the extension transpiles the buffer to a virtual `.ts` on each keystroke, hands it to typescript's `LanguageService`, and maps positions back. completions, hovers, go-to-definition, rename and diagnostics all come from tsserver for free.
@@ -212,5 +216,6 @@ the work was planned in seven steps; the current state at each is below.
 5. **scope and protocol.** built. `protocol` has a shape function when it has parameters and an inline literal when it does not, because only an inline literal keeps its transition arrays typed as tuples.
 6. **the form and call constructs.** built. form and call are sugar over the matching `tstd` modules; both pass through the same one-line-in-one-line-out discipline.
 7. **lsp and the type-aware checks.** the conditions must be boolean, the `? {}` must be exhaustive over a union, the `Result`-typed statement must be `void`-prefixed. none belong in the emitter; the lsp is where they live. not built.
+8. **the coherence spec.** a walk over the docs against the code, so drift fails the build. built (see COHERENCE.md).
 
 the equality rewrite (`==` and `!=` emit the strict ones) and the `Promise.reject` ban ride along with step 2: token rewrites and table rows.

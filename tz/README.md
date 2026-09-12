@@ -55,6 +55,7 @@ two residues, both cosmetic. typescript's grammar reads a `? {}` arm as an objec
 - the implied `ok` at the end of a fallible body
 - the ban list, `==` and `!=` emitting the strict ones
 - `tzc`, `tzx`, and diagnostics that land on the source
+- a coherence spec that walks the docs against the code, so drift fails the build
 
 `scratch/` shows every one of them and both commands run over it.
 

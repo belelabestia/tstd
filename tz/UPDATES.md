@@ -4,7 +4,22 @@ a journal of decisions. the spec lives in `tz/TUTORIAL.md`; the design notes liv
 
 ## agenda
 
-the next item: a doc-code coherence spec. it walks the lexer, emitter, and ban list as the truth, then walks the docs and asserts that every backticked identifier is a known construct and every role claim (expression vs statement) matches the actual handler. the full plan is in `tz/COHERENCE.md`. the spec runs in `npm test`, so drift becomes a failing build.
+the next item is open. the doc-code coherence spec is built (`tz/COHERENCE.md`, `tz/src/coherence.spec.ts`): it walks the lexer, emitter, and ban list as the truth, then walks the docs and asserts that every backticked identifier is a known construct and every role claim (expression vs statement) matches the actual handler. it runs in `npm test`, so drift becomes a failing build. one adaptation from the plan: the docs backtick tstd members and variables as well as constructs, so the backtick walk carries a documented whitelist of those, and the plan's handler names were replaced with the real ones in `emit.ts` (`arrowing`, `matcherTail`, `questioning`, `construct`, `propagate`, `scoping`, `calling`, `forming`, `protocoling`, `exit`).
+
+## 2026-09-12: the side quest is a statement too
+
+the coherence plan's role list called every matcher an expression. that was the plan's own drift, and the spec caught it before the docs ever would: a side quest is both. `?none err ...` is a statement (a postfix exit that leaves the scope), `?none => dflt` is an expression (an arrow capture that stays). the same `?` postfix does either, decided by what follows it. so `?none`, `?some`, `?true`, `?false`, `?:tag`, `?literal` and `?(cond)` all carry `both` in the role list. only `=>` is expression-only, and only the block constructs are statement-only. the gap was in `COHERENCE.md`, not in the code; the code already let a matcher leave or capture.
+
+## 2026-09-12: the coherence spec ships
+
+the journal's own failure drove it: the `if` expression stayed in the docs for several rounds because no one compared the claim against the code. the spec does the comparison mechanically now. four walks over `README.md`, `DESIGN.md` and `TUTORIAL.md`, with the code as the truth:
+
+- every backticked identifier is a known construct (keyword, banned, absent, role, or punct), with a whitelist for the tstd members and variables the docs legitimately backtick.
+- every "the `X` expression/statement" claim matches the role the handler plays.
+- every construct in the role list has a spec entry in `lex.spec.ts` or `emit.spec.ts`.
+- every construct in the role list is mentioned in `DESIGN.md`.
+
+the role list lives in `emit.ts` because that is where the handlers live. a role's `match` field is the spelling a spec file actually writes (`?:` for `?:tag`, `?(` for `?(cond)`, `:err` for `:tag`), because the docs' generic names are not what a spec spells. the plan named handlers that did not exist; the spec asserts against the real ones.
 
 ## 2026-09-12: vocabulary closes to three words
 
