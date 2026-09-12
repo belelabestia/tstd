@@ -41,6 +41,9 @@ const tails = ['if', 'for', 'while'];
 
 const matchers = ['none', 'some', 'true', 'false'];
 
+/** the keyword vocabulary, split by where it can appear */
+export const keywords = { words, tails, matchers };
+
 const values = ['word', 'string', 'number', 'template', 'regex'];
 
 const bodies = ['file', 'body', 'iife', 'match'];

@@ -32,6 +32,10 @@ const instead: Record<string, string> = {
 
 const absence = ['null', 'undefined'];
 
+/** the words the language refuses, and the words that are not spelled */
+export const banned = Object.keys(instead);
+export const absent = [...absence];
+
 const optional = [',', ')', ']'];
 
 /** refuses the first line of source that is not typezig */

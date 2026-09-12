@@ -18,6 +18,31 @@ const wraps: Record<string, Landing> = {
   return: { open: 'return ', close: '' }
 };
 
+/** the constructs tz adds, with the role they play and the handler that rewrites them */
+export const roles: { name: string, role: 'expression' | 'statement' | 'both', handler: string, match: string }[] = [
+  { name: '=>',       role: 'expression', handler: 'arrowing',    match: '=>' },
+{ name: '?none',    role: 'both',       handler: 'matcherTail', match: '?none' },
+  { name: '?some',    role: 'both',       handler: 'matcherTail', match: '?some' },
+  { name: '?true',    role: 'both',       handler: 'matcherTail', match: '?true' },
+  { name: '?false',   role: 'both',       handler: 'matcherTail', match: '?false' },
+  { name: '?:tag',    role: 'both',       handler: 'matcherTail', match: '?:' },
+  { name: '?literal', role: 'both',       handler: 'matcherTail', match: '?' },
+  { name: '?(cond)',  role: 'both',       handler: 'matcherTail', match: '?(' },
+  { name: '? {}',     role: 'both',       handler: 'questioning', match: '? {' },
+  { name: ':tag',     role: 'expression', handler: 'construct',   match: ':err' },
+  { name: 'try',      role: 'statement',  handler: 'propagate',   match: 'try' },
+  { name: 'scope',    role: 'statement',  handler: 'scoping',     match: 'scope' },
+  { name: 'call',     role: 'both',       handler: 'calling',     match: 'call' },
+  { name: 'form',     role: 'statement',  handler: 'forming',     match: 'form' },
+  { name: 'protocol', role: 'statement',  handler: 'protocoling', match: 'protocol' },
+  { name: 'return',   role: 'statement',  handler: 'exit',        match: 'return' },
+  { name: 'ok',       role: 'statement',  handler: 'exit',        match: 'ok' },
+  { name: 'err',      role: 'statement',  handler: 'exit',        match: 'err' },
+  { name: 'async',    role: 'statement',  handler: 'exit',        match: 'async' },
+  { name: 'break',    role: 'statement',  handler: 'exit',        match: 'break' },
+  { name: 'continue', role: 'statement',  handler: 'exit',        match: 'continue' }
+];
+
 const exits = ['return', 'ok', 'err', 'async', 'break', 'continue'];
 
 const carries = ['(', '[', '{'];

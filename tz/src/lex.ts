@@ -7,7 +7,8 @@ export type Kind = 'word' | 'number' | 'string' | 'template' | 'regex' | 'commen
 /** a lexed piece of source, and where it came from */
 export type Token = { kind: Kind, text: string, from: number, to: number, line: number, column: number; };
 
-const puncts = [
+/** the punctuation the lexer knows, longest first */
+export const puncts = [
   '>>>=',
   '...', '===', '!==', '**=', '<<=', '>>=', '>>>', '&&=', '||=', '??=',
   '=>', '==', '!=', '<=', '>=', '&&', '||', '??', '?.', '++', '--',
