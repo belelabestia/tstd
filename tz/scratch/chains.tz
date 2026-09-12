@@ -1,4 +1,4 @@
-import { is } from '@belelabestia/tstd';
+import { is, result, type Result } from '@belelabestia/tstd';
 
 /** a fallback, then a choice, then a choice of choices */
 
@@ -28,4 +28,44 @@ export const word = (code: number) => code ? {
   200 => 'ok',
   (code > 500) => 'down',
   _ => 'other'
+};
+
+/** a captured funnel: answer arms land in a temp, declines leave the function */
+export const pick = (out: Result<string, string>) => {
+  const r = out ? {
+    :ok (u) => u,
+    :err (e) err e
+  };
+  ok r;
+};
+
+/** the same block as the whole body, the switch returns leaving directly */
+export const grade = (out: Result<number, string>) => out ? {
+  :ok (u) => u,
+  :err (e) err e
+};
+
+/** nested in an argument the funnel hoists before the statement, no iife */
+export const handle = (x: Result<string, string>) => {
+  const loud = (s: string) => s.toUpperCase();
+  loud(x ? {
+    :err (e) err e,
+    :ok (u) => u
+  });
+  ok 1;
+};
+
+/** matcher arms decline, and the remainder extracts the survivor */
+export const rows = (x: Result<string, string>) => {
+  const r = x ? {
+    ?:err err 'no',
+    _ => x.value
+  };
+  ok r;
+};
+
+/** a decline tail answers on the miss, binding the survivor and continuing */
+export const funnel = (x: Result<string, string>, y: boolean) => {
+  const a = x ?:ok err 'no ok' else (v) => y ?true err 'no y' else => v;
+  ok a;
 };
