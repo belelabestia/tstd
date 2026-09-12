@@ -139,7 +139,7 @@ url.value.href;
 ```
 
 ```ts
-const parsed = call.sync(() => JSON.parse(raw));
+const parsed = call.sync(JSON.parse, raw);
 if (parsed.branch === 'err') return parsed;
 parsed.value;
 ```
@@ -153,7 +153,7 @@ const name = (id: string) => {
   const raw = row(id);
   if (raw.branch === 'err') return raw;
 
-  const parsed = call.sync(() => JSON.parse(raw.value));
+  const parsed = call.sync(JSON.parse, raw.value);
   if (parsed.branch === 'err') return parsed;
 
   if (!is.model(parsed.value, rowShape)) return result.err('not a row');
@@ -688,7 +688,7 @@ the emitter parses no typescript types here; field assignments and blocks are to
 
 a throw is converted into a `Result` at two boundaries; this is the second one, promoted to a keyword. `call` isolates foreign or non-typezig code, sync or async, into an explicit, non-throwing `Result`:
 
-when the `Result` is the whole answer, exit with it directly: no `try`, no `ok`, the closure the emit already opens is the value the body carries:
+when the `Result` is the whole answer, exit with it directly: no `try`, no `ok`. an expression that is exactly one call passes the function and its arguments straight to the boundary — `call.sync(f, a)` — and any other expression is tucked into the closure the emit opens, which is the value the body carries:
 
 ```tz
 export const parse = (raw: string) => call => JSON.parse(raw);
@@ -697,7 +697,7 @@ export const parse = (raw: string) => call => JSON.parse(raw);
 which emits, one line in one line out:
 
 ```ts
-export const parse = (raw: string) => call.sync(() => JSON.parse(raw));
+export const parse = (raw: string) => call.sync(JSON.parse, raw);
 ```
 
 `try` is for when work continues after the boundary: it unwraps left, so `try call` takes `=>` the way a side quest does:
@@ -709,7 +709,7 @@ const raw = try call => JSON.parse(file.readToString());
 which emits, one line in one line out:
 
 ```ts
-const $0 = call.sync(() => JSON.parse(file.readToString()));
+const $0 = call.sync(JSON.parse, file.readToString());
 if ($0.branch === 'err') return $0;
 const raw = $0.value;
 ```
@@ -735,7 +735,7 @@ const response = try call => {
 };
 ```
 
-an arrow with no block cannot lift, so there `await` forwards the promise itself: `=> await call => fetch(url)` emits `=> call.async(() => fetch(url))`, the same `Promise` of `Result` the `async`/`await` variant carries, with nothing to suspend:
+an arrow with no block cannot lift, so there `await` forwards the promise itself: `=> await call => fetch(url)` emits `=> call.async(fetch, url)`, the same `Promise` of `Result` the `async`/`await` variant carries, with nothing to suspend:
 
 ```tz
 export const get = (url: string) => await call => fetch(url);
@@ -750,7 +750,7 @@ the boundary matrix, each row the same three lines of emitted typescript:
 | async expression | `await call => expr` | `fetch`, third-party sdks |
 | async block | `await call => { ... }` | multi-line async foreign work |
 
-the keyword still needs the import, the way `ok` needs `result`: the emit calls `call.sync`, and the emitter never writes an import. a block answers with its `return`, so a block that falls off the end is refused, and `try`, `ok` and `err` stay outside it: the boundary converts the panic, nothing else does. and since a bare `call` already wraps the closure, an uncaptured one dangles: a `call` with no land is refused, so `return` (or a binding) carries it, never silence. a call that captures nothing spells `void`, which discards the boundary on purpose and passes through:
+the keyword still needs the import, the way `ok` needs `result`: the emit calls `call.sync`, and the emitter never writes an import. a block answers with its `return`, so a block that falls off the end is refused, and `try`, `ok` and `err` stay outside it: the boundary converts the panic, nothing else does. and since a bare `call` answers instead of throwing, an uncaptured one dangles: a `call` with no land is refused, so `return` (or a binding) carries it, never silence. a call that captures nothing spells `void`, which discards the boundary on purpose and passes through:
 
 ```tz
 export const forget = (save: (x: string) => void, x: string) => {
@@ -767,6 +767,36 @@ void try call => save(x);   // propagates the err, drops the ok
 ```
 
 the deeper rule is type-level and belongs to the lsp, not the emitter: any expression statement whose value is a `Result` or a promise needs the `void`, whatever produced it. the emitter only catches the constructs that announce their product themselves, `call`, `scope` and `try`; whether some other dropped value, a plain call or an unwrapped `x.value`, hides a result is a question of types, and the lsp is where it gets asked.
+
+## make: the constructor that does not throw
+
+`new` is banned, and its replacement takes `=>` like `call` does, because a constructor is the other thing that panics: platform and library constructors throw. `make` names the constructor, keeps the args where they are, and the boundary becomes a `Result`:
+
+```tz
+const url = make => URL(href);
+```
+
+which emits, one line in one line out:
+
+```ts
+const url = make(URL, href);
+```
+
+`try make` unwraps left exactly like `try call`:
+
+```tz
+const url = try make => URL(href);
+```
+
+which emits:
+
+```ts
+const $0 = make(URL, href);
+if ($0.branch === 'err') return $0;
+const url = $0.value;
+```
+
+a constructor only syncs, so there is no async side of this boundary: an `await` in front of `make` is refused, and so is a make that dangles, the way a call dangles. `new` is gone, but the constructor itself is foreign the same way a throwing function is foreign: if your own code would have used `new`, `make` is the crossing, and `class` stays banned.
 
 ## the whole pipeline
 

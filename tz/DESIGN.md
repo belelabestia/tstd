@@ -37,6 +37,7 @@ the constructs, in the order they were ruled:
 - **protocol**: a union or a machine in one block. a parameter is the only slot in a value that states a type, so one object of functions states one type per key.
 - **form**: the wire shape and the domain shape in one block. a field is either a guard (plain), a `{ is, decode, encode }` triple, a triple renamed with `as`, or a `form.nest(...)` of another form.
 - **call**: the boundary that does not throw. `call expr`, `call => { ... }`, `await call expr`, `await call => { ... }`. sync or async, expression or block; an `await` inside picks the async variant on its own.
+- **make**: the constructor that does not throw. `make => C(...)` spells `make(C, ...)`, so `new` stays off the table and the word stays one spelling. a constructor only syncs, so an `await` adds nothing and is refused.
 
 ## the ban list
 
@@ -47,7 +48,7 @@ yes, and this is the part that makes tz a language instead of a preprocessor. a 
 | `class` | hierarchies, and a method carries a `this` the type never states | a module, or a closure with `init` |
 | `function` | arrow consts only | `const f = () => {}` |
 | `this` | invisible requirement | an argument |
-| `new` | `make` owns every instantiation | `make(C, ...args)` |
+| `new` | `make` owns every instantiation | `make => C(...)` |
 | `try` `catch` `finally` (the ts ones) | a throw is invisible to a signature | `call.sync`, `call.async`, or tz `try` |
 | `interface` | `type` covers everything | `type` |
 | `enum` | a hierarchy in disguise | `Union` |

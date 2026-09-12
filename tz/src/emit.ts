@@ -33,6 +33,7 @@ export const roles: { name: string, role: 'expression' | 'statement' | 'both', h
   { name: 'try',      role: 'statement',  handler: 'propagate',   match: 'try' },
   { name: 'scope',    role: 'statement',  handler: 'scoping',     match: 'scope' },
   { name: 'call',     role: 'both',       handler: 'calling',     match: 'call' },
+  { name: 'make',     role: 'both',       handler: 'making',      match: 'make' },
   { name: 'form',     role: 'statement',  handler: 'forming',     match: 'form' },
   { name: 'protocol', role: 'statement',  handler: 'protocoling', match: 'protocol' },
   { name: 'return',   role: 'statement',  handler: 'exit',        match: 'return' },
@@ -233,7 +234,7 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
     return source.slice(tokens[a].from, tokens[mend(qq)].to);
   };
 
-  const reserved = ['else', 'if', 'match', 'try', 'scope', 'protocol', 'form', 'call', 'ok', 'err', 'async', 'return', 'break', 'continue', 'none', 'some', 'true', 'false'];
+  const reserved = ['else', 'if', 'match', 'try', 'scope', 'protocol', 'form', 'call', 'make', 'ok', 'err', 'async', 'return', 'break', 'continue', 'none', 'some', 'true', 'false'];
 
   const holes = (text: string, bound: string) => {
     const spans: Array<{ from: number, to: number }> = [];
@@ -903,6 +904,14 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
           continue;
         }
 
+        if (t.kind === 'word' && t.text === 'make' && keyword(tokens, before, j) && j !== skip) {
+          const bad = making(j);
+          if (bad !== undefined) return bad;
+
+          j = after[j] >= 0 ? after[j] : j + 1;
+          continue;
+        }
+
         j++;
       }
 
@@ -1002,10 +1011,89 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
       if (t.kind === 'word' && t.text === 'await' && keyword(tokens, before, k)) { suspends = true; break; }
     }
 
+    if (!suspends) {
+      let k = n;
+      while (k >= 0 && k <= end && tokens[k].kind === 'comment') k++;
+      const first = k;
+
+      let spot = -1;
+
+      const construct = new Set([...reserved, 'await', 'if', 'for', 'while', 'satisfies', 'as', 'of', 'in', 'typeof', 'new', 'extends']);
+
+      while (k >= 0 && k <= end) {
+        const t = tokens[k];
+        if (t.kind === 'comment') { k++; continue; }
+        if (t.kind === 'word' && !(keyword(tokens, before, k) && construct.has(t.text))) { k++; continue; }
+        if (t.text === '.') { k++; continue; }
+        if (t.text === '(') { spot = k; break; }
+        break;
+      }
+
+      if (spot > first && twin[spot] === end) {
+        const close = twin[spot];
+        const inner = source.slice(tokens[spot].to, tokens[close].from);
+        const callee = source.slice(tokens[first].from, tokens[spot].from).trim();
+        const name = async ? 'call.async' : 'call.sync';
+
+        if (inner.trim() === '') {
+          edits.push({ from: tokens[at].from, to: tokens[close].to, text: `${name}(${callee})` });
+        }
+        else {
+          edits.push({ from: tokens[at].from, to: tokens[spot].to, text: `${name}(${callee}, ` });
+        }
+
+        return undefined;
+      }
+    }
+
     if (suspends && box !== undefined) box.suspends = true;
 
     edits.push({ from: tokens[at].from, to: tokens[n].from, text: suspends ? 'call.async(async () => ' : `${open}() => ` });
     edits.push({ from: tokens[end].to, to: tokens[end].to, text: ')' });
+    return undefined;
+  };
+
+  const making = (at: number) => {
+    const aw = before[at];
+    if (aw >= 0 && tokens[aw].kind === 'word' && tokens[aw].text === 'await' && keyword(tokens, before, aw) && after[aw] === at) {
+      return no(at, 'make is sync; an await adds nothing');
+    }
+
+    let n = after[at];
+    if (n < 0) return no(at, 'make takes =>; name the constructor after it');
+    if (tokens[n].text !== '=>' || !keyword(tokens, before, n)) return no(at, 'make takes =>; name the constructor after it');
+
+    let m = after[n];
+    while (m >= 0 && tokens[m].kind === 'comment') m = after[m];
+    const first = m;
+    if (first < 0) return no(n, 'a constructor follows make =>');
+
+    while (m >= 0) {
+      const t = tokens[m];
+      if (t.kind === 'comment') { m = after[m]; continue; }
+      if (t.text === '(') break;
+      if (t.text === '{') return no(m, 'a make block cannot build a constructor');
+      if (t.text === '=>' && keyword(tokens, before, m)) return no(m, 'a make takes the constructor and its arguments');
+      if (t.text === ';' || t.text === ',' || t.text === ':' || t.text === '?' || closes.includes(t.text)) return no(m, 'a make takes the constructor and its arguments');
+      m = after[m];
+    }
+
+    if (m < 0) return no(first, 'a make takes the constructor and its arguments');
+
+    const open = m;
+    const close = twin[open];
+    if (close < 0) return no(open, 'a make call has no closing paren');
+
+    const callee = source.slice(tokens[first].from, tokens[open].from).trim();
+    const inner = source.slice(tokens[open].to, tokens[close].from);
+
+    if (inner.trim() === '') {
+      edits.push({ from: tokens[at].from, to: tokens[close].to, text: `make(${callee})` });
+    }
+    else {
+      edits.push({ from: tokens[at].from, to: tokens[open].to, text: `make(${callee}, ` });
+    }
+
     return undefined;
   };
 
@@ -1058,6 +1146,11 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
       if (bad !== undefined) return bad;
 
       if (box.suspends && !waited) edits.push({ from: tokens[n].from, to: tokens[n].from, text: 'await ' });
+    }
+
+    if (tokens[n].text === 'make' && keyword(tokens, before, n)) {
+      const bad = making(n);
+      if (bad !== undefined) return bad;
     }
 
     const lands = land === undefined ? '' : ` ${land.open}${name}.value${land.close};`;
@@ -3005,14 +3098,17 @@ if (tokens[tag].kind === 'number' || tokens[tag].kind === 'string' || word === '
 
     if (land === undefined) {
       let atCall = -1;
+      let what = 'call';
 
       if (tokens[init].kind === 'word' && tokens[init].text === 'call' && keyword(tokens, before, init)) atCall = init;
+      else if (tokens[init].kind === 'word' && tokens[init].text === 'make' && keyword(tokens, before, init)) { atCall = init; what = 'make'; }
       else if (tokens[init].kind === 'word' && tokens[init].text === 'await' && keyword(tokens, before, init)) {
         const m = after[init];
         if (m >= 0 && tokens[m].kind === 'word' && tokens[m].text === 'call' && keyword(tokens, before, m)) atCall = m;
+        else if (m >= 0 && tokens[m].kind === 'word' && tokens[m].text === 'make' && keyword(tokens, before, m)) { atCall = m; what = 'make'; }
       }
 
-      if (atCall >= 0) return no(atCall, 'a call answers; capture it with try or bind it');
+      if (atCall >= 0) return no(atCall, `a ${what} answers; capture it with try or bind it`);
     }
 
     let skip = -1;
@@ -3020,7 +3116,7 @@ if (tokens[tag].kind === 'number' || tokens[tag].kind === 'string' || word === '
     if (tokens[init].text === 'try' && keyword(tokens, before, init)) {
       let n = after[init];
       if (n >= 0 && tokens[n].kind === 'word' && tokens[n].text === 'await' && keyword(tokens, before, n)) n = after[n];
-      if (n >= 0 && tokens[n].kind === 'word' && tokens[n].text === 'call' && keyword(tokens, before, n)) skip = n;
+      if (n >= 0 && tokens[n].kind === 'word' && (tokens[n].text === 'call' || tokens[n].text === 'make') && keyword(tokens, before, n)) skip = n;
     }
 
     const called = calling(init, last, skip);

@@ -40,7 +40,7 @@ test('every backticked identifier in the docs is a known construct', () => {
     'buf', 'c', 'close', 'cond', 'const', 'constructor', 'created', 'db', 'decline', 'decode',
     'e', 'editor', 'Either', 'else', 'exit', 'export', 'f', 'failed', 'fallback', 'fetch', 'fs',
     'g', 'get', 'git', 'hold', 'id', 'import', 'init', 'invalid', 'is', 'iso', 'JSON', 'leaked',
-    'let', 'Loader', 'main', 'make', 'map', 'matcher', 'n', 'name', 'no', 'on', 'open',
+    'let', 'Loader', 'main', 'map', 'matcher', 'n', 'name', 'no', 'on', 'open',
     'outcome', 'panic', 'pay', 'postfix', 'Promise', 'raw', 'read', 'refuse', 'result', 'row',
     'rows', 'scratch', 'seen', 'serve', 'set', 'side', 'source', 'src', 'string', 'table',
     'task', 'tmp', 'to', 'ts', 'tsc', 'tstd', 'tsx', 'type', 'typescript', 'tz', 'tzc', 'tzx',
