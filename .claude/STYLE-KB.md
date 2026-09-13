@@ -929,6 +929,19 @@ the `.js` emit is byte-identical to 5.9; only two `.d.ts` differ, by an alpha-re
 "js/ts.tsdk.path": "node_modules/typescript/lib"
 ```
 
+### i7. disposable checkouts stay link-free: house
+
+a `git worktree` used for verifying an intermediate commit once deleted the live checkout: the worktree held junctions back into the repo's `node_modules` so the suite could run, and the recursive remove followed them into the real tree, dying halfway on long paths and taking `.git` and sources with it.
+
+❌ instead of linking `node_modules` into a worktree and removing the tree afterwards:
+
+```
+worktree\node_modules -> repo\node_modules
+git worktree remove --force worktree
+```
+
+✅ do verify the final tree in place; if an intermediate state must run, `git archive <sha>` into an empty directory and drive the toolchain by absolute path, or clone locally and install fresh. never place a link inside a directory you plan to delete, on windows a recursive delete follows directory junctions. if links already exist inside one, unlink each first (`rmdir <link>` removes the link only) and confirm none remain before removing anything.
+
 ---
 
 ## j. prose voice (for readme / docs / claude.md itself)
