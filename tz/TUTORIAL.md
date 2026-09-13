@@ -257,7 +257,7 @@ the transpiler is a lexer, so it refuses unknown words line by line. every refus
 | `this` | an argument |
 | `new` | `make` |
 | `interface` | `type` |
-| `enum` | `Union` |
+| `enum` | `Union or protocol` |
 | `var` | `const`, or `let` |
 | `namespace`, `module` | a file |
 | `any` | `unknown` |

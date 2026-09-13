@@ -51,7 +51,7 @@ yes, and this is the part that makes tz a language instead of a preprocessor. a 
 | `new` | `make` owns every instantiation | `make => C(...)` |
 | `try` `catch` `finally` (the ts ones) | a throw is invisible to a signature | `call.sync`, `call.async`, or tz `try` |
 | `interface` | `type` covers everything | `type` |
-| `enum` | a hierarchy in disguise | `Union` |
+| `enum` | a hierarchy in disguise | `Union` or `protocol` |
 | `var` | reassignment is a design decision, `let` states it | `const`, or `let` |
 | `namespace` `module` | files are modules | a file |
 | `any` | it is not a type, it is the absence of one; the ban is what frees `any:` | `unknown` |
