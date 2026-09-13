@@ -20,8 +20,8 @@ export const puncts = [
 const divides = ['++', '--', ')', ']', '}'];
 
 const opens = [
-  'return', 'typeof', 'instanceof', 'in', 'of', 'new', 'delete', 'void',
-  'case', 'do', 'else', 'yield', 'await', 'throw', 'ok', 'err'
+  'return', 'typeof', 'in', 'of', 'delete', 'void',
+  'case', 'do', 'else', 'await', 'ok', 'err'
 ];
 
 const starts = (c: string) => /[A-Za-z_$]/.test(c) || c > '\u007f';
