@@ -7,8 +7,8 @@ const shape = {
 
 /** the signup a payload describes, or why it is not one */
 export const signup = (body: unknown) => {
-  is.model(body, shape) ?false err 'malformed body';
-  body.age >= 18 ?false err 'under age';
+  is.model(body, shape) ?== false err 'malformed body';
+  body.age ?< 18 err 'under age';
   ok body;
 };
 
@@ -18,7 +18,7 @@ export const active = (rows: string[]) => {
 
   for (const row of rows) {
     row ?none continue;
-    row.length > 0 ?false continue;
+    row.length ?== 0 continue;
     out.push(row);
   }
 
@@ -27,7 +27,7 @@ export const active = (rows: string[]) => {
 
 /** a two sided choice, so it is an expression and it needs its else */
 export const label = (n: number) =>
-  n < 0 ?true => 'below' else n == 0 ?true => 'nothing' else => 'above';
+  n ?< 0 => 'below' else => n ?== 0 => 'nothing' else => 'above';
 
 /** an answer for a case worth choosing rather than refusing */
 export const clamp = (n: number) => {
@@ -39,7 +39,7 @@ export const clamp = (n: number) => {
 
 /** identity, which is all a value needs */
 export const say = (code: number) => code ? {
-  200 => 'ok',
-  400 => 'bad request',
-  _ => 'something else'
+  == 200 => 'ok',
+  == 400 => 'bad request',
+  else => 'something else'
 };

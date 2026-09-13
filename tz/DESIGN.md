@@ -32,7 +32,7 @@ the two earlier spellings we are replacing:
 the constructs, in the order they were ruled:
 
 - **the exit family**: `return`, `ok`, `err`, `async` for bodies; `break`, `continue` for loops. one discipline per body: a body uses exactly one of `return`, `ok`, `err`, `async`, or an arrow capture. mixing is refused at the source line.
-- **side quests**: `?none`, `?some`, `?true`, `?false`, `?:tag`, `?literal`, `?(cond)`, plus the `? {}` block for exhaustive answers. each one tests one thing at the position where it stands. a side quest that finds its match exits or arrow captures; a side quest that misses continues unless the chain ends.
+- **side quests**: `?none`, `?some`, `?==`, `?!=`, `?>`, `?<`, `?>=`, `?<=`, `?&(...)`, `?|(...)`, `?:tag`, `?(cond)`, plus the `? {}` block for exhaustive answers. each one tests one thing at the position where it stands. a side quest that finds its match exits or arrow captures; a side quest that misses continues unless the chain ends. `?true`, `?false` and `?literal` retired into `?==`; juxtaposed chains join in groups now.
 - **scope**: `scope (hold) => { ... }`. holds resources and hands them back in reverse. picks `scope.sync` or `scope.async` from the body.
 - **protocol**: a union or a machine in one block. a parameter is the only slot in a value that states a type, so one object of functions states one type per key.
 - **form**: the wire shape and the domain shape in one block. a field is either a guard (plain), a `{ is, decode, encode }` triple, a triple renamed with `as`, or a `form.nest(...)` of another form.
@@ -41,7 +41,7 @@ the constructs, in the order they were ruled:
 
 ## the ban list
 
-yes, and this is the part that makes tz a language instead of a preprocessor. a lexer that can find `match` can refuse `class`. the readme says an eslint ruleset "might come at some point"; this is that ruleset, delivered as a syntax error, at zero extra cost, with nothing to configure and no way to switch it off.
+yes, and this is the part that makes tz a language instead of a preprocessor. a lexer that can find `function` can refuse `class`, the same walk in one table. the readme says an eslint ruleset "might come at some point"; this is that ruleset, delivered as a syntax error, at zero extra cost, with nothing to configure and no way to switch it off.
 
 | refused | because | replacement |
 | --- | --- | --- |
@@ -55,13 +55,13 @@ yes, and this is the part that makes tz a language instead of a preprocessor. a 
 | `var` | reassignment is a design decision, `let` states it | `const`, or `let` |
 | `namespace` `module` | files are modules | a file |
 | `any` | it is not a type, it is the absence of one; the ban is what frees `any:` | `unknown` |
-| `instanceof` | there are no classes to be an instance of | a guard |
+| `instanceof` | there are no classes to be an instance of | a branch test |
 | `function*` `yield` | flow hidden in a protocol | a loop |
 | `abstract` `implements` `private` `protected` `public` | class vocabulary | gone with `class` |
 | `else` after an `if` **statement** | the funnel is the flow | a side quest chain, or a `? {}` block |
-| `?:` | one conditional expression is enough | `cond ?true => a else => b` |
+| `?:` | one conditional expression is enough | `cond ? => a else => b` |
 | `??` | silent about which half it is doing, and cannot hold a statement | `val ?none => dflt` |
-| `switch` | the `match` of yesterday is gone; `? {}` answers exhaustively | `? {}` |
+| `switch` | a `? {}` block is the same decision; one spelling | `? {}` |
 | `throw` | we do not throw | `err` |
 | `get x()` `set x()` `x() {}` in an object | a method is a `function` wearing a hat | `x: () => {}` |
 | a bare `return;` | every one of them is an exit | a side quest, or end the body |
@@ -72,7 +72,7 @@ yes, and this is the part that makes tz a language instead of a preprocessor. a 
 
 `extends`, `super` and `constructor` need no rule: they are unreachable once `class` is gone. `extends` stays legal where it is a type operator (`<B extends Protocol<B>>`, conditional types), which is the only place tz can still spell it.
 
-no statement `else`. a boolean with two meaningful cases is an expression, which is where a two-sided choice belongs, and a side quest chain (`?true ... else ...`) is exactly that. a statement-level `else` is a funnel that refused to funnel: its `else if` chains are early exits nobody wrote, and `? {}` is there for the case that is really a table.
+no statement `else`. a boolean with two meaningful cases is an expression, which is where a two-sided choice belongs, and a side quest chain (`? ... else ...`) is exactly that. a statement-level `else` is a funnel that refused to funnel: its `else if` chains are early exits nobody wrote, and `? {}` is there for the case that is really a table.
 
 no `?:`. the side quest chain replaces it, so the ban is about having one spelling, not about the operator. `?.` is untouched (`??` is banned on its own account, see `?none`). the lexer tells a conditional from an optional marker by the token after the `?`: a `:` means an optional (`name?: string`), anything else means a ternary. the one place it cannot tell is a conditional type (`A extends B ? C : D`), so the ban is lifted inside a `type` declaration, and an inline conditional type in a value annotation has to be named first. the style asks for that anyway.
 
@@ -94,9 +94,8 @@ there is no pragma. a comment that turns a ban off for one line makes the ban li
 
 ## the new words
 
-none of `guard`, `match`, `scope`, `protocol`, `on`, `any`, `ok` or `err` is reserved in javascript, and two of them are already `tstd` exports: `scope.sync(...)` and `protocol.init(...)` appear in real code today. those four are contextual, recognised by what follows them:
+none of `scope`, `protocol`, `on`, `any`, `ok` or `err` is reserved in javascript, and two of them are already `tstd` exports: `scope.sync(...)` and `protocol.init(...)` appear in real code today. the four syntactically contextual ones are recognised by what follows them:
 
-- `match` then `(`, its matching `)`, then `{`
 - `scope` then `(`, its matching `)`, then `=>`
 - `protocol` then a name then `{`, with `<S, E>` before the brace when it is generic
 - `on` or `any` then `:` then a tag, all three adjacent, after something that ends an expression
@@ -107,13 +106,13 @@ a `:tag` inside a `? {}` arm needs none of that, because an arm cannot start wit
 
 `scope.sync` is followed by `.`, so it stays an identifier. one token of lookahead, no backtracking.
 
-`match` and `scope` are the ones that want more than a token, and the parens are what make that bearable: scan to the matching `)`, which is paren depth the lexer already tracks, then look at one more token. hunting a `{` through an unparenthesised expression was the alternative.
+`scope` is the one that wants more than a token, and the parens are what make that bearable: scan to the matching `)`, which is paren depth the lexer already tracks, then look at one more token, and a `=>` is what finds the call that is not one.
 
-`scope` has no residue at all, because the token it needs is `=>` and no call is ever followed by one. `match` keeps a thin one: a call to somebody's own `match(...)` whose statement is followed by a bare block, and a bare block means nothing in tz.
+`scope` has no residue at all, because the token it needs is `=>` and no call is ever followed by one.
 
 `async` needs no context either, in the other direction. the modifier is banned, so the word in keyword position is always the exit, and after a `.` it is somebody's property.
 
-`guard`, `ok` and `err` do not get that treatment. they are reserved outright, because they start a statement and a statement can also start with a call: `guard(x);` is exactly `guard (x);`, and no follow set can separate them. three more reserved words is the honest price, and the one that stings is `err`, which is everybody's favourite name for an error binding. use `e`, as the examples here do.
+`ok` and `err` do not get that treatment. they are reserved outright, because they start a statement and a statement can also start with a call, and no follow set can separate `ok (x);` from `ok x;`. two more reserved words is the honest price, and the one that stings is `err`, which is everybody's favourite name for an error binding. use `e`, as the examples here do.
 
 `try` is the exception and needs no context: it is a reserved word already, and with `catch` refused the typescript form is dead, so tz simply takes the word.
 
@@ -150,7 +149,7 @@ each of these is a good idea somewhere else, and each one was on the table. they
 
 ### shapes a side quest could have had
 
-**a postfix guard**, in the initialiser, symmetric with `?:err`:
+**a postfix guard**, in the initialiser, symmetric with `?err`:
 
 ```tz
 const row = table[id] ?(is.some(row));
@@ -163,20 +162,20 @@ const row = table[id];
 is.none(row) ?none return;
 ```
 
-`?:err` needs the postfix position; that is not a preference. the value you want from it is `.value`, not what the expression produced, so the unwrapping has to happen where the binding happens and there is no statement form that can do it. a side quest that tests a boolean transforms nothing, so its statement form is already complete and a postfix spelling is a second way to say one thing. that is the thing the braced-exiting-`if` ruling removed.
+`?err` needs the postfix position; that is not a preference. the value you want from it is `.value`, not what the expression produced, so the unwrapping has to happen where the binding happens and there is no statement form that can do it. a side quest that tests a boolean transforms nothing, so its statement form is already complete and a postfix spelling is a second way to say one thing. that is the thing the braced-exiting-`if` ruling removed.
 
-**`if (c) side quest <exit>`**, reading the side quest as the `else` branch in disguise. it is a nice sentence and it costs the language a word that means two things: a construct in one place, a marker in another. `cond ?false <exit>` says the same in fewer tokens and one meaning.
+**`if (c) side quest <exit>`**, reading the side quest as the `else` branch in disguise. it is a nice sentence and it costs the language a word that means two things: a construct in one place, a marker in another. `cond ? <exit>` says the same in fewer tokens and one meaning.
 
-**an answering guard**, `const n = parse(raw) ?(is.number(n)) => 0;`, the way `?:err` answers with `=>`. this one is not the same as the lines it replaces, so the argument above does not touch it: the two-line spelling needs an extra name for the value being tested.
+**an answering guard**, `const n = parse(raw) ?(is.number(n)) => 0;`, the way `?err` answers with `=>`. this one is not the same as the lines it replaces, so the argument above does not touch it: the two-line spelling needs an extra name for the value being tested.
 
 ```tz
 const p = parse(raw);
-const n = is.number(p) ?true => p else 0;
+const n = is.number(p) ? => p else 0;
 ```
 
 it is refused for the partition instead. a side quest never answers is the sentence that makes the flow model readable in one pass, and one saved name does not buy it back.
 
-`?:err` answering is not the counter-example it looks like. a failed result cannot be carried forward: you either exit or you substitute, and those are the only two moves, so `?:err` needs both forms to be complete. a guarded value is already sitting there usable. choosing against it is not an exit, it is a choice, and a choice is `?true => ... else ...`.
+`?err` answering is not the counter-example it looks like. a failed result cannot be carried forward: you either exit or you substitute, and those are the only two moves, so `?err` needs both forms to be complete. a guarded value is already sitting there usable. choosing against it is not an exit, it is a choice, and a choice is `? => ... else ...`.
 
 ### zig's block expression, and `break <expr>`
 
@@ -196,23 +195,23 @@ what is genuinely lost is reading fallibility off the declaration without openin
 
 `db.get(id) try`, chainable, the way rust replaced `try!(x)` with `x?`. the motivation is real, and the two halves of it come apart.
 
-postfix at statement scope is free, and `?:err` is the proof: its operand is delimited on the left by the `=` or the statement start, so the emitter scans forward to the `;` and never scans back. `const user = db.get(id) try;` would cost nothing to emit.
+postfix at statement scope is free, and `?err` is the proof: its operand is delimited on the left by the `=` or the statement start, so the emitter scans forward to the `;` and never scans back. `const user = db.get(id) try;` would cost nothing to emit.
 
 chaining is not statement scope, and it is the half that asks for a grammar. `f() try .g() try` makes the emitter find where the left operand starts, and `a() try + b() try` makes it decide how tightly `try` binds. both of those are parsing typescript. chaining also lifts the position restriction, since a `try` in an argument list leaves the enclosing function from inside an argument list, which is what `g(try f())` was refused for.
 
-so the chainable spelling is the one that cannot be had, and the affordable one is paid for in word order: `x ?:err` reads "x, on error", where `x try` reads backwards. rust got away with it because `?` is punctuation and punctuation has no word order. the postfix guard above was refused for saying the same thing twice; this one is refused for what it costs the lexer.
+so the chainable spelling is the one that cannot be had, and the affordable one is paid for in word order: `x ?err` reads "x, on error", where `x try` reads backwards. rust got away with it because `?` is punctuation and punctuation has no word order. the postfix guard above was refused for saying the same thing twice; this one is refused for what it costs the lexer.
 
 `await` is refused ahead of all of that, because it is typescript's token. tz adds words and bans words; it has never respelled one. postfix leaves two spellings for one thing, or bans the prefix, and then the lexer rewrites awaits wherever they appear, `(await f()).y` included, and the one-statement desugar is over. the two only look alike anyway: `await` unwraps a promise the types already track, `try` unwraps a branch and exits.
 
-what survives of the idea is already here. `x try` is `x ?:err (e) err e`, so writing the tail out is the postfix spelling, and `try` is its prefix shorthand.
+what survives of the idea is already here. `x try` is `x ?err (e) err e`, so writing the tail out is the postfix spelling, and `try` is its prefix shorthand.
 
 ## staging
 
 the work was planned in seven steps; the current state at each is below.
 
-1. **lexer + the simplest constructs** (the early `guard` and `match`). proves the pipeline and proves line preservation. superseded; the current constructs are the side quests and arrow captures.
+1. **lexer + the simplest constructs.** proves the pipeline and proves line preservation. superseded; the current constructs are the side quests and arrow captures.
 2. **the ban list.** a lexer walk with a table; this is what makes the language a language; every later check gets cheaper once `function` and method shorthand are gone. built.
-3. **the exit family** (`ok`, `err`, `async`, `try`, `?:err`, `?none`) and the one-discipline-per-body check. the inferred lifts and the implied `ok`. the reason the language exists. built.
+3. **the exit family** (`ok`, `err`, `async`, `try`, `?err`, `?none`) and the one-discipline-per-body check. the inferred lifts and the implied `ok`. the reason the language exists. built.
 4. **cli, loader hook, diagnostics mapping.** now it is usable for real code. built.
 5. **scope and protocol.** built. `protocol` has a shape function when it has parameters and an inline literal when it does not, because only an inline literal keeps its transition arrays typed as tuples.
 6. **the form and call constructs.** built. form and call are sugar over the matching `tstd` modules; both pass through the same one-line-in-one-line-out discipline.

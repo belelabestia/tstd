@@ -8,26 +8,26 @@ export const port = (env: Record<string, string | undefined>) => {
 };
 
 export const level = (n: number) =>
-  n < 0 ?true => 'below' else => n == 0 ?true => 'nothing' else => 'above';
+  n ?< 0 => 'below' else => n ?== 0 => 'nothing' else => 'above';
 
 export const ping = (cond: boolean, log: (x: string) => void) => {
-  cond ?true log('up');
+  cond ? log('up');
   return cond;
 };
 
 export const react = (cond: boolean, seen: (x: string) => void) => {
-  cond ?true seen('yes') else seen('no');
+  cond ? seen('yes') else seen('no');
 };
 
-/** a literal match, strict identity without a precondition */
+/** a comparison match, strict identity without a precondition */
 export const tick = (n: number) =>
-  n ?0 => 'zero' else => n ?(n < 0) => 'neg' else => 'pos';
+  n ?== 0 => 'zero' else => n ?(n < 0) => 'neg' else => 'pos';
 
-/** conditions answer together, switching on true only then */
+/** comparisons answer together, switching on true only then */
 export const word = (code: number) => code ? {
-  200 => 'ok',
-  (code > 500) => 'down',
-  _ => 'other'
+  == 200 => 'ok',
+  > 500 => 'down',
+  else => 'other'
 };
 
 /** a captured funnel: answer arms land in a temp, declines leave the function */
@@ -55,17 +55,17 @@ export const handle = (x: Result<string, string>) => {
   ok 1;
 };
 
-/** matcher arms decline, and the remainder extracts the survivor */
+/** branch arms decline, and the remainder extracts the value */
 export const rows = (x: Result<string, string>) => {
   const r = x ? {
-    ?:err err 'no',
-    _ => x.value
+    :err err 'no',
+    else => x.value
   };
   ok r;
 };
 
 /** a decline tail answers on the miss, binding the survivor and continuing */
 export const funnel = (x: Result<string, string>, y: boolean) => {
-  const a = x ?:ok err 'no ok' else (v) => y ?true err 'no y' else => v;
+  const a = x ?:ok err 'no ok' else (v) => y ? err 'no y' else => v;
   ok a;
 };

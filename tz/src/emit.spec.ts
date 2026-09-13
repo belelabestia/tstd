@@ -38,34 +38,50 @@ test('decline with a matcher, and bind what it refuses', () => {
     'const f = (id: string) => {\n  const $0 = table[id]; if (is.none($0)) return result.err(`no row`); const found = $0;\n  return result.ok(found);\n};'
   );
 
-  // booleans are strict: ?false is === false, never falsiness
+  // a comparison tests the subject in place, so a named number narrows directly
 
   assert.equal(
-    out('const f = (n: number) => {\n  n > 0 ?false return 0;\n  return n;\n};'),
-    'const f = (n: number) => {\n  const $0 = n > 0; if ($0 === false) return 0;\n  return n;\n};'
+    out('const f = (n: number) => {\n  n ?<= 0 return 0;\n  return n;\n};'),
+    'const f = (n: number) => {\n  if (n <= (0)) return 0;\n  return n;\n};'
   );
 
-  // a branch test unwraps, and the binding is optional, renaming to the temp
+  // ?err unwraps, and the binding is optional, renaming to the temp
+
+  assert.equal(
+    out('const f = (id: string) => {\n  const user = db.get(id) ?err (e) err e;\n  ok user;\n};'),
+    'const f = (id: string) => {\n  const $0 = db.get(id); if ($0.branch === \'err\') { const e = $0.value; return result.err(e); } const user = $0.value;\n  return result.ok(user);\n};'
+  );
+
+  // a coloned branch test leaves the value boxed, so ?:err still reads the
+  // original branch and ?:loading can decline the same subject right after it
 
   assert.equal(
     out('const f = (id: string) => {\n  const user = db.get(id) ?:err (e) err e;\n  ok user;\n};'),
-    'const f = (id: string) => {\n  const $0 = db.get(id); if ($0.branch === \'err\') { const e = $0.value; return result.err(e); } const user = $0.value;\n  return result.ok(user);\n};'
+    'const f = (id: string) => {\n  const $0 = db.get(id); if ($0.branch === \'err\') { const e = $0; return result.err(e); } const user = $0;\n  return result.ok(user);\n};'
   );
 });
 
-test('combine refusals before the tail', () => {
-  // several matchers, one tail: the tests join with ||, so typescript narrows once
+test('combine halves in a group before the tail', () => {
+  // several halves, one tail: the tests join with ||, so typescript narrows once
 
   assert.equal(
-    out('const f = (id: string) => {\n  const c = pick(id) ?:idle ?:loading return `no`;\n  return c;\n};'),
-    'const f = (id: string) => {\n  const $0 = pick(id); if ($0.branch === \'idle\' || $0.branch === \'loading\') return `no`; const c = $0.value;\n  return c;\n};'
+    out('const f = (id: string) => {\n  const c = pick(id) ?|(:idle, :loading) return `no`;\n  return c;\n};'),
+    'const f = (id: string) => {\n  const $0 = pick(id); if ((($0.branch === \'idle\') || ($0.branch === \'loading\'))) return `no`; const c = $0;\n  return c;\n};'
   );
 
-  // but a matcher after a consumed tail belongs to no subject, so it is refused
+  // an and group joins with && instead
 
+  assert.equal(
+    out('const f = (x: number) => {\n  x ?&(> 0, < 100) return `in`;\n  return x;\n};'),
+    'const f = (x: number) => {\n  if (((x > (0)) && (x < (100)))) return `in`;\n  return x;\n};'
+  );
+
+  // but juxtaposed quests join nothing, so they are refused
+
+  assert.match(refused('const f = (id: string) => {\n  const c = pick(id) ?:idle ?:loading return `no`;\n  return c;\n};'), /halves join in a group/);
   assert.match(refused('const f = (id: string) => {\n  const c = pick(id) ?:idle err `a` ?:loading err `b`;\n  return c;\n};'), /one decline per statement/);
   assert.match(refused('const f = (id: string) => {\n  cache[id] ?none (e) err `taken`;\n  ok id;\n};'), /absence carries no value/);
-  assert.match(refused('const f = (n: number) => {\n  n > 0 ?true (ok) return n;\n  return n;\n};'), /a literal binds nothing/);
+  assert.match(refused('const f = (x: number) => {\n  const a = x ?== 0 (v) => v;\n  return a;\n};'), /there is no value to name/);
 });
 
 test('answer with a fallback, and never with a closure', () => {
@@ -79,7 +95,7 @@ test('answer with a fallback, and never with a closure', () => {
   // a block after the => is an iife, which is the one allocation the form allows
 
   assert.equal(
-    out('const f = (read: () => string) => {\n  const found = read() ?:err (e) => {\n    log(e);\n    return `local`;\n  };\n  return found;\n};'),
+    out('const f = (read: () => string) => {\n  const found = read() ?err (e) => {\n    log(e);\n    return `local`;\n  };\n  return found;\n};'),
     'const f = (read: () => string) => {\n  const $0 = read(); const found = $0.branch === \'err\' ? (() => {\n    log($0.value);\n    return `local`;\n  })() : $0.value;\n  return found;\n};'
   );
 
@@ -90,41 +106,42 @@ test('answer with a fallback, and never with a closure', () => {
   // but an else may exit, leaving the value to the answer side
 
   assert.equal(
-    out('const f = (cond: boolean) => {\n  const a = cond ?true => 4 else err `nope`;\n  ok a;\n};'),
+    out('const f = (cond: boolean) => {\n  const a = cond ? => 4 else err `nope`;\n  ok a;\n};'),
     'const f = (cond: boolean) => {\n  if (!(cond === true)) return result.err(`nope`); const a = 4;\n  return result.ok(a);\n};'
   );
 });
 
-test('match a literal, and test a condition in parens', () => {
-  // a literal is strict identity, the ?true rule generalized past booleans
+test('compare with an operator, and test a condition in parens', () => {
+  // a comparison is strict identity generalized past booleans, with the
+  // operator glued onto the ? and the operand spaced after it
 
   assert.equal(
-    out('const f = (x: number) => {\n  const a = x ?0 => -1;\n  return a;\n};'),
-    'const f = (x: number) => {\n  const a = x === 0 ? -1 : x;\n  return a;\n};'
+    out('const f = (x: number) => {\n  const a = x ?== 0 => -1;\n  return a;\n};'),
+    'const f = (x: number) => {\n  const a = x === (0) ? -1 : x;\n  return a;\n};'
   );
 
   assert.equal(
-    out('const f = (x: number) => {\n  const a = x ?-1.5 => 0;\n  return a;\n};'),
-    'const f = (x: number) => {\n  const a = x === -1.5 ? 0 : x;\n  return a;\n};'
+    out('const f = (x: number) => {\n  const a = x ?== -1.5 => 0;\n  return a;\n};'),
+    'const f = (x: number) => {\n  const a = x === (-1.5) ? 0 : x;\n  return a;\n};'
   );
 
   assert.equal(
-    out('const f = (s: string) => {\n  const a = s ?\'ok\' => 1 else 0;\n  return a;\n};'),
-    'const f = (s: string) => {\n  const a = s === \'ok\' ? 1 :   0;\n  return a;\n};'
+    out('const f = (s: string) => {\n  const a = s ?== `ok` => 1 else => 0;\n  return a;\n};'),
+    'const f = (s: string) => {\n  const a = s === (`ok`) ? 1 :   0;\n  return a;\n};'
   );
 
-  // literals chain and mix like any other matcher, and decline like one too
+  // halves join in a group, and decline like any other quest
 
   assert.equal(
-    out('const f = (x: number, d: number) => {\n  x ?0 ?1 return d;\n  return x;\n};'),
-    'const f = (x: number, d: number) => {\n  if (x === 0 || x === 1) return d;\n  return x;\n};'
+    out('const f = (x: number, d: number) => {\n  x ?|(== 0, == 1) return d;\n  return x;\n};'),
+    'const f = (x: number, d: number) => {\n  if (((x === (0)) || (x === (1)))) return d;\n  return x;\n};'
   );
 
-  // a literal declines like any other matcher, and so does a condition in parens
+  // a comparison declines like any other quest, and so does a condition in parens
 
   assert.equal(
-    out('const f = (x: number) => {\n  x ?0 err `zero`;\n  x ?(x < 0) err `neg`;\n  ok x;\n};'),
-    'const f = (x: number) => {\n  if (x === 0) return result.err(`zero`);\n  if ((x < 0) === true) return result.err(`neg`);\n  return result.ok(x);\n};'
+    out('const f = (x: number) => {\n  x ?== 0 err `zero`;\n  x ?(x < 0) err `neg`;\n  ok x;\n};'),
+    'const f = (x: number) => {\n  if (x === (0)) return result.err(`zero`);\n  if ((x < 0) === true) return result.err(`neg`);\n  return result.ok(x);\n};'
   );
 
   // a bare return after a condition is a decline too, so ban lets it through
@@ -135,8 +152,8 @@ test('match a literal, and test a condition in parens', () => {
   );
 
   assert.equal(
-    out('const f = (x: string | undefined, d: string) => {\n  const a = x ?none ?\'a\' => d;\n  ok a;\n};'),
-    'const f = (x: string | undefined, d: string) => {\n  const a = is.none(x) || x === \'a\' ? d : x;\n  return result.ok(a);\n};'
+    out('const f = (x: string | undefined, d: string) => {\n  const a = x ?|(none, == `a`) => d;\n  ok a;\n};'),
+    'const f = (x: string | undefined, d: string) => {\n  const a = ((is.none(x)) || (x === (`a`))) ? d : x;\n  return result.ok(a);\n};'
   );
 
   // a condition in parens tests strictly: the hit is === true, never truthiness
@@ -153,63 +170,66 @@ test('match a literal, and test a condition in parens', () => {
     'const f = (x: number) => {\n  if ((x <= 0) === true) {\n    log(x);\n    return result.err(`bad ${x}`);\n  };const a = x;\n  return result.ok(a);\n};'
   );
 
-  // literals never bind, and conditions bind nothing either
+  // comparisons never bind, and conditions bind nothing either
 
-  assert.match(refused('const f = (x: number) => {\n  const a = x ?0 (v) => v;\n  return a;\n};'), /a literal binds nothing/);
+  assert.match(refused('const f = (x: number) => {\n  const a = x ?== 0 (v) => v;\n  return a;\n};'), /binds nothing/);
   assert.match(refused('const f = (x: number) => {\n  const a = x ?(x > 0) (v) => v;\n  return a;\n};'), /binds nothing; the subject is already named/);
 
-  // a condition tests a bare name, needs something to test, and owns no templates
+  // a condition tests a bare name, and needs something to test
 
   assert.match(refused('const f = (a: number) => {\n  const v = f(a) ?(f(a) > 0) => 1;\n  return v;\n};'), /tests a name/);
   assert.match(refused('const f = (x: number) => {\n  const v = x ?() => 1;\n  return v;\n};'), /tests something/);
-  assert.match(refused('const f = (x: string) => {\n  const v = x ?`lit` => 1;\n  return v;\n};'), /static spelling/);
+  assert.equal(
+    out('const f = (x: string) => {\n  const v = x ?== `lit` => 1;\n  return v;\n};'),
+    'const f = (x: string) => {\n  const v = x === (`lit`) ? 1 : x;\n  return v;\n};'
+  );
 
-  // a condition binds nothing, so a binding after one is refused
+  // juxtaposed quests join nothing, so a second quest after the first is refused
 
-  assert.match(refused('const f = (x: X) => {\n  const v = x ?:err ?(e > 0) (e) => 1;\n  return v;\n};'), /binds nothing/);
+  assert.match(refused('const f = (x: X) => {\n  const v = x ?:err ?== 1 => 1;\n  return v;\n};'), /halves join in a group/);
 });
 
-test('answer conditions together in ? {}, with switch (true) only then', () => {
-  // a condition arm tests strictly in an expression block, which switches on true
+test('answer comparisons together in ? {}, switching on true only then', () => {
+  // a comparison arm tests in an expression block, which switches on true
 
   assert.equal(
-    out('const f = (x: number) => {\n  const a = x ? {\n    (x < 0) => -1,\n    _ => 0\n  };\n  return a;\n};'),
-    'const f = (x: number) => {\n  const a = (() => { switch (true) {\n    case (x < 0): return -1;\n    default: return 0;\n  } })();\n  return a;\n};'
+    out('const f = (x: number) => {\n  const a = x ? {\n    < 0 => -1,\n    else => 0\n  };\n  return a;\n};'),
+    'const f = (x: number) => {\n  let $1; switch (true) {\n    case (x < (0)): $1 = -1; break;\n    default: $1 = 0; break;\n  } const a = $1;\n  return a;\n};'
   );
 
-  // literals beside conditions become boolean cases too, first hit winning
+  // == arms beside comparisons stay boolean cases too, first hit winning
 
   assert.equal(
-    out('const f = (x: number) => {\n  const a = x ? {\n    0 => `zero`,\n    (x > 0) => `pos`,\n    _ => `other`\n  };\n  return a;\n};'),
-    'const f = (x: number) => {\n  const a = (() => { switch (true) {\n    case (x === 0): return `zero`;\n    case (x > 0): return `pos`;\n    default: return `other`;\n  } })();\n  return a;\n};'
+    out('const f = (x: number) => {\n  const a = x ? {\n    == 0 => `zero`,\n    > 0 => `pos`,\n    else => `other`\n  };\n  return a;\n};'),
+    'const f = (x: number) => {\n  let $1; switch (true) {\n    case (x === (0)): $1 = `zero`; break;\n    case (x > (0)): $1 = `pos`; break;\n    default: $1 = `other`; break;\n  } const a = $1;\n  return a;\n};'
   );
 
-  // a value arm beside conditions is an expression, so it is spelled strictly and keeps its own parens
+  // a group arm shares one tail across its halves
 
   assert.equal(
-    out('const f = (x: number, d: number) => {\n  const a = x ? {\n    d == 0 => `zero`,\n    (x > 0) => `pos`,\n    _ => `other`\n  };\n  return a;\n};'),
-    'const f = (x: number, d: number) => {\n  const a = (() => { switch (true) {\n    case (x === (d === 0)): return `zero`;\n    case (x > 0): return `pos`;\n    default: return `other`;\n  } })();\n  return a;\n};'
+    out('const f = (x: number) => {\n  const a = x ? {\n    &(< 0, > 100) => `out`,\n    else => `in`\n  };\n  return a;\n};'),
+    'const f = (x: number) => {\n  let $1; switch (true) {\n    case (((x < (0)) && (x > (100)))): $1 = `out`; break;\n    default: $1 = `in`; break;\n  } const a = $1;\n  return a;\n};'
   );
 
-  // statement arms switch on true, so overlapping conditions run once
+  // statement arms switch on true, so overlapping comparisons run once
 
   assert.equal(
-    out('const f = (x: number, log: (s: string) => void) => {\n  x ? {\n    (x < 0) log(`neg`);\n    (x > 0) log(`pos`);\n  };\n  return x;\n};'),
-    'const f = (x: number, log: (s: string) => void) => {\n  switch (true) {\n    case (x < 0): log(`neg`); break;\n    case (x > 0): log(`pos`); break;\n  };\n  return x;\n};'
+    out('const f = (x: number, log: (s: string) => void) => {\n  x ? {\n    < 0 log(`neg`);\n    > 0 log(`pos`);\n  };\n  return x;\n};'),
+    'const f = (x: number, log: (s: string) => void) => {\n  switch (true) {\n    case (x < (0)): log(`neg`); break;\n    case (x > (0)): log(`pos`); break;\n  };\n  return x;\n};'
   );
 
-  // a condition tests a bare name, needs something to test, and binds nothing
+  // a repeated subject elides, an empty condition tests nothing, and arms bind only branches
 
-  assert.match(refused('const f = (a: number) => {\n  const v = f(a) ? {\n    (f(a) > 0) => 1,\n    _ => 0\n  };\n  return v;\n};'), /tests a name/);
-  assert.match(refused('const f = (x: number) => {\n  const a = x ? {\n    () => 1,\n    _ => 0\n  };\n  return a;\n};'), /tests something/);
-  assert.match(refused('const f = (x: number) => {\n  const a = x ? {\n    (x > 0) (v) => v,\n    _ => 0\n  };\n  return a;\n};'), /binds nothing/);
+  assert.match(refused('const f = (x: number) => {\n  const a = x ? {\n    (x > 0) => 1,\n    else => 0\n  };\n  return a;\n};'), /elide it/);
+  assert.match(refused('const f = (x: number) => {\n  const a = x ? {\n    () => 1,\n    else => 0\n  };\n  return a;\n};'), /tests something/);
+  assert.match(refused('const f = (x: number) => {\n  const a = x ? {\n    == 0 (v) => v,\n    else => 0\n  };\n  return a;\n};'), /binds nothing/);
 });
 
 test('rename through template holes, and drop bindings nothing uses', () => {
   // a bound name inside ${} renames like any other, holes and all
 
   assert.equal(
-    out('const f = (read: Read) => {\n  const v = read() ?:err (e) => `got ${e}`;\n  return v;\n};'),
+    out('const f = (read: Read) => {\n  const v = read() ?err (e) => `got ${e}`;\n  return v;\n};'),
     'const f = (read: Read) => {\n  const $0 = read(); const v = $0.branch === \'err\' ? `got ${$0.value}` : $0.value;\n  return v;\n};'
   );
 
@@ -217,8 +237,8 @@ test('rename through template holes, and drop bindings nothing uses', () => {
 
   assert.match(refused('const f = (read: Read) => {\n  const v = read() ?:err (e) => `local`;\n  return v;\n};'), /never used; drop the binding/);
   assert.match(refused('const f = (read: Read) => {\n  read() ?:err (e) err `bad`;\n  ok 1;\n};'), /never used; drop the binding/);
-  assert.match(refused('const f = (cond: boolean) => {\n  cond ?true (ok) { log(); };\n  return 0;\n};'), /binds nothing/);
-  assert.match(refused('const r = out ? {\n  :ok (user) => 1,\n  _ => 2\n};'), /never used; drop the binding/);
+  assert.match(refused('const f = (x: number) => {\n  x ?== 0 (v) err v;\n  ok x;\n};'), /binds nothing/);
+  assert.match(refused('const r = out ? {\n  :ok (user) => 1,\n  else => 2\n};'), /never used; drop the binding/);
 
   // and the miss branch cannot borrow what only the answer owns
 
@@ -305,7 +325,7 @@ test('call the foreign boundary by keyword', () => {
 
   assert.equal(
     out('export const get = (url: string) => await call => fetch(url);'),
-    'export const get = (url: string) =>  call.async(fetch, url);'
+    'export const get = (url: string) => call.async(fetch, url);'
   );
 
   // a call block opens its closure with =>, so return answers it and nothing else
@@ -423,29 +443,29 @@ test('answer with a chain, decline with a statement', () => {
   // an expression answers with =>, and else names the miss branch
 
   assert.equal(
-    out('export const label = (n: number) =>\n  n < 0 ?true => `below` else => `above`;'),
-    'export const label = (n: number) =>\n  (($0) => $0 === true ? `below` : `above`)(n < 0);'
+    out('export const label = (n: number) =>\n  n ?< 0 => `below` else => `above`;'),
+    'export const label = (n: number) =>\n  (n < (0) ? `below` : `above`);'
   );
 
   // an else branch holds another chain, each subject evaluated only on its miss
 
   assert.equal(
-    out('export const label = (n: number) =>\n  n < 0 ?true => `below` else n == 0 ?true => `nothing` else => `above`;'),
-    'export const label = (n: number) =>\n  (($0) => $0 === true ? `below` : (($1) => $1 === true ? `nothing` : `above`)(n === 0))(n < 0);'
+    out('export const label = (n: number) =>\n  n ?< 0 => `below` else => n ?== 0 => `nothing` else => `above`;'),
+    'export const label = (n: number) =>\n  (n < (0) ? `below` : (n === (0) ? `nothing` : `above`));'
   );
 
   // a bare value answers nothing; the miss answers with => or an exit
 
-  assert.match(refused('export const label = (n: number) =>\n  n < 0 ?true => `below` else `above`;'), /bare value answers nothing/);
-  assert.match(refused('export const label = (n: number) =>\n  n < 0 ?true `below` else => `above`;'), /answers with =>/);
-  assert.match(refused('export const label = (n: number) =>\n  n < 0 ?true => `below` ?false => `above`;'), /chain with else/);
+  assert.match(refused('export const label = (n: number) =>\n  n ?< 0 => `below` else `above`;'), /bare value answers nothing/);
+  assert.match(refused('export const label = (n: number) =>\n  n ?< 0 `below` else => `above`;'), /answers with =>/);
+  assert.match(refused('export const label = (n: number) =>\n  n ?< 0 => `below` else => return `above`;'), /to decline, use an exit/);
 });
 
 test('a chain declines as a ladder, captured as a let', () => {
   // a captured chain stays a ternary while every answer is a value
 
   assert.equal(
-    out('const f = (c: boolean, o: boolean) => {\n  const a = c ?true => 4 else o ?true => 6 else => 8;\n  return a;\n};'),
+    out('const f = (c: boolean, o: boolean) => {\n  const a = c ? => 4 else => o ? => 6 else => 8;\n  return a;\n};'),
     'const f = (c: boolean, o: boolean) => {\n  const a = c === true ? 4 :   (() => { return o === true ? 6 : 8; })();\n  return a;\n};'
   );
 
@@ -453,25 +473,26 @@ test('a chain declines as a ladder, captured as a let', () => {
   // assign to a temp, the decline branch leaves, and the binding reads the temp
 
   assert.equal(
-    out('const f = (c: boolean, o: boolean) => {\n  const a = c ?true => 4 else o ?true => 6 else return 8;\n  return a;\n};'),
+    out('const f = (c: boolean, o: boolean) => {\n  const a = c ? => 4 else => o ? => 6 else return 8;\n  return a;\n};'),
     'const f = (c: boolean, o: boolean) => {\n  let $1; if (c === true) { $1 = 4; } else {   if (o === true) { $1 = 6; } else { return 8; } } const a = $1;\n  return a;\n};'
   );
 
   // as a body there is no temp: the whole chain is the decline ladder
 
   assert.equal(
-    out('export const level = (n: number) =>\n  n < 0 ?true => `below`\n  else n == 0 ?true => `nothing`\n  else return `above`;'),
-    'export const level = (n: number) =>\n  { const $0 = n < 0; if ($0 === true) return `below`; const $1 = n === 0; if ($1 === true) return `nothing`; return `above`; };'
+    out('export const level = (n: number) =>\n  n ?< 0 => `below`\n  else => n ?== 0 => `nothing`\n  else return `above`;'),
+    'export const level = (n: number) =>\n  { if (n < (0)) return `below`; if (n === (0)) return `nothing`; return `above`; };'
   );
 
   // a chain inside an expression declines nowhere: there is no scope for the exit
 
-  assert.match(refused('const f = (c: boolean) => {\n  const r = g(c ?true => 4 else return 8);\n  ok r;\n};'), /cannot be a value here/);
+  assert.match(refused('const f = (c: boolean) => {\n  const r = g(c ? => 4 else return 8);\n  ok r;\n};'), /cannot be a value here/);
+  assert.match(refused('const f = (c: boolean) => {\n  const r = g(c ? => 4 else => return 8);\n  ok r;\n};'), /to decline, use an exit/);
 
   // but a value chain nests anywhere, the else-compile reused
 
   assert.equal(
-    out('const f = (c: boolean, o: boolean) => {\n  const r = g(c ?true => 4 else o ?true => 6 else => 8);\n  ok r;\n};'),
+    out('const f = (c: boolean, o: boolean) => {\n  const r = g(c ? => 4 else => o ? => 6 else => 8);\n  ok r;\n};'),
     'const f = (c: boolean, o: boolean) => {\n  const r = g((c === true ? 4 : (() => { return o === true ? 6 : 8; })()) );\n  return result.ok(r);\n};'
   );
 });
@@ -480,7 +501,7 @@ test('run one side as a statement, and exit from a block', () => {
   // a statement runs an expression, no =>, no capture
 
   assert.equal(
-    out('const f = (cond: boolean) => {\n  status ?true log(`up`);\n  return 0;\n};'),
+    out('const f = (cond: boolean) => {\n  status ? log(`up`);\n  return 0;\n};'),
     'const f = (cond: boolean) => {\n  if (status === true) log(`up`);\n  return 0;\n};'
   );
 
@@ -494,22 +515,22 @@ test('run one side as a statement, and exit from a block', () => {
   // two sides use else, one line or one block per side, like an if
 
   assert.equal(
-    out('const f = (cond: boolean) => {\n  log(`start`);\n  cond ?true seen(`yes`) else seen(`no`);\n  log(`done`);\n};'),
+    out('const f = (cond: boolean) => {\n  log(`start`);\n  cond ? seen(`yes`) else seen(`no`);\n  log(`done`);\n};'),
     'const f = (cond: boolean) => {\n  log(`start`);\n  if (cond === true) seen(`yes`); else seen(`no`);\n  log(`done`);\n};'
   );
 
   assert.equal(
-    out('const f = (cond: boolean) => {\n  log(`start`);\n  cond ?true {\n      a();\n      b();\n    } else {\n      c();\n      d();\n    };\n  log(`done`);\n};'),
+    out('const f = (cond: boolean) => {\n  log(`start`);\n  cond ? {\n      a();\n      b();\n    } else {\n      c();\n      d();\n    };\n  log(`done`);\n};'),
     'const f = (cond: boolean) => {\n  log(`start`);\n  if (cond === true) {\n      a();\n      b();\n    } else {\n      c();\n      d();\n    };\n  log(`done`);\n};'
   );
 
-  assert.match(refused('const f = (cond: boolean) => {\n  status ?true => log(`up`);\n  return 0;\n};'), /must always be captured/);
-  assert.match(refused('const f = (cond: boolean) => {\n  cond ?true {\n      a();\n    } ?false {\n      c();\n    };\n  return 0;\n};'), /uses else/);
+  assert.match(refused('const f = (cond: boolean) => {\n  status ? => log(`up`);\n  return 0;\n};'), /must always be captured/);
+  assert.match(refused('const f = (cond: boolean) => {\n  cond ? {\n      a();\n    } ? {\n      c();\n    };\n  return 0;\n};'), /uses else/);
 
   // and ? {} lists every side, one arm per line, the statement form of an answer
 
   assert.equal(
-    out('const f = (cond: boolean, seen: (x: string) => void) => {\n  cond ? {\n    true seen(`yes`);\n    false seen(`no`);\n  };\n  return cond;\n};'),
+    out('const f = (cond: boolean, seen: (x: string) => void) => {\n  cond ? {\n    == true seen(`yes`);\n    == false seen(`no`);\n  };\n  return cond;\n};'),
     'const f = (cond: boolean, seen: (x: string) => void) => {\n  switch (cond) {\n    case true: seen(`yes`); break;\n    case false: seen(`no`); break;\n  };\n  return cond;\n};'
   );
 
@@ -530,21 +551,21 @@ test('run one side as a statement, and exit from a block', () => {
   // and a block that exits is the inline decline, effects first and value or not
 
   assert.equal(
-    out('const f = (cond: boolean) => {\n  cond ?true {\n    log();\n    return 6;\n  }\n  return 0;\n};'),
+    out('const f = (cond: boolean) => {\n  cond ? {\n    log();\n    return 6;\n  }\n  return 0;\n};'),
     'const f = (cond: boolean) => {\n  if (cond === true) {\n    log();\n    return 6;\n  }\n  return 0;\n};'
   );
 
   // a block that never leaves yields nothing, so with a land it is refused
 
-  assert.match(refused('const f = (cond: boolean) => {\n  const v = cond ?true {\n    log();\n  };\n  return v;\n};'), /yields nothing to land on/);
-  assert.match(refused('const f = (cond: boolean) => {\n  cond ?true => log(`up`);\n  return 0;\n};'), /must always be captured/);
+  assert.match(refused('const f = (cond: boolean) => {\n  const v = cond ? {\n    log();\n  };\n  return v;\n};'), /yields nothing to land on/);
+  assert.match(refused('const f = (cond: boolean) => {\n  cond ? => log(`up`);\n  return 0;\n};'), /must always be captured/);
 });
 
 test('unwrap inside argument lists, where a statement never could', () => {
   // each failure is hoisted before the call in source order, sharing no temp
 
   assert.equal(
-    out('const f = () => {\n  const r = processPayment(\n    cart[userId] ?none err `empty`,\n    token ?none err `missing`\n  ) ?:err (e) err `failed: ${e}`;\n  ok r;\n};'),
+    out('const f = () => {\n  const r = processPayment(\n    cart[userId] ?none err `empty`,\n    token ?none err `missing`\n  ) ?err (e) err `failed: ${e}`;\n  ok r;\n};'),
     'const f = () => {\n  const $0 = cart[userId]; if (is.none($0)) return result.err(`empty`); if (is.none(token)) return result.err(`missing`); const $2 = processPayment(\n    $0,\n    token\n  ); if ($2.branch === \'err\') { const e = $2.value; return result.err(`failed: ${e}`); } const r = $2.value;\n  return result.ok(r);\n};'
   );
 
@@ -554,55 +575,55 @@ test('unwrap inside argument lists, where a statement never could', () => {
 });
 
 test('read a branch in ? {}, and bind what it carries', () => {
-  // a quoted arm matches a value; an arm that starts with : matches a branch
+  // an arm that starts with : matches a branch, and == matches a value
 
   assert.equal(
-    out('const r = out ? {\n  :ok (user) => keep(user),\n  :err => 0,\n  _ (e) => drop(e)\n};'),
-    'const r = (() => { switch (out.branch) {\n  case \'ok\': { const user = out.value; return keep(user); }\n  case \'err\': return 0;\n  default: { const e = out.value; return drop(e); }\n} })();'
+    out('const r = out ? {\n  :ok (user) => keep(user),\n  :err => 0,\n  else => drop(out)\n};'),
+    'let $1; switch (out.branch) {\n  case \'ok\': $1 = keep(out.value); break;\n  case \'err\': $1 = 0; break;\n  default: $1 = drop(out); break;\n} const r = $1;'
   );
 
   // an expression subject gets a temp, because the payload has to have a name to reach
 
   assert.equal(
-    out('const r = load(id) ? {\n  :ok (rows) => rows,\n  _ => none\n};'),
-    'const r = (() => { const $0 = load(id); switch ($0.branch) {\n  case \'ok\': { const rows = $0.value; return rows; }\n  default: return none;\n} })();'
+    out('const r = load(id) ? {\n  :ok (rows) => rows,\n  else => none\n};'),
+    'let $1; const $0 = load(id); switch ($0.branch) {\n  case \'ok\': $1 = $0.value; break;\n  default: $1 = none; break;\n} const r = $1;'
   );
 
-  assert.match(refused('const r = out ? {\n  :ok => 1,\n  \'two\' => 2,\n  _ => 3\n};'), /branches or reads values/);
+  assert.match(refused('const r = out ? {\n  :ok => 1,\n  == `two` => 2,\n  else => 3\n};'), /branches or reads values/);
 });
 
 test('answer exhaustively with ? {}, over values as well as branches', () => {
-  // a quoted arm matches a value, with the default that is always required
+  // a comparison arm matches a value, with the else that is always required
 
   assert.equal(
-    out('const r = code ? {\n  200 => `ok`,\n  _ => `other`\n};'),
-    'const r = (() => { switch (code) {\n  case 200: return `ok`;\n  default: return `other`;\n} })();'
+    out('const r = code ? {\n  == 200 => `ok`,\n  else => `other`\n};'),
+    'let $1; switch (code) {\n  case 200: $1 = `ok`; break;\n  default: $1 = `other`; break;\n} const r = $1;'
   );
 
   assert.equal(
-    out('const r = name ? {\n  \'root\' => admin,\n  _ => deny(name)\n};'),
-    'const r = (() => { switch (name) {\n  case \'root\': return admin;\n  default: return deny(name);\n} })();'
+    out('const r = name ? {\n  == `root` => admin,\n  else => deny(name)\n};'),
+    'let $1; switch (name) {\n  case `root`: $1 = admin; break;\n  default: $1 = deny(name); break;\n} const r = $1;'
   );
 
-  // no _, no mixing, and never uncaptured; tsc owns totality, so a missing
+  // no else, no mixing, and never uncaptured; tsc owns totality, so a missing
 // branch lands as | undefined instead of a transpiler refusal
 
-  assert.match(refused('const r = out ? {\n  :ok => 1,\n  `two` => 2,\n  _ => 3\n};'), /branches or reads values/);
+  assert.match(refused('const r = out ? {\n  :ok => 1,\n  == `two` => 2,\n  else => 3\n};'), /branches or reads values/);
   assert.equal(
     out('const r = out ? {\n  :ok => 1\n};'),
-    'const r = (() => { switch (out.branch) {\n  case \'ok\': return 1;\n} })();'
+    'let $1; switch (out.branch) {\n  case \'ok\': $1 = 1; break;\n} const r = $1;'
   );
-  assert.match(refused('const f = (x: X) => {\n  x ? {\n    :ok => 1,\n    _ => 2\n  };\n  return 0;\n};'), /must always be captured/);
+  assert.match(refused('const f = (x: X) => {\n  x ? {\n    :ok => 1,\n    else => 2\n  };\n  return 0;\n};'), /must always be captured/);
 
   // an arm answers with a value, so exits are refused however they arrive
 
-  assert.match(refused('const r = out ? {\n  :ok => return 1,\n  _ => 0\n};'), /hoist the exit out/);
-  assert.match(refused('const f = (out: X) => {\n  const r = out ? {\n    :ok (v) => { ok v; },\n    _ => 0\n  };\n  ok r;\n};'), /hoist the exit out/);
+  assert.match(refused('const r = out ? {\n  :ok => return 1,\n  else => 0\n};'), /answers with a value/);
+  assert.match(refused('const f = (out: X) => {\n  const r = out ? {\n    :ok (v) => { ok v; },\n    else => 0\n  };\n  ok r;\n};'), /hoist the exit out/);
 
   // presence words are matchers, not arms; and a block answer still needs its =>
 
-  assert.match(refused('const r = x ? {\n  none => -1,\n  _ => 0\n};'), /none and some test presence/);
-  assert.match(refused('const r = out ? {\n  :ok { log(1); },\n  _ => 0\n};'), /answers with a value or declines/);
+  assert.match(refused('const r = x ? {\n  none => -1,\n  else => 0\n};'), /none and some test presence/);
+  assert.match(refused('const r = out ? {\n  :ok { log(1); },\n  else => 0\n};'), /answers with a value or declines/);
 });
 
 test('an arm may decline, and the captured block becomes a let-temp switch', () => {
@@ -618,36 +639,35 @@ test('an arm may decline, and the captured block becomes a let-temp switch', () 
 
   assert.equal(
     out('const f = (out: X) => out ? {\n  :ok (u) => u,\n  :err (e) err e\n};'),
-    'const f = (out: X) => { switch (out.branch) {\n  case \'ok\': return out.value;\n  case \'err\': return result.err(out.value);} };'
+    'const f = (out: X) => { switch (out.branch) {\n  case \'ok\':  { const u = out.value; return u; }\n  case \'err\': return result.err(out.value);} };'
   );
 
   // nested in an argument the funnel hoists before the statement, no iife
 
   assert.equal(
-    out('const f = (x: X) => {\n  handle(x ? {\n    :err err \'no error\',\n    _ (v) => v\n  });\n  return 0;\n};'),
+    out('const f = (x: X) => {\n  handle(x ? {\n    :err err \'no error\',\n    else => x.value\n  });\n  return 0;\n};'),
     'const f = (x: X) => {\n  if (x.branch === \'err\') return result.err(\'no error\'); handle(x.value);\n  return 0;\n};'
   );
 
-  // the ? {} parallel of the multi-tag chain: matcher arms decline, the
-  // remainder extracts the survivor
+  // a group arm declines alongside the rest, the remainder extracts the value
 
   assert.equal(
-    out('const f = (x: X) => {\n  const rows = x ? {\n    ?:idle return,\n    ?:err return,\n    _ => x.value\n  };\n  return rows;\n};'),
-    'const f = (x: X) => {\n  let $1; switch (x.branch) {\n    case \'idle\': return;\n    case \'err\': return;\n    default: $1 = x.value; break;} const rows = $1;\n  return rows;\n};'
+    out('const f = (x: X) => {\n  const rows = x ? {\n    |(:idle, :err) return,\n    else => x.value\n  };\n  return rows;\n};'),
+    'const f = (x: X) => {\n  let $1; switch (true) {\n    case (((x.branch === \'idle\') || (x.branch === \'err\'))): return;\n    default: $1 = x.value; break;\n  } const rows = $1;\n  return rows;\n};'
   );
 
-  // a matcher arm only declines, and an all-answers block stays the iife
+  // a group head shares one tail; halves never mix branches with values
 
-  assert.match(refused('const r = out ? {\n  ?:idle => 1,\n  _ => 0\n};'), /a matcher arm declines/);
+  assert.match(refused('const r = out ? {\n  |(:ok, == 1) => 1,\n  else => 0\n};'), /never mixes/);
 });
 
 test('a decline tail answers on the miss, binding the survivor', () => {
-  // a matcher chain declines on match, and the else binds the survivor and
+  // a group declines on match, and the else binds the survivor and
   // continues into a new subject, mixing declines and fallbacks
 
   assert.equal(
-    out('const f = (x: X, y: boolean) => {\n  const a = x ?:a ?:b ?:c err \'no\' else (v) => y ?true err v else => 1;\n  ok a;\n};'),
-    'const f = (x: X, y: boolean) => {\n  if (x.branch === \'a\' || x.branch === \'b\' || x.branch === \'c\') return result.err(\'no\'); const v = x.value;  if (y === true) return result.err(v);  const a = 1;\n  return result.ok(a);\n};'
+    out('const f = (x: X, y: boolean) => {\n  const a = x ?|(:a, :b, :c) err `no` else (v) => y ? err v else => 1;\n  ok a;\n};'),
+    'const f = (x: X, y: boolean) => {\n  if (((x.branch === \'a\') || (x.branch === \'b\') || (x.branch === \'c\'))) return result.err(`no`); const v = x;  if (y === true) return result.err(v);  const a = 1;\n  return result.ok(a);\n};'
   );
 
   // the miss may answer plainly, with no binding and no continuation
@@ -667,8 +687,8 @@ test('construct a branch with a colon', () => {
   // and an answer can build one where a ? {} arm binds one
 
   assert.equal(
-    out('const f = (code: number) => code ? {\n  200 => :ok,\n  _ => :err(`bad`)\n};'),
-    'const f = (code: number) => (() => { switch (code) {\n  case 200: return branch(\'ok\');\n  default: return branch(\'err\', `bad`);\n} })();'
+    out('const f = (code: number) => code ? {\n  == 200 => :ok,\n  else => :err(`bad`)\n};'),
+    'const f = (code: number) => { switch (code) {\n  case 200: return branch(\'ok\'); break;\n  default: return branch(\'err\', `bad`); break;\n} };'
   );
 
   // one value or nothing: empty parens and pairs are both refused
@@ -731,8 +751,11 @@ test('refuse the if expression, and pass the statement through', () => {
   );
 });
 
-test('match is retired; ? {} answers exhaustively', () => {
-  assert.match(refused('const r = match (name) {\n  \'root\' => admin,\n  _ => deny(name)\n};'), /match is refused/);
+test('match is a name like any other', () => {
+  assert.equal(
+    out('const f = (match: number) => match + 1;'),
+    'const f = (match: number) => match + 1;'
+  );
 });
 
 test('refuse what the language does not have', () => {
@@ -741,11 +764,10 @@ test('refuse what the language does not have', () => {
   assert.match(refused('const f = () => { class A { } };'), /class is refused/);
   assert.match(refused('const f = (x: unknown) => x === 1;'), /=== is refused/);
   assert.match(refused('const f = (x: unknown) => x == null;'), /null or undefined/);
-  assert.match(refused('const f = (x: boolean) => x ? 1 : 2;'), /answer with \?true/);
+  assert.match(refused('const f = (x: boolean) => x ? 1 : 2;'), /answer with \? =>/);
   assert.match(refused('const f = () => { return; };'), /it is a matcher/);
   assert.match(refused('const f = async () => { use(); };'), /the async modifier is refused/);
   assert.match(refused('const f = (x: unknown) => x ?? y;'), /none =>/);
-  assert.match(refused('const f = (x: number) => {\n  guard (x > 0);\n  return x;\n};'), /guard is refused/);
   assert.match(refused('const f = () => {\n  const c = pick() on:err;\n  return c;\n};'), /on: is retired/);
   assert.match(refused('const f = () => {\n  const c = pick() any:none;\n  return c;\n};'), /any: is retired/);
 });
@@ -753,7 +775,7 @@ test('refuse what the language does not have', () => {
 test('refuse the lie the discipline check exists for', () => {
   // a body answers one way, so mixing an err decline with a return answers twice
 
-  assert.match(refused('const f = (x: number) => {\n  x > 0 ?false err \'no\';\n  return x;\n};'), /mixes them/);
+  assert.match(refused('const f = (x: number) => {\n  x ?> 0 err \'no\';\n  return x;\n};'), /mixes them/);
 });
 
 test('hold resources in a scope, one line for one line', () => {
@@ -829,10 +851,73 @@ test('keep a keyword as a branch name', () => {
 test('carry a column home', () => {
   // the line is already right, so only the column moves, and the anchors say by how much
 
-  const written = emit('const f = (n: number) => {\n  n > 0 ?false err \'no\';\n};');
+  const written = emit('const f = (n: number) => {\n  n ?> 0 err \'no\';\n};');
   if (written.branch === 'err') assert.fail();
 
   const anchors = written.value.lines[1];
   assert.ok(anchors.length > 0);
   assert.equal(anchors[0].was, 0);
+});
+
+test('compare against a variable with ?==', () => {
+  // ?== compares the subject at runtime, the name unquoted
+  assert.equal(
+    out('const f = (x: number, y: number) => {\n  x ?== y return;\n};'),
+    'const f = (x: number, y: number) => {\n  if (x === (y)) return;\n};'
+  );
+
+  // ?== with answer
+  assert.equal(
+    out('const f = (x: number, y: number) => {\n  const z = x ?== y => 1 else => 0;\n  return z;\n};'),
+    'const f = (x: number, y: number) => {\n  const z = x === (y) ? 1 :   0;\n  return z;\n};'
+  );
+
+  // ?== chains in a group like any other comparison
+  assert.equal(
+    out('const f = (x: number, y: number, d: number) => {\n  x ?|(== y, == 0) return d;\n  return x;\n};'),
+    'const f = (x: number, y: number, d: number) => {\n  if (((x === (y)) || (x === (0)))) return d;\n  return x;\n};'
+  );
+});
+
+test('match a template with ?==', () => {
+  // template operands compare strictly, holes evaluating at runtime
+  assert.equal(
+    out('const f = (x: string) => {\n  x ?== `hello` return;\n};'),
+    'const f = (x: string) => {\n  if (x === (`hello`)) return;\n};'
+  );
+
+  // template with holes
+  assert.equal(
+    out('const f = (x: string) => {\n  x ?== `hello ${y}` return;\n};'),
+    'const f = (x: string) => {\n  if (x === (`hello ${y}`)) return;\n};'
+  );
+
+  // templates chain in a group with == on every half
+  assert.equal(
+    out('const f = (x: string, d: string) => {\n  x ?|(== `lit`, == `other`) return d;\n  return x;\n};'),
+    'const f = (x: string, d: string) => {\n  if (((x === (`lit`)) || (x === (`other`)))) return d;\n  return x;\n};'
+  );
+});
+
+test('refuse the glued and unglued misspellings', () => {
+  // glued values refuse: the operator is mandatory
+  assert.match(refused('const f = (x: number) => { x ?5 return; }'), /glues onto nothing/);
+  assert.match(refused('const f = (x: number) => { x ?true return; }'), /retired/);
+
+  // ?= is gone: the second = belongs to the operator
+  assert.match(refused('const f = (x: number) => { x ?=y return; }'), /\?= compares nothing/);
+
+  // spaced operators and glued operands refuse in both directions
+  assert.match(refused('const f = (x: number) => { x ? == 5 return; }'), /glues onto the \?/);
+  assert.match(refused('const f = (x: number) => { x ?==5 return; }'), /takes a space/);
+
+  // spaced values refuse too: a bare ? means == true, so the value needs its own operator
+  assert.match(refused('const f = (x: number) => { x ? 5 return; }'), /comparison needs its operator/);
+  assert.match(refused('const f = (c: boolean) => { c ? true return; }'), /comparison needs its operator/);
+  assert.match(refused('const f = (x: number) => { x ?-5 return; }'), /glues onto nothing/);
+  assert.match(refused('const f = (x: number) => { x ? -5 return; }'), /comparison needs its operator/);
+
+  // groups take two halves, one combinator, no mixing
+  assert.match(refused('const f = (x: number) => { x ?&(> 0) return; }'), /one test needs no group/);
+  assert.match(refused('const f = (x: X) => { x ?|(:err, == 1) return; }'), /never mixes/);
 });

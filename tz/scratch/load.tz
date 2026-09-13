@@ -16,7 +16,7 @@ const row = (id: string) => {
 export const name = (id: string) => {
   const raw = try row(id);
   const parsed = try call => JSON.parse(raw);
-  is.model(parsed, shape) ?false err 'not a row';
+  is.model(parsed, shape) ?== false err 'not a row';
   ok parsed.name;
 };
 
@@ -33,6 +33,6 @@ export const say = (id: string) => {
 
   return out ? {
     :ok (who) => `hello ${who}`,
-    _ (why) => `sorry, ${why}`
+    else => `sorry, ${out.value}`
   };
 };

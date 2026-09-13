@@ -1,6 +1,6 @@
 import { result } from '@belelabestia/tstd';
 import { Token } from './lex.js';
-import { Scan, keyword, modifier } from './scan.js';
+import { Scan, keyword, modifier, comparisons } from './scan.js';
 import { refusal } from './refusal.js';
 
 const instead: Record<string, string> = {
@@ -9,13 +9,12 @@ const instead: Record<string, string> = {
   this: 'an argument',
   new: 'make',
   interface: 'type',
-  enum: 'Union',
-  match: '? {}',
+  enum: 'Union or protocol',
   var: 'const, or let',
   namespace: 'a file',
   module: 'a file',
   any: 'unknown',
-  instanceof: 'a guard',
+  instanceof: 'a branch test',
   yield: 'a loop',
   abstract: 'gone with class',
   implements: 'gone with class',
@@ -26,15 +25,12 @@ const instead: Record<string, string> = {
   throw: 'err',
   switch: '? {}',
   catch: 'call.sync, call.async, or try',
-  finally: 'call.sync, call.async, or try',
-  guard: 'a ?false or ?none decline'
+  finally: 'call.sync, call.async, or try'
 };
-
-const absence = ['null', 'undefined'];
 
 /** the words the language refuses, and the words that are not spelled */
 export const banned = Object.keys(instead);
-export const absent = [...absence];
+export const absent: readonly string[] = ['null', 'undefined'];
 
 const optional = [',', ')', ']'];
 
@@ -65,23 +61,100 @@ export const ban = (tokens: Token[], scanned: Scan) => {
       if (t.text === '??' || t.text === '??=') return no('?? is refused; ?none => says which half it is doing');
 
       if (t.text === '==' || t.text === '!=') {
-        const l = before[i] >= 0 && absence.includes(tokens[before[i]].text);
-        const r = after[i] >= 0 && absence.includes(tokens[after[i]].text);
+        const l = before[i] >= 0 && absent.includes(tokens[before[i]].text);
+        const r = after[i] >= 0 && absent.includes(tokens[after[i]].text);
 
         if (l || r) return no('comparing against null or undefined is refused; is.some and is.none say presence');
       }
 
+      if (t.text === '?' && typing < 0 && matcher[i] === i) {
+        const a = after[i];
+
+        if (a >= 0 && comparisons.includes(tokens[a].text) && t.to !== tokens[a].from) return no('the operator glues onto the ?; write ?== ...');
+        if (a >= 0 && (tokens[a].text === '&' || tokens[a].text === '|') && t.to !== tokens[a].from) return no('a group glues onto the ?; write ?&(...) or ?|(...)');
+        if (a >= 0 && tokens[a].text === '=' && t.to === tokens[a].from) return no('?= compares nothing; compare with ?== ...');
+        if (a >= 0 && tokens[a].kind === 'word' && ['none', 'some', 'ok', 'err'].includes(tokens[a].text)) {
+          const w = after[a];
+          if (w < 0 || tokens[w].text === ';' || tokens[w].text === ',' || tokens[w].text === ')' || tokens[w].text === ']' || tokens[w].text === '}') {
+            return no('a matcher glues onto the ?; write ?none ...');
+          }
+        }
+        if (a >= 0 && tokens[a].kind === 'word' && (tokens[a].text === 'null' || tokens[a].text === 'undefined')) return no('null and undefined are never spelled; test presence with ?none or ?some');
+
+        let j = after[i];
+
+        while (j >= 0) {
+          const u = tokens[j];
+          if (u.kind === 'comment') { j = after[j]; continue; }
+          if (u.text === '(' || u.text === '[' || u.text === '{') { j = twin[j] >= 0 ? after[twin[j]] : after[j]; continue; }
+          if (u.text === ')' || u.text === ']' || u.text === '}') break;
+          if (u.text === ':') return no('a ? with : is a ternary; answer with ? => ... else ...');
+          if (u.text === ';' || u.text === '=>' || u.text === 'else') break;
+          if (u.kind === 'word' && (u.text === 'return' || u.text === 'ok' || u.text === 'err' || u.text === 'async' || u.text === 'break' || u.text === 'continue')) break;
+          j = after[j];
+        }
+      }
+
       if (t.text === '?' && typing < 0 && matcher[i] < 0 && after[i] >= 0 && tokens[after[i]].text !== ':' && tokens[after[i]].text !== '{' && !optional.includes(tokens[after[i]].text)) {
         const a = after[i];
-        if (tokens[a].kind === 'template' && t.to === tokens[a].from) {
-          return no('a ? matcher tests a static spelling; use quotes');
+
+        let j = after[i];
+
+        while (j >= 0) {
+          const u = tokens[j];
+          if (u.kind === 'comment') { j = after[j]; continue; }
+          if (u.text === '(' || u.text === '[' || u.text === '{') { j = twin[j] >= 0 ? after[twin[j]] : after[j]; continue; }
+          if (u.text === ')' || u.text === ']' || u.text === '}') break;
+          if (u.text === ':') return no('a ? with : is a ternary; answer with ? => ... else ...');
+          if (u.text === ';' || u.text === '=>' || u.text === 'else') break;
+          if (u.kind === 'word' && (u.text === 'return' || u.text === 'ok' || u.text === 'err' || u.text === 'async' || u.text === 'break' || u.text === 'continue')) break;
+          j = after[j];
         }
 
-        const glued = t.to === tokens[a].from;
-        const sign = (tokens[a].text === '-' || tokens[a].text === '+') && glued && after[a] >= 0 && tokens[after[a]].kind === 'number' && tokens[a].to === tokens[after[a]].from;
-        if (glued && (tokens[a].kind === 'number' || tokens[a].kind === 'string' || tokens[a].text === '(' || sign)) continue;
+        if ((tokens[a].kind === 'number' || tokens[a].kind === 'string' || tokens[a].kind === 'template') && t.to === tokens[a].from) {
+          return no('a value glues onto nothing; compare it with ?== ...');
+        }
 
-        return no('?: is refused; answer with ?true => ... else ...');
+        if ((tokens[a].text === '-' || tokens[a].text === '+') && t.to === tokens[a].from && after[a] >= 0 && tokens[after[a]].kind === 'number' && tokens[a].to === tokens[after[a]].from) {
+          return no('a value glues onto nothing; compare it with ?== ...');
+        }
+
+        if ((tokens[a].text === '-' || tokens[a].text === '+') && after[a] >= 0 && tokens[after[a]].kind === 'number' && tokens[a].to === tokens[after[a]].from) {
+          return no('a comparison needs its operator; write ?== ...');
+        }
+
+        if (tokens[a].kind === 'word' && (tokens[a].text === 'true' || tokens[a].text === 'false') && t.to === tokens[a].from) {
+          return no('?true and ?false are retired; a boolean subject reads cond ?');
+        }
+
+        if (tokens[a].text === '=' && t.to === tokens[a].from) {
+          return no('?= compares nothing; compare with ?== ...');
+        }
+
+        if (comparisons.includes(tokens[a].text)) {
+          if (t.to !== tokens[a].from) return no('the operator glues onto the ?; write ?== ...');
+
+          const w = after[a];
+          if (w >= 0 && tokens[a].to === tokens[w].from) return no('the operand takes a space; write ?== ...');
+        }
+
+        if (tokens[a].text === '&' || tokens[a].text === '|') {
+          return no('a group glues onto the ?; write ?&(...) or ?|(...)');
+        }
+
+        if (tokens[a].kind === 'template' && !(t.to === tokens[a].from)) {
+          return no('a template rides its ?==; write ?== `tpl`');
+        }
+
+        if ((tokens[a].kind === 'number' || tokens[a].kind === 'string' || (tokens[a].kind === 'word' && (tokens[a].text === 'true' || tokens[a].text === 'false'))) && t.to !== tokens[a].from) {
+          return no('a comparison needs its operator; write ?== ...');
+        }
+
+        if (tokens[a].text === '(' && t.to !== tokens[a].from) {
+          return no('a condition glues onto the ?; write ?(...)');
+        }
+
+        return no('?: is refused; answer with ? => ... else ...');
       }
 
       continue;

@@ -162,7 +162,7 @@ const name = (id: string) => {
 };
 ```
 
-no `try` in business code, and no monadic api on `result`: no `map`, no `andThen`, no `unwrap`, no `match` on a branch. you check the tag and exit; flow is never hidden behind data. a function that cannot fail exits with the bare value, not a `Result`.
+no `try` in business code, and no monadic api on `result`: no `map`, no `andThen`, no `unwrap`. you check the tag and exit; flow is never hidden behind data. a function that cannot fail exits with the bare value, not a `Result`.
 
 ### resources, handed back in reverse
 
@@ -258,16 +258,14 @@ the transpiler is a lexer, so it refuses unknown words line by line. every refus
 | `new` | `make` |
 | `interface` | `type` |
 | `enum` | `Union` |
-| `match` | `? {}` |
 | `var` | `const`, or `let` |
 | `namespace`, `module` | a file |
 | `any` | `unknown` |
-| `instanceof` | a guard |
+| `instanceof` | a branch test |
 | `yield` | a loop |
 | `abstract`, `implements`, `private`, `protected`, `public`, `super`, `constructor` | gone with `class` |
 | `throw` | `err` |
 | `switch` | `? {}` |
-| `guard` | a `?false` or `?none` exit |
 | `catch`, `finally` | `call.sync`, `call.async`, or the tz `try` |
 | `get`, `set` | a function wearing a hat |
 | method shorthand `x() {}` | `x: () => {}` |
@@ -275,9 +273,9 @@ the transpiler is a lexer, so it refuses unknown words line by line. every refus
 then the punctuation and shape refusals:
 
 - `===` and `!==` are refused; you write `==` and `!=`, and they emit the strict ones. one spelling of equality, guarded by the transpiler instead of by habit.
-- `??` is refused; `?none` says which half it is doing. `?:` is refused; use `?true => ... else ...` instead.
+- `??` is refused; `?none` says which half it is doing. `?:` is refused; use `? => ... else ...` instead.
 - comparing against `null` or `undefined` is refused; `is.some` and `is.none` say presence.
-- a bare `return` is refused; every `return` is an exit, so it has to be a side quest (`cond ?false return`, `val ?none return`).
+- a bare `return` is refused; every `return` is an exit, so it has to be a side quest (`cond ?== false return`, `val ?none return`).
 - the `async` modifier is refused; an `await` in the body infers it, and `async x` states the rest of the story.
 - `Promise.reject` is refused; a rejection is a throw on a later tick, so resolve with a `Result`.
 - typescript's own `try { } catch { }` is refused; use `call.sync`, `call.async`, or the tz `try`.
@@ -321,21 +319,59 @@ arrow capture is the spell for "produce a value, stay in scope". the `=>` form n
 const port = process.env.PORT ?none => 8080;
 ```
 
-an arrow capture is the only way a `=>` appears; there is no `match`-style block that just lists answers. the body decides what an arrow capture does: when it has a `=>` and a value, it captures; when it has an exit keyword (`return`, `err`, `ok`, `break`, `continue`), it leaves.
+an arrow capture is the only way a `=>` appears; there is no block that just lists answers. the body decides what an arrow capture does: when it has a `=>` and a value, it captures; when it has an exit keyword (`return`, `err`, `ok`, `break`, `continue`), it leaves.
 
 ## side quests: the `?` family
 
-seven side quests, all postfix, all under `?`:
+all the side quests are postfix, all under `?`:
 
 | side quest | what it tests | example |
 | --- | --- | --- |
 | `?none` / `?some` | presence and absence | `table[id] ?none err 'no row'` |
-| `?true` / `?false` | a boolean | `body.age >= 18 ?false err 'under age'` |
-| `?:tag` | a branch of a tagged union | `pay() ?:err (e) err why` |
-| `?literal` | strict identity on a number or string | `x ?0 => -1` |
-| `?(cond)` | a computed boolean, strictly | `n ?(n < 0) => 0` |
+| `?ok` / `?err` | the `Result` branches, payload unwrapped | `pay() ?err (e) err e` |
+| `?:tag` | any named branch, the whole value boxed | `pay() ?:err return` |
+| `?==`, `?!=`, `?>`, `?<`, `?>=`, `?<=` | a comparison against the subject | `x ?> 0 err 'not positive'` |
+| `?&(...)` | every listed comparison holds | `x ?&(> 0, < 100) { print('in range'); }` |
+| `?\|(...)` | any listed comparison holds | `x ?|(< 0, > 100) { print('out'); }` |
+| `?(cond)` | a self contained boolean expression | `x ?(x % 2 == 0) => 'even'` |
+| `?` | true, shorthand for `?== true` | `cond ? log('up')` |
 
-a literal collapses `x == 4 ?true` into `x ?4`: numbers glue their sign, strings take quotes, templates are refused in favor of quotes. a condition names the bare subject it tests, which the emit renames onto the temp; the hit is `=== true`, never truthiness, and conditions chain and mix like any other side quest.
+place a `?` in the middle of a comparison and it captures the expression on its left and tests it against what follows on its right. the operator glues onto the `?`: `x ?== 2`, `x ?!= 3`, `x ?> 0`. the operators are exactly the boolean binaries: `==`, `!=`, `>`, `<`, `>=`, `<=`. `==` and `!=` emit the strict ones, the way they do everywhere else in tz:
+
+```tz
+x ?> 0 err 'not positive';
+const speed = val ?>= 100 => 1.0 else 0.5;
+```
+
+`==` is mandatory on every test, even where the old spelling glued a value straight onto the `?`: `x ?5`, `x ?'hi'` and `x ?=y` are refused, and read `x ?== 5`, `x ?== 'hi'`, `x ?== y`. `?true` and `?false` retire the same way, and a bare `?` means `?== true`, so a boolean subject just reads `cond ?`. arithmetic and bitwise quests go with them: there is no `?%`, and a modulo case spells `x ?(x % 2 == 0)` or moves the computation left, `x % 2 ?== 0`.
+
+when the right side has more than one half, one combinator glues on plus parens joins them: `&` means every half holds, `|` means any half holds:
+
+```tz
+x ?&(> 0, < 100) { print('in range'); }
+x ?|(< 0, > 100) { print('out of bounds'); }
+```
+
+each half carries its own operator, groups nest, and a group of one is refused, since the bare test already says it:
+
+```tz
+x ?|(?&(> 0, < 1), == 5) => 'small' else => 'big';
+```
+
+a group never mixes branch tags with comparisons: `:err` tests the branch while `== 1` tests the value, so `|(:err, == 1)` is refused. `?(` stays the escape hatch, a self contained boolean expression that may or may not mention the subject; groups always carry their combinator, so `?&(`, `?|(` and `?(` never collide. `?ok` and `?err` name the `Result` branches the short way and hand the payload back unwrapped; the coloned `?:tag` reads any branch by name with the subject left boxed, so the chain can test the same union twice.
+
+### the same heads in `? {}`
+
+a `? {}` block lifts its subject once and every arm reuses it with the same heads an inline quest takes: `==` comparisons, `:tag` branches, `(cond)` expressions. `==` stays mandatory there too, so a bare `200 => 'ok'` is refused in favour of `== 200 => 'ok'`. arms are alternatives, first hit winning, with exactly one `else` naming the miss; it replaces the old `_`:
+
+```tz
+x ? {
+  &(> 0, < 100) return 'in range',
+  |(< 0, > 100) return 'out of range'
+};
+```
+
+a group head shares one tail across its halves, and an explicit `(cond)` arm with `&&` is how an and reads where no group fits. a `? {` followed by arms is the block; followed by plain statements it is the hit tail of a bare `?`, and then `else` is required, since arms are recognised by their heads. the emit follows the heads: a block of only `==` arms switches on the subject internally, anything mixed cascades as written. the optimisation is invisible in the source either way.
 
 ### one rule decides exit and arrow capture
 
@@ -354,7 +390,7 @@ const port = process.env.PORT ?none => 8080;  // arrow captures a value in place
 a block after `=>` is an iife; `return` resolves it, here into `a`:
 
 ```tz
-const a = x ?:err => {
+const a = x ?err => {
   const val = getDefaultValue();
   log(val);
   return val;
@@ -364,7 +400,7 @@ const a = x ?:err => {
 effects plus an exit spell inline, the block emitting as written and the exit leaving the function:
 
 ```tz
-x ?:err (e) {
+x ?err (e) {
   log(e);
   err e;
 };
@@ -374,19 +410,19 @@ the difference between "leave, there is no value" and "continue, with this inste
 
 ### chains take `else`
 
-when both boolean sides are meaningful, arrow capture one side and name the miss with `else`; an `else` holds another chain, so the subjects evaluate only on their miss:
+when both boolean sides are meaningful, arrow capture one side and name the miss with `else`; an `else` takes `=>` and an expression, which may hold another chain, so the subjects evaluate only on their miss:
 
 ```tz
 export const label = (n: number) =>
-  n < 0 ?true => 'below' else n == 0 ?true => 'nothing' else => 'above';
+  n ?< 0 => 'below' else => n ?== 0 => 'nothing' else => 'above';
 ```
 
 the miss side arrow-captures like any side quest tail: `=> expression`, `=> { block }`, or an exit. a bare value after `else` captures nothing, so `else 'above'` is refused and reads `else => 'above'`. an exit in the final else flips the whole chain to an exit ladder: the value branches become exits, and the subjects evaluate only on their miss:
 
 ```tz
 export const level = (n: number) =>
-  n < 0 ?true => 'below'
-  else n == 0 ?true => 'nothing'
+  n ?< 0 => 'below'
+  else => n ?== 0 => 'nothing'
   else return 'above';
 ```
 
@@ -394,8 +430,8 @@ captured, the chain binds once: the value branches assign to a temp, the exit br
 
 ```tz
 export const look = (n: number) => {
-  const tag = n < 0 ?true => 'below'
-    else n == 0 ?true => 'nothing'
+  const tag = n ?< 0 => 'below'
+    else => n ?== 0 => 'nothing'
     else err 'above';
   ok tag;
 };
@@ -406,7 +442,7 @@ as a statement the two sides share one subject with `else` between them: exactly
 ```tz
 export const run = (cond: boolean) => {
   log('start');
-  cond ?true {
+  cond ? {
     a();
     b();
   } else {
@@ -422,8 +458,8 @@ more than two sides list every arm under a bare `?`, one per line, the statement
 ```tz
 export const react = (cond: boolean, seen: (x: string) => void) => {
   cond ? {
-    true seen('yes');
-    false seen('no');
+    == true seen('yes');
+    == false seen('no');
   };
 };
 ```
@@ -441,13 +477,13 @@ export const clamp = (n: number) => {
 
 ### `? {}`: arrow capture exhaustively
 
-`? {}` arrow captures over a value or over a branch: quoted and literal arms for values, `:tag` arms that bind the payload for branches, `(cond)` arms for computed cases. `_` is the open case, a last resort: when the arms cover the whole union `tsc` proves the block exits, and a missing branch lands as `| undefined`. exhaustiveness is `tsc`'s job, not the transpiler's:
+`? {}` arrow captures over a value or over a branch: `==` arms for values, `:tag` arms that bind the payload for branches, `(cond)` arms for computed cases. `else` is the open case, a last resort: when the arms cover the whole union `tsc` proves the block exits, and a missing branch lands as `| undefined`. exhaustiveness is `tsc`'s job, not the transpiler's:
 
 ```tz
 export const say = (code: number) => code ? {
-  200 => 'ok',
-  400 => 'bad request',
-  _ => 'something else'
+  == 200 => 'ok',
+  == 400 => 'bad request',
+  else => 'something else'
 };
 ```
 
@@ -455,46 +491,46 @@ export const say = (code: number) => code ? {
 export const describe = (x: Load) => x ? {
   :done (rows) => `rows: ${rows}`,
   :failed (why) => `failed: ${why}`,
-  _ => 'still going'
+  else => 'still going'
 };
 ```
 
-a condition arm names no tag and binds nothing; it tests strictly, the hit meaning `=== true`. a block with only identity arms switches on the subject, the way `match` used to; a block containing a condition switches on `true` instead, so literals beside conditions become boolean cases and the first hit wins:
+a condition arm names no tag and binds nothing; it tests strictly, the hit meaning `=== true`. a comparison arm elides the subject it already holds, so `> 500` tests the lifted subject and a repeated `(code > 500)` is refused; `(cond)` stays for foreign expressions that mention other values. a block with only `==` arms switches on the subject internally; a block containing a condition cascades instead, and the first hit wins either way:
 
 ```tz
 export const word = (code: number) => code ? {
-  200 => 'ok',
-  (code > 500) => 'down',
-  _ => 'other'
+  == 200 => 'ok',
+  > 500 => 'down',
+  else => 'other'
 };
 ```
 
 ### try: propagate without naming
 
-`try` propagates a failure without naming it, and binds the unwrapped value. it is the prefix for anything that hands back a `Result`: a plain call, a `call` at the foreign boundary, a `hold` inside a scope. spelled out, `try x` is `x ?:err (e) err e`: on the err branch, exit with the payload it carried.
+`try` propagates a failure without naming it, and binds the unwrapped value. it is the prefix for anything that hands back a `Result`: a plain call, a `call` at the foreign boundary, a `hold` inside a scope. spelled out, `try x` is `x ?err (e) err e`: on the err branch, exit with the payload it carried.
 
 ```tz
 export const name = (id: string) => {
   const raw = try row(id);
   const parsed = try call => JSON.parse(raw);
-  is.model(parsed, rowShape) ?false err 'not a row';
+  is.model(parsed, rowShape) ?== false err 'not a row';
   ok parsed.name;
 };
 ```
 
 ### bindings: name it or drop it
 
-`?some` and `?:tag` carry a value, so they bind one in parens, and the name reaches everywhere the tail reaches, template holes included:
+the branch tests carry what they found: `?ok` and `?err` hand the payload back unwrapped, `?:tag` hands the whole subject boxed, `?some` the found value. they bind one in parens, and the name reaches everywhere the tail reaches, template holes included:
 
 ```tz
 request.body.email ?some (email) sendMail(email);
 ```
 
 ```tz
-const out = name(id) ?:err (why) err `no answer for ${id}: ${why}`;
+const out = name(id) ?err (why) err `no answer for ${id}: ${why}`;
 ```
 
-a binding nothing uses is refused: `read() ?:err (e) => 'localhost'` does not compile, and neither does a `? {}` arm whose answer ignores its name. drop the parens and move on. `?none`, `?true` and `?false`, literals and conditions carry nothing, so they never bind at all.
+a binding nothing uses is refused: `read() ?err (e) => 'localhost'` does not compile, and neither does a `? {}` arm whose answer ignores its name. drop the parens and move on. `?none`, comparisons, groups and conditions carry nothing, so they never bind at all.
 
 and one split to keep straight: the binding lives on the match side. an `else` branch runs on miss, where the bound value names nothing, so `x ?:e (e) => 1 else f(e)` is refused alongside the unused ones. the same goes for a `? {}` arm: bind what the answer carries, or nothing.
 
@@ -507,7 +543,7 @@ const idle = :idle;
 const failed = (why: string) => :failed(why);
 ```
 
-exactly one value or nothing: `:err()` and `:err(a, b)` are both refused. and never in type position, where a colon already has a job. the pairing is the point: `?:tag` binds what `:tag(...)` builds, and a `? {}` arm exits with either.
+exactly one value or nothing: `:err()` and `:err(a, b)` are both refused. and never in type position, where a colon already has a job. the pairing is the point: what `:tag(...)` builds is what a branch test reads, and a `? {}` arm exits with either. `?ok` / `?err` unwind the common case; the coloned `?:tag` reads any branch by name and leaves the value boxed for the chain.
 
 ### in-argument unwrapping
 
@@ -517,35 +553,35 @@ the side quest is postfix on any expression, so it works inside argument lists, 
 const receipt = processPayment(
   cart[userId] ?none err 'Cart empty',
   token ?none err 'Missing token'
-) ?:err (e) err `Payment failed: ${e}`;
+) ?err (e) err `Payment failed: ${e}`;
 ```
 
 ### the side-effect trigger
 
-one side is all you care about: `?true` (or `?false`) with a single expression, no exit, no unwrap:
+one side is all you care about: a comparison with a single expression, no exit, no unwrap:
 
 ```tz
-status != 'ready' ?true log('going down');
+status ?!= 'ready' log('going down');
 ```
 
 the single-branch `if (cond) { ... }` from typescript, kept because it reads forward: condition, then what fires, on one line. an expression must always be captured, so `=>` as a statement is refused: a statement runs an expression or a block. a `=>` block as a statement is refused too, scopes do not take `=>`; `break` and `continue` are exits like any other on a side quest tail, but a `=>` block is a function boundary, so they are refused on it. longer reactions take the bare block form, one line or one block per side with `else` between them, and longer matches list every arm under a bare `?`.
 
 ### what side quests refuse
 
-the flip side of the ladder, in one place. an expression captures with `=>` and must always be captured, so `=>` as a statement is refused and a bare value after a side quest in an arrow capture is refused; a statement runs an expression or a block, with `else` between its two sides and a bare `?` block listing every arm of a longer match; a side quest after a consumed tail belongs to no subject, so chain with `else` or start a new statement; side quests do not nest, so bind the inner value first; one `else` per arrow capture; exits never hide in arrow bodies, `=>` blocks or `? {}` arms, and `try` never shares a statement with a side quest; bindings name values, not keywords, and the miss branch cannot borrow them. each refusal points at the line that needs restructuring, and `tsc` never sees the confusion.
+the flip side of the ladder, in one place. an expression captures with `=>` and must always be captured, so `=>` as a statement is refused and a bare value after a side quest in an arrow capture is refused; a statement runs an expression or a block, with `else` between its two sides and a bare `?` block listing every arm of a longer match; a side quest after a consumed tail belongs to no subject, so chain with `else` or start a new statement; side quests do not nest, so bind the inner value first; one `else` per arrow capture; exits never hide in arrow bodies, `=>` blocks or `? {}` arms, and `try` never shares a statement with a side quest; bindings name values, not keywords, and the miss branch cannot borrow them. binary quests add their own: glued values (`?5`, `?'hi'`, `?=y`), `?true` and `?false`, arithmetic tails, single-item groups, groups mixing `:tag` with comparisons, bare arm values, and `_` arms are all refused; a gap between `?` and its operator is refused too, and so is a missing one between the operator and its operand, so `? == 5` reads `?== 5` and `?==5` reads `?== 5`. each refusal points at the line that needs restructuring, and `tsc` never sees the confusion.
 
 ### summary of the construct matrix
 
 | construct | syntax | role | replaces |
 | --- | --- | --- | --- |
-| postfix exit | `val ?none err 'msg'`, `cond ?false return` | early exit from scope on failure | an early `return`, an `if (!cond) return` clause |
-| postfix arrow capture | `val ?none => dflt`, `cond ?false => 'guest'` | inline value substitution, with an exit allowed on the miss side | `??` |
-| arrow capture chain | `cond ?true => a else b` | capture one of two values | ternary `?:` |
-| inline exit | `a ?true { log(); return; }` | effects plus an exit, inline | `if` with effects and an early exit |
-| side-effect trigger | `cond ?true log('ok')`, `cond ?true { ... }` | run on match, keep going | single-branch `if` |
-| two-sided statement | `cond ?true a else b` | run one of two sides | two-branch `if`/`else` |
-| exhaustive statement | `cond ? { true a; false b; }` | run one of many sides, chaining with `else if` under conditions | `if`/`else` chains |
-| exhaustive arrow capture | `x ? { 200 => a, (x > 500) => b, _ => c }` | total coverage over values, branches, and conditions | `switch`, `if/else` chains |
+| postfix exit | `val ?none err 'msg'`, `cond ?== false return` | early exit from scope on failure | an early `return`, an `if (!cond) return` clause |
+| postfix arrow capture | `val ?none => dflt`, `cond ?== false => 'guest'` | inline value substitution, with an exit allowed on the miss side | `??` |
+| arrow capture chain | `cond ? => a else => b` | capture one of two values | ternary `?:` |
+| inline exit | `a ? { log(); return; }` | effects plus an exit, inline | `if` with effects and an early exit |
+| side-effect trigger | `cond ? log('ok')`, `cond ? { ... }` | run on match, keep going | single-branch `if` |
+| two-sided statement | `cond ? a else b` | run one of two sides | two-branch `if`/`else` |
+| exhaustive statement | `cond ? { == true a; == false b; }` | run one of many sides, chaining with `else if` under conditions | `if`/`else` chains |
+| exhaustive arrow capture | `x ? { == 200 => a, (x > 500) => b, else => c }` | total coverage over values, branches, and conditions | `switch`, `if/else` chains |
 
 ## scope
 
@@ -665,7 +701,7 @@ export type User = form.Decoded<typeof user>;
 
 ```tz
 const processPayload = (raw: unknown) => {
-  form.model(raw, user) ?false err 'malformed wire format';
+  form.model(raw, user) ?== false err 'malformed wire format';
   const u = form.decode(raw, user);
   log(`created at: ${u.createdAt}`);
   const payload = form.encode(u, user);
@@ -813,7 +849,7 @@ const loadConfig = (filePath: string) => scope (hold) => {
 
   const raw = try call => JSON.parse(file.readToString());
 
-  form.model(raw, configForm) ?false err `invalid configuration structure in ${filePath}`;
+  form.model(raw, configForm) ?== false err `invalid configuration structure in ${filePath}`;
 
   const config = form.decode(raw, configForm);
 
@@ -826,9 +862,9 @@ and its consumer, the same side quests on the way out: a scope ends with an `exi
 ```tz
 const serve = (filePath: string) => {
   const held = loadConfig(filePath);
-  const done = held.exit ?:panic (why) err `panic: ${why}`;
+  const done = held.exit ?:panic (why) err `panic: ${why.value}`;
   const config = try done;
-  config.port > 0 ?false err `a port has to be positive`;
+  config.port ?<= 0 err `a port has to be positive`;
   start(config);
   ok 'listening';
 };

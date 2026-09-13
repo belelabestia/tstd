@@ -21,15 +21,13 @@ const wraps: Record<string, Landing> = {
 /** the constructs tz adds, with the role they play and the handler that rewrites them */
 export const roles: { name: string, role: 'expression' | 'statement' | 'both', handler: string, match: string }[] = [
   { name: '=>',       role: 'expression', handler: 'arrowing',    match: '=>' },
-{ name: '?none',    role: 'both',       handler: 'matcherTail', match: '?none' },
+  { name: '?none',    role: 'both',       handler: 'matcherTail', match: '?none' },
   { name: '?some',    role: 'both',       handler: 'matcherTail', match: '?some' },
-  { name: '?true',    role: 'both',       handler: 'matcherTail', match: '?true' },
-  { name: '?false',   role: 'both',       handler: 'matcherTail', match: '?false' },
   { name: '?:tag',    role: 'both',       handler: 'matcherTail', match: '?:' },
   { name: '?literal', role: 'both',       handler: 'matcherTail', match: '?' },
   { name: '?(cond)',  role: 'both',       handler: 'matcherTail', match: '?(' },
   { name: '? {}',     role: 'both',       handler: 'questioning', match: '? {' },
-  { name: ':tag',     role: 'expression', handler: 'construct',   match: ':err' },
+  { name: 'branch',   role: 'expression', handler: 'construct',   match: 'branch(' },
   { name: 'try',      role: 'statement',  handler: 'propagate',   match: 'try' },
   { name: 'scope',    role: 'statement',  handler: 'scoping',     match: 'scope' },
   { name: 'call',     role: 'both',       handler: 'calling',     match: 'call' },
@@ -103,6 +101,7 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
   const edits: Edit[] = [];
   const taken: number[] = [];
   const consumed: boolean[] = [];
+  const headedOps: Array<boolean> = [];
   const sealed: boolean[] = [];
   const scoped: boolean[] = [];
   const dropped: Array<{ from: number, to: number }> = [];
@@ -209,8 +208,6 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
     return floor;
   };
 
-  const plain = ['none', 'some'];
-
   const check = (word: string, name: string) => {
     if (word === 'none') return `is.none(${name})`;
     if (word === 'some') return `is.some(${name})`;
@@ -220,21 +217,302 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
 
   const kept = (unwraps: boolean, name: string) => unwraps ? `${name}.value` : name;
 
-  const mend = (qq: number) => {
-    const a = matcher[qq];
-    if (a < 0) return -1;
-    if (tokens[a].text === '(') return twin[a];
-    const b = after[a];
-    if ((tokens[a].text === '-' || tokens[a].text === '+') && b >= 0 && tokens[b].kind === 'number' && tokens[a].to === tokens[b].from) return b;
-    return a;
+  const strictOp = (op: string) => op === '==' ? '===' : op === '!=' ? '!==' : op;
+
+  const binops = ['==', '!=', '<=', '>=', '<', '>'];
+
+  type Quest = { test: string, tip: number, cursor: number, unwraps: boolean, bindable: boolean, kind: string, tags: boolean, compares: boolean, conds: Array<{ from: number, to: number }> };
+
+  const operandEnd = (from: number, bound: number) => {
+    let j = from;
+    let end = -1;
+    let want = true;
+
+    const infix = ['+', '-', '*', '/', '%', '**', '<<', '>>', '>>>', '&', '|', '^', '&&', '||', '??', '==', '!=', '===', '!==', '<', '>', '<=', '>=', 'in', 'instanceof', 'as', 'satisfies'];
+    const prefix = ['!', '~', 'typeof', 'void', 'delete', '++', '--'];
+
+    const beforeWord = (k: number) => {
+      let p = before[k];
+      while (p >= 0 && tokens[p].kind === 'comment') p = before[p];
+      return p;
+    };
+
+    while (j >= 0 && j <= bound) {
+      const t = tokens[j];
+      if (t.kind === 'comment') { j++; continue; }
+      if (matcher[j] >= 0 && !consumed[j]) break;
+      if (t.text === '(' || t.text === '[') {
+        const shut = twin[j];
+        if (shut < 0 || shut > bound) break;
+        if (want) {
+          end = shut;
+          want = false;
+          j = after[shut];
+          continue;
+        }
+        const p = beforeWord(j);
+        const callable = t.text === '('
+          ? p >= 0 && (tokens[p].kind === 'word' || tokens[p].text === ')' || tokens[p].text === ']')
+          : p >= 0 && (tokens[p].kind === 'word' || tokens[p].kind === 'number' || tokens[p].kind === 'string' || tokens[p].kind === 'template' || tokens[p].text === ')' || tokens[p].text === ']');
+        if (callable) {
+          end = shut;
+          want = false;
+          j = after[shut];
+          continue;
+        }
+        break;
+      }
+      if (t.text === '.' || t.text === '?.') {
+        j = after[j];
+        if (j >= 0 && j <= bound && tokens[j].kind === 'word') { end = j; j = after[j]; }
+        continue;
+      }
+      if (t.text === '=>' || t.text === '{' || t.text === ';' || t.text === ',' || t.text === ':' || closes.includes(t.text)) break;
+      if (t.text === '=') break;
+      if (t.kind === 'word' && t.text === 'else' && keyword(tokens, before, j)) break;
+      if (t.kind === 'word' && ['return', 'ok', 'err', 'async', 'break', 'continue'].includes(t.text) && keyword(tokens, before, j)) break;
+      if (prefix.includes(t.text) || ((t.text === '+' || t.text === '-') && want)) { j = after[j]; continue; }
+      if (infix.includes(t.text)) {
+        if (want) break;
+        want = true;
+        j = after[j];
+        continue;
+      }
+      if (t.kind === 'word' || t.kind === 'number' || t.kind === 'string' || t.kind === 'template' || t.kind === 'regex') {
+        if (!want) break;
+        end = j;
+        want = false;
+        j = after[j];
+        continue;
+      }
+      break;
+    }
+
+    return end;
   };
 
-  const literal = (qq: number) => {
-    const a = matcher[qq];
-    return source.slice(tokens[a].from, tokens[mend(qq)].to);
+  type Grouped = { test: string, unwraps: boolean, tags: boolean, compares: boolean, conds: Array<{ from: number, to: number }>, shut: number };
+
+  const compared = (op: number, subj: string, bound: number): { test: string, end: number } | Failure => {
+    let s = after[op];
+    while (s >= 0 && s <= bound && tokens[s].kind === 'comment') s = after[s];
+    if (s < 0 || s > bound) return no(op, 'a comparison needs an operand');
+    if (tokens[op].to === tokens[s].from) return no(s, 'the operand takes a space; write ?== ...');
+    const end = operandEnd(s, bound);
+    if (end < 0) return no(op, 'a comparison needs an operand');
+    return { test: `${subj} ${strictOp(tokens[op].text)} (${spell(s, end, '', '')})`, end };
   };
 
-  const reserved = ['else', 'if', 'match', 'try', 'scope', 'protocol', 'form', 'call', 'make', 'ok', 'err', 'async', 'return', 'break', 'continue', 'none', 'some', 'true', 'false'];
+  const grouped = (amp: number, subj: string, subjName: string): Grouped | Failure => {
+    const open = after[amp];
+    if (open < 0 || tokens[open].text !== '(') return no(amp, 'a group lists halves in parens');
+    const shut = twin[open];
+    if (shut < 0) return no(open, 'a group has no closing paren');
+
+    const ranges: Array<{ from: number, to: number }> = [];
+    let cur = after[open];
+    let k = after[open];
+
+    while (k >= 0 && k < shut) {
+      const t = tokens[k];
+      if (t.kind === 'comment') { k++; continue; }
+      if (t.text === '(' || t.text === '[') { k = twin[k] >= 0 ? twin[k] + 1 : k + 1; continue; }
+      if (t.text === ',') { ranges.push({ from: cur, to: before[k] }); k = after[k]; cur = k; continue; }
+      k++;
+    }
+
+    ranges.push({ from: cur, to: before[shut] });
+
+    if (ranges.length < 2) return no(open, 'a group joins halves; one test needs no group');
+
+    const joiner = tokens[amp].text === '&' ? ' && ' : ' || ';
+    const parts: string[] = [];
+    let unwraps = false;
+    let tags = false;
+    let compares = false;
+    const conds: Array<{ from: number, to: number }> = [];
+
+    for (const half of ranges) {
+      let m = half.from;
+      while (m >= 0 && m <= half.to && tokens[m].kind === 'comment') m++;
+
+      if (m < 0 || m > half.to) return no(open, 'an empty half tests nothing');
+
+      const h = tokens[m];
+
+      if (h.text === '?' && matcher[m] >= 0 && !consumed[m]) {
+        const sub = quest(m, subj, subjName);
+        if (!('test' in sub)) return sub;
+        let e = sub.cursor;
+        while (e >= 0 && e <= half.to && tokens[e].kind === 'comment') e++;
+        if (e >= 0 && e <= half.to) return no(e, 'a half holds one test');
+        parts.push(`(${sub.test})`);
+        unwraps = unwraps || sub.unwraps;
+        tags = tags || sub.tags;
+        compares = compares || sub.compares;
+        for (const c of sub.conds) conds.push(c);
+        continue;
+      }
+
+      if (binops.includes(h.text)) {
+        const c = compared(m, subj, half.to);
+        if (!('test' in c)) return c;
+        let e = after[c.end];
+        while (e >= 0 && e <= half.to && tokens[e].kind === 'comment') e++;
+        if (e >= 0 && e <= half.to) return no(e, 'a half holds one test');
+        parts.push(`(${c.test})`);
+        compares = true;
+        continue;
+      }
+
+      if (h.text === ':') {
+        const w = after[m];
+        if (w < 0 || w > half.to || tokens[w].kind !== 'word') return no(m, 'a : half names a branch');
+        let e = after[w];
+        while (e >= 0 && e <= half.to && tokens[e].kind === 'comment') e++;
+        if (e >= 0 && e <= half.to) return no(e, 'a half holds one test');
+        parts.push(`(${check(tokens[w].text, subj)})`);
+        tags = true;
+        continue;
+      }
+
+      if (h.kind === 'word' && (h.text === 'none' || h.text === 'some')) {
+        if (after[m] <= half.to) return no(after[m], 'a half holds one test');
+        parts.push(`(is.${h.text}(${subj}))`);
+        compares = true;
+        continue;
+      }
+
+      if (h.text === '(') {
+        const shut2 = twin[m];
+        if (shut2 < 0 || shut2 > half.to) return no(m, 'a condition has no closing paren');
+        if (after[m] === shut2) return no(m, 'a condition tests something');
+        if (nested(after[m], before[shut2])) return no(m, 'matchers do not nest; bind the inner value first');
+        let e = after[shut2];
+        while (e >= 0 && e <= half.to && tokens[e].kind === 'comment') e++;
+        if (e >= 0 && e <= half.to) return no(e, 'a half holds one test');
+        parts.push(`((${spell(after[m], before[shut2], subjName, subj)}) === true)`);
+        conds.push({ from: after[m], to: before[shut2] });
+        compares = true;
+        continue;
+      }
+
+      return no(m, 'a half starts with ==, :, ( or ?');
+    }
+
+    if (tags && compares) return no(open, 'a group never mixes branch tags with comparisons');
+
+    return { test: `(${parts.join(joiner)})`, unwraps, tags, compares, conds, shut };
+  };
+
+  const quest = (qq: number, subj: string, subjName: string): Quest | Failure => {
+    const tag = matcher[qq];
+
+    if (tag === qq) {
+      consumed[qq] = true;
+      return { test: `${subj} === true`, tip: qq, cursor: after[qq], unwraps: false, bindable: false, kind: 'bare', tags: false, compares: true, conds: [] };
+    }
+
+    if (tokens[tag].text === '(') {
+      const shut = twin[tag];
+      if (shut < 0) return no(tag, 'a condition has no closing paren');
+      if (after[tag] === shut) return no(tag, 'a condition tests something');
+      if (subjName === '') return no(tag, '?(...) tests a name; bind the value first');
+      if (nested(after[tag], before[shut])) return no(tag, 'matchers do not nest; bind the inner value first');
+      consumed[qq] = true;
+      return { test: `(${spell(after[tag], before[shut], subjName, subj)}) === true`, tip: tag, cursor: after[shut], unwraps: false, bindable: false, kind: 'cond', tags: false, compares: true, conds: [{ from: after[tag], to: before[shut] }] };
+    }
+
+    if (binops.includes(tokens[tag].text)) {
+      const c = compared(tag, subj, tokens.length - 1);
+      if (!('test' in c)) return c;
+      consumed[qq] = true;
+      return { test: c.test, tip: tag, cursor: after[c.end], unwraps: false, bindable: false, kind: 'cmp', tags: false, compares: true, conds: [] };
+    }
+
+    if (tokens[tag].text === '&' || tokens[tag].text === '|') {
+      const g = grouped(tag, subj, subjName);
+      if (!('test' in g)) return g;
+      consumed[qq] = true;
+      return { test: g.test, tip: tag, cursor: after[g.shut], unwraps: g.unwraps, bindable: false, kind: 'group', tags: g.tags, compares: g.compares, conds: g.conds };
+    }
+
+    const word = tokens[tag].text;
+    const coloned = before[tag] >= 0 && tokens[before[tag]].text === ':';
+    const unwraps = (word === 'ok' || word === 'err') && !coloned;
+    consumed[qq] = true;
+    return { test: check(word, subj), tip: tag, cursor: after[tag], unwraps, bindable: word !== 'none', kind: word, tags: true, compares: false, conds: [] };
+  };
+
+  type Head = { kind: 'branch' | 'cmp' | 'group' | 'cond' | 'presence' | 'else', expr: string, value: string, tags: string[], next: number, conds: Array<{ from: number, to: number }> };
+
+  const headed = (k: number, close: number, subj: string, subjName: string): Head | Failure => {
+    const t = tokens[k];
+
+    if (t.text === ':') {
+      const tag = after[k];
+      if (tag < 0 || tag >= close || tokens[tag].kind !== 'word') return no(k, 'a : arm names a branch');
+      return { kind: 'branch', expr: `${subj}.branch === '${tokens[tag].text}'`, value: tokens[tag].text, tags: [tokens[tag].text], next: after[tag], conds: [] };
+    }
+
+    if (binops.includes(t.text)) {
+      const c = compared(k, subj, close);
+      if (!('test' in c)) return c;
+      return { kind: 'cmp', expr: c.test, value: spell(after[k], c.end, '', ''), tags: [], next: after[c.end], conds: [] };
+    }
+
+    if (t.text === '&' || t.text === '|') {
+      const g = grouped(k, subj, subjName);
+      if (!('test' in g)) return g;
+      if (g.shut >= close) return no(k, 'a group has no closing paren');
+      return { kind: 'group', expr: g.test, value: '', tags: [], next: after[g.shut], conds: g.conds };
+    }
+
+    if (t.text === '(') {
+      const shut = twin[k];
+      if (shut < 0 || shut >= close) return no(k, 'a condition has no closing paren');
+      if (after[k] === shut) return no(k, 'a condition tests something');
+      if (nested(after[k], before[shut])) return no(k, 'matchers do not nest; bind the inner value first');
+      if (subjName === '') return no(k, 'a condition tests a name; bind the value first');
+      if (uses(after[k], before[shut], subjName) > 0) return no(k, 'the subject is lifted; elide it or bind the inner value first');
+      return { kind: 'cond', expr: `(${spell(after[k], before[shut], subjName, subj)}) === true`, value: '', tags: [], next: after[shut], conds: [{ from: after[k], to: before[shut] }] };
+    }
+
+    if (t.kind === 'word' && (t.text === 'none' || t.text === 'some')) {
+      return { kind: 'presence', expr: `is.${t.text}(${subj})`, value: t.text, tags: [], next: after[k], conds: [] };
+    }
+
+    if (t.kind === 'word' && t.text === 'else') {
+      return { kind: 'else', expr: '', value: '', tags: [], next: after[k], conds: [] };
+    }
+
+    if (t.kind === 'number' || t.kind === 'string' || t.kind === 'template' || (t.kind === 'word' && (t.text === 'true' || t.text === 'false')) || t.text === '-' || t.text === '+' || t.text === '_') {
+      return no(k, 'bare values refuse; an arm starts with ==, :, &, |, ( or else');
+    }
+
+    if (t.text === '?') {
+      return no(k, 'halves join in a group; write ?&(...) or ?|(...)');
+    }
+
+    return no(k, 'an arm starts with ==, :, &, |, ( or else');
+  };
+
+  const barmed = (open: number, close: number) => {
+    let f = after[open];
+    while (f >= 0 && f < close && tokens[f].kind === 'comment') f = after[f];
+    if (f < 0 || f >= close) return false;
+    const h = tokens[f];
+    if (h.text === '(') {
+      const shut = twin[f];
+      const nx = shut >= 0 ? after[shut] : -1;
+      if (nx < 0 || nx >= close) return false;
+      const nt = tokens[nx].text;
+      return nt !== ';' && nt !== ',';
+    }
+    return binops.includes(h.text) || ['&', '|', ':', 'else', 'none', 'some', '_', '?', '-', '+'].includes(h.text) || h.kind === 'number' || h.kind === 'string' || h.kind === 'template' || (h.kind === 'word' && (h.text === 'true' || h.text === 'false'));
+  };
+
+  const reserved = ['else', 'if', 'try', 'scope', 'protocol', 'form', 'call', 'make', 'ok', 'err', 'async', 'return', 'break', 'continue', 'none', 'some', 'true', 'false'];
 
   const holes = (text: string, bound: string) => {
     const spans: Array<{ from: number, to: number }> = [];
@@ -462,230 +740,8 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
 
     return count;
   };
-  const conditional = (i: number) => no(i, 'an if expression is refused; answer with ?true => ... else ...');
+  const conditional = (i: number) => no(i, 'an if expression is refused; answer with ? => ... else ...');
 
-  const questioning = (q: number) => {
-    const open = after[q];
-    const end = twin[open];
-    if (end < 0) return no(q, 'a ? {} block has no closing brace');
-
-    let s = before[q];
-    let depth = 0;
-    let start = -1;
-    const delims = ['(', ',', '[', '=', ':', ';', '{', '}', 'return', 'ok', 'err', '=>'];
-
-    while (s >= 0) {
-      const t = tokens[s];
-      if (t.kind === 'comment') { s = before[s]; continue; }
-      if (closes.includes(t.text)) { depth++; s = before[s]; continue; }
-      if (carries.includes(t.text)) {
-        if (depth === 0) { start = after[s]; break; }
-        depth--;
-        s = before[s];
-        continue;
-      }
-      if (depth === 0) {
-        if (matcher[s] >= 0) return no(q, 'matchers do not nest; bind the inner value first');
-        if (delims.includes(t.text) && (t.kind !== 'word' || keyword(tokens, before, s))) { start = after[s]; break; }
-      }
-
-      s = before[s];
-    }
-
-    if (start < 0) start = 0;
-
-    const stop = before[q];
-    if (start > stop) return no(q, 'a ? {} tests a value');
-
-    const landed = before[start];
-    const sits = landed >= 0 && ['(', ',', '[', '=', ':', '=>', 'return', 'ok', 'err'].includes(tokens[landed].text) && (tokens[landed].kind !== 'word' || keyword(tokens, before, landed));
-    if (!sits) return no(q, 'an expression must always be captured; a ? {} statement runs an expression or a block');
-
-    const arms: number[] = [];
-
-    for (let j = after[open]; j >= 0 && j < end;) {
-      arms.push(j);
-
-      const comma = find(j, end - 1, [',', ';']);
-      if (comma < 0) break;
-
-      j = after[comma];
-    }
-
-    let branching = false;
-    let hasCond = false;
-    for (const arm of arms) {
-      if (tokens[arm].text === ':') branching = true;
-      if (tokens[arm].text === '?' && matcher[arm] >= 0 && tokens[matcher[arm]].text === ':') branching = true;
-      if (tokens[arm].text === '(') hasCond = true;
-    }
-
-    const one = start === stop;
-    const named = one && tokens[start].kind === 'word';
-    const needTemp = (branching || hasCond) && !named;
-    const name = needTemp ? temp(q) : '';
-    const subject = named ? tokens[start].text : name;
-    const subjWord = named ? tokens[start].text : '';
-
-    if (hasCond && !named) {
-      const badSubject = arms.some((arm) => tokens[arm].text === '(');
-      if (badSubject) return no(q, 'a condition tests a name; bind the value first');
-    }
-
-    if (hasCond && named) edits.push({ from: tokens[start].from, to: tokens[open].from, text: '(() => { switch (true) ' });
-    else if (!branching || named) edits.push({ from: tokens[start].from, to: tokens[start].from, text: '(() => { switch (' });
-    else edits.push({ from: tokens[start].from, to: tokens[start].from, text: `(() => { const ${name} = ` });
-
-    if (hasCond && named) { }
-    else if (branching && named) edits.push({ from: tokens[stop].to, to: tokens[open].from, text: '.branch) ' });
-    else if (branching) edits.push({ from: tokens[stop].to, to: tokens[open].from, text: `; switch (${name}.branch) ` });
-    else edits.push({ from: tokens[stop].to, to: tokens[open].from, text: ') ' });
-
-    edits.push({ from: tokens[end].from, to: tokens[end].to, text: '} })()' });
-
-    const carried = named ? `${subject}.value` : `${name}.value`;
-
-    for (const arm of arms) {
-      const stop = find(arm, end - 1, [',']);
-      const arrow = find(arm, (stop >= 0 ? stop : end) - 1, ['=>']);
-      if (arrow < 0) return no(arm, 'a ? {} arm answers with =>');
-
-      const answer = after[arrow];
-      if (answer < 0 || answer >= end) return no(arrow, 'a ? {} arm needs an answer');
-
-      if (tokens[answer].kind === 'word' && exits.includes(tokens[answer].text) && keyword(tokens, before, answer)) {
-        return no(answer, 'a ? {} arm answers with a value; hoist the exit out');
-      }
-
-      const wildcard = tokens[arm].text === '_';
-      const branch = tokens[arm].text === ':';
-      const cond = tokens[arm].text === '(';
-
-      if (tokens[arm].kind === 'word' && (tokens[arm].text === 'none' || tokens[arm].text === 'some')) {
-        return no(arm, 'none and some test presence; use a ?none matcher or a statement ? {}');
-      }
-
-      if (!hasCond) {
-        if (branching && !wildcard && !branch) return no(arm, 'a ? {} reads branches or reads values, never both');
-        if (!branching && branch) return no(arm, 'a :tag arm needs a subject that carries branches');
-      }
-
-      let label = '';
-      let bind = -1;
-      let condSpan: { from: number, to: number } | undefined = undefined;
-
-      if (cond) {
-        const shut = twin[arm];
-        if (shut < 0 || shut >= end) return no(arm, 'a condition has no closing paren');
-        if (after[arm] === shut) return no(arm, 'a condition tests something');
-        if (nested(after[arm], before[shut])) return no(arm, 'matchers do not nest; bind the inner value first');
-        condSpan = { from: after[arm], to: before[shut] };
-        const afterCond = after[shut];
-        if (afterCond >= 0 && afterCond < arrow && tokens[afterCond].text === '(') return no(afterCond, 'a condition binds nothing; the subject is already named');
-        label = `case (${spell(after[arm], before[shut], subjWord, subject)}):`;
-      }
-      else if (branch) {
-        const tag = after[arm];
-        if (tag < 0 || tokens[tag].kind !== 'word') return no(arm, 'a : arm names a branch');
-
-        label = hasCond ? `case (${subject}.branch === '${tokens[tag].text}'):` : `case '${tokens[tag].text}':`;
-        bind = after[tag];
-      }
-
-      if (wildcard) { label = 'default:'; bind = after[arm]; }
-
-      let bound = '';
-
-      if (bind >= 0 && bind < arrow && tokens[bind].text === '(') {
-        if (condSpan !== undefined) return no(bind, 'a condition binds nothing; the subject is already named');
-        if (!branching && !hasCond) return no(bind, 'only a branch arm binds a value');
-
-        const shut = twin[bind];
-        const inner = after[bind];
-        if (shut < 0 || inner < 0 || inner >= shut) return no(bind, 'an arm binds a name, or nothing at all');
-
-        bound = tokens[inner].text;
-        if (reserved.includes(bound)) return no(inner, 'a binding names a value, not a keyword');
-      }
-
-      if (label === '' && tokens[before[arrow]].text === ')') return no(arm, 'only a branch arm binds a value');
-
-      const block = tokens[answer].text === '{';
-
-      if (label === '') {
-        if (hasCond) {
-          const val = spell(arm, before[arrow], '', '');
-          edits.push({ from: tokens[arm].from, to: tokens[before[arrow]].to, text: `case (${subject} === ${arm === before[arrow] ? val : `(${val})`}):` });
-          edits.push({ from: tokens[before[arrow]].to, to: tokens[arrow].to, text: '' });
-        }
-        else {
-          edits.push({ from: tokens[arm].from, to: tokens[arm].from, text: 'case ' });
-          edits.push({ from: tokens[before[arrow]].to, to: tokens[arrow].to, text: ':' });
-        }
-      }
-      else {
-        const opens = block || bound === '' ? `${label} ` : `${label} { const ${bound} = ${carried}; return `;
-        edits.push({ from: tokens[arm].from, to: tokens[answer].from, text: opens });
-      }
-
-      const comma = find(answer, end - 1, [',']);
-
-      if (bound !== '' && uses(answer, block ? twin[answer] : comma >= 0 ? before[comma] : before[end], bound) === 0) {
-        return no(bind, `(${bound}) is never used; drop the binding`);
-      }
-
-      if (!block) {
-        const bound = comma >= 0 ? comma : end;
-        const bad = calling(answer, comma >= 0 ? before[comma] : before[end], -1);
-        if (bad !== undefined) return bad;
-
-        for (let st = answer; st >= 0 && st <= bound; st++) {
-          if (tokens[st].kind === 'comment') continue;
-          if (tokens[st].text === '{') { st = twin[st] >= 0 ? twin[st] : st; continue; }
-          if (tokens[st].text === ':') {
-            const raised = construct(st, true);
-            if (raised !== undefined) return raised;
-          }
-        }
-      }
-
-      if (block) {
-        const shut = twin[answer];
-        if (shut < 0 || shut >= end) return no(answer, 'a ? {} arm block has no closing brace');
-
-        let deep = 0;
-
-        for (let st = after[answer]; st >= 0 && st < shut; st++) {
-          const u = tokens[st];
-          if (u.kind === 'comment') continue;
-          if (u.text === '(' || u.text === '[' || u.text === '{') { if (twin[st] >= 0) deep++; continue; }
-          if (u.text === ')' || u.text === ']' || u.text === '}') { deep--; continue; }
-          if (u.kind !== 'word' || !starts[st] || !keyword(tokens, before, st)) continue;
-
-          if (u.text === 'ok' || u.text === 'err' || u.text === 'async') return no(st, 'a ? {} arm answers with a value; hoist the exit out');
-          if (deep === 0 && (u.text === 'break' || u.text === 'continue')) return no(st, 'a break in an arm block leaves the ? {}, not the loop; hoist it out');
-        }
-
-        if (bound !== '') edits.push({ from: tokens[answer].to, to: tokens[answer].to, text: ` const ${bound} = ${carried};` });
-        if (comma >= 0) edits.push({ from: tokens[comma].from, to: tokens[comma].to, text: '' });
-
-        continue;
-      }
-
-      if (label === '' || bound === '') edits.push({ from: tokens[answer].from, to: tokens[answer].from, text: 'return ' });
-
-      const shut = bound === '' ? ';' : '; }';
-
-      if (comma >= 0) edits.push({ from: tokens[comma].from, to: tokens[comma].to, text: shut });
-      else {
-        const last = before[end];
-        edits.push({ from: tokens[last].to, to: tokens[last].to, text: shut });
-      }
-    }
-
-    consumed[q] = true;
-    return undefined;
-  };
 
   const scoping = (i: number) => {
     const t = tokens[i];
@@ -938,7 +994,7 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
       const q = params && o >= 0 ? before[o] : -1;
       const plain = params && (tokens[p].kind === 'word' ? tokens[p].text !== 'call' && tagged[p] < 0 : q < 0 || (tokens[q].kind !== 'word' || (tokens[q].text !== 'scope' && tokens[q].text !== 'call')) && tagged[q] < 0);
 
-      if (plain) edits.push({ from: tokens[aw].from, to: tokens[aw].to, text: '' });
+      if (plain) edits.push({ from: tokens[aw].from, to: tokens[at].from, text: '' });
     }
 
     if (tokens[n].text === '=>' && keyword(tokens, before, n)) {
@@ -1103,7 +1159,6 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
 
     const kind = frames[body[init]].kind;
     if (kind === 'iife') return no(init, 'try would leave the iife rather than the function; hoist it out');
-    if (kind === 'match') return no(init, 'try would leave the match rather than the function; hoist it out');
 
     const name = temp(i);
     const last = ends(init);
@@ -1164,7 +1219,7 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
         if (t.kind === 'comment') continue;
         if (matcher[j] >= 0 && (!freshOnly || !consumed[j])) return true;
         if (carries.includes(t.text) && twin[j] >= 0) {
-          if (walk(j + 1, twin[j] - 1)) return true;
+          if (walk(j + 1, Math.min(twin[j] - 1, b))) return true;
           j = twin[j];
         }
       }
@@ -1239,6 +1294,8 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
   };
 
   const chain: (i: number, from: number, last: number, span: { from: number, to: number }, box?: { temp: string }) => string | undefined | Failure = (i, from, last, span, box) => {
+    let startArrow = -1;
+    if (from >= 0 && tokens[from].text === '=>') { startArrow = from; from = after[from]; }
     const q = mark(from, last);
     if (q < 0) {
       if (box === undefined) return undefined;
@@ -1250,7 +1307,7 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
 
       const n = after[from];
       const body = n >= 0 && n <= last && tokens[n].text !== ';' ? spell(n, before[last], '', '') : '';
-      span.from = from;
+      span.from = startArrow >= 0 ? startArrow : from;
       span.to = before[last];
       dropped.push({ from, to: before[last] });
       return t.text === 'break' || t.text === 'continue'
@@ -1263,56 +1320,21 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
 
     if (nested(from, before[q])) return no(q, 'matchers do not nest; bind the inner value first');
 
-    const tests: string[] = [];
-    let tip = q;
-    let cursor = q;
-    let unwraps = false;
-    let bindable = true;
-
     const conds: Array<{ from: number, to: number }> = [];
     const subjStop = before[q];
     const subjName = from === subjStop && from >= 0 && tokens[from].kind === 'word' && !reserved.includes(tokens[from].text) ? tokens[from].text : '';
     const subj = subjName === '' ? sub : subjName;
     const lead = subjName === '' ? '; ' : '';
 
-    while (cursor >= 0 && matcher[cursor] >= 0) {
-      const tag = matcher[cursor];
-
-      if (tokens[tag].text === '(') {
-        const shut = twin[tag];
-        if (shut < 0) return no(tag, 'a condition has no closing paren');
-        if (after[tag] === shut) return no(tag, 'a condition tests something');
-        if (subjName === '') return no(tag, '?(...) tests a name; bind the value first');
-        if (nested(after[tag], before[shut])) return no(tag, 'matchers do not nest; bind the inner value first');
-        conds.push({ from: after[tag], to: before[shut] });
-        tests.push(`(${spell(after[tag], before[shut], subjName, subj)}) === true`);
-        bindable = false;
-        consumed[cursor] = true;
-        tip = tag;
-        cursor = after[shut];
-        continue;
-      }
-
-      const word = tokens[tag].text;
-
-      if (tokens[tag].kind === 'number' || tokens[tag].kind === 'string' || word === '-' || word === '+' || word === 'true' || word === 'false') {
-        tests.push(`${subj} === ${literal(cursor)}`);
-        bindable = false;
-        consumed[cursor] = true;
-        tip = tag;
-        cursor = after[mend(cursor)];
-        continue;
-      }
-
-      tests.push(check(word, subj));
-      if (!plain.includes(word)) unwraps = true;
-      if (word === 'none') bindable = false;
-      consumed[cursor] = true;
-      tip = tag;
-      cursor = after[tag];
-    }
-
-    const test = tests.join(' || ');
+    const qr = quest(q, subj, subjName);
+    if (!('test' in qr)) return qr;
+    if (qr.cursor >= 0 && matcher[qr.cursor] >= 0 && !consumed[qr.cursor]) return no(qr.cursor, 'halves join in a group; write ?&(...) or ?|(...)');
+    const test = qr.test;
+    const tip = qr.tip;
+    let cursor = qr.cursor;
+    const unwraps = qr.unwraps;
+    const bindable = qr.bindable;
+    for (const c of qr.conds) conds.push(c);
     const hold = kept(unwraps, subj);
 
     let bound = '';
@@ -1411,11 +1433,14 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
           return no(bindAt, `(${bound}) is never used; drop the binding`);
         }
       }
-      else {
-        const n = after[other];
-        if (n >= 0 && tokens[n].text === '=>') {
-          const answer = after[n];
-          if (answer < 0) return no(n, 'an else branch answers with =>; it needs a value');
+        else {
+          const n = after[other];
+          if (n >= 0 && tokens[n].text === '=>') {
+            const answer = after[n];
+            if (answer < 0) return no(n, 'an else branch answers with =>; it needs a value');
+            if (tokens[answer].kind === 'word' && ['return', 'ok', 'err', 'break', 'continue'].includes(tokens[answer].text) && keyword(tokens, before, answer)) {
+              return no(n, 'to decline, use an exit; drop the =>');
+            }
 
           if (tokens[answer].text === '{') {
             const close = twin[answer];
@@ -1471,7 +1496,7 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
     }
 
     const opens = suspends ? 'await (async () => ' : '(() => ';
-    span.from = from;
+    span.from = startArrow >= 0 ? startArrow : from;
     span.to = chainTo;
     dropped.push({ from, to: chainTo });
 
@@ -1484,6 +1509,12 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
 
   const declining = (i: number, init: number, at: number, last: number, land?: Landing) => {
     const tails = ['return', 'ok', 'err', 'break', 'continue'];
+
+    if (matcher[at] === at) {
+      const nx = after[at];
+      if (nx >= 0 && tokens[nx].text === '{' && twin[nx] >= 0 && barmed(nx, twin[nx])) return undefined;
+    }
+
     const name = temp(i);
 
     consumed[at] = true;
@@ -1504,54 +1535,16 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
     let cursor: number = at;
 
     while (true) {
-      const tests: string[] = [];
-      let tip = cursor;
-      let unwraps = false;
-      let bindable = true;
-      let kind = '';
-      const conds: Array<{ from: number, to: number }> = [];
-
-      while (cursor >= 0 && matcher[cursor] >= 0) {
-        const tag = matcher[cursor];
-
-        if (tokens[tag].text === '(') {
-          const shut = twin[tag];
-          if (shut < 0) return no(tag, 'a condition has no closing paren');
-          if (after[tag] === shut) return no(tag, 'a condition tests something');
-          if (subjName === '') return no(tag, '?(...) tests a name; bind the value first');
-          if (nested(after[tag], before[shut])) return no(tag, 'matchers do not nest; bind the inner value first');
-          conds.push({ from: after[tag], to: before[shut] });
-tests.push(`(${spell(after[tag], before[shut], subjName, subj)}) === true`);
-          bindable = false;
-          if (kind === '') kind = 'cond';
-          consumed[cursor] = true;
-          tip = tag;
-          cursor = after[shut];
-          continue;
-        }
-
-        const word = tokens[tag].text;
-
-        if (tokens[tag].kind === 'number' || tokens[tag].kind === 'string' || word === '-' || word === '+' || word === 'true' || word === 'false') {
-          tests.push(`${subj} === ${literal(cursor)}`);
-          bindable = false;
-          if (kind === '') kind = 'literal';
-          consumed[cursor] = true;
-          tip = tag;
-          cursor = after[mend(cursor)];
-          continue;
-        }
-
-tests.push(check(word, subj));
-        if (!plain.includes(word)) unwraps = true;
-        if (word === 'none') bindable = false;
-        if (kind === '') kind = word;
-        consumed[cursor] = true;
-        tip = tag;
-        cursor = after[tag];
-      }
-
-      const test = tests.join(' || ');
+      const qr = quest(cursor, subj, subjName);
+      if (!('test' in qr)) return qr;
+      if (qr.cursor >= 0 && matcher[qr.cursor] >= 0 && !consumed[qr.cursor]) return no(qr.cursor, 'halves join in a group; write ?&(...) or ?|(...)');
+      const test = qr.test;
+      const tip = qr.tip;
+      cursor = qr.cursor;
+      const unwraps = qr.unwraps;
+      const bindable = qr.bindable;
+      const kind = qr.kind;
+      const conds = qr.conds;
       const hold = kept(unwraps, subj);
 
       let bound = '';
@@ -1560,10 +1553,9 @@ tests.push(check(word, subj));
       if (cursor >= 0 && tokens[cursor].text === '(') {
         if (!bindable) {
           if (conds.length > 0) return no(cursor, '?(...) binds nothing; the subject is already named');
-          if (kind === 'none') return no(cursor, `?${kind} binds nothing; absence carries no value`);
-          if (kind === 'some') return no(cursor, `?${kind} binds nothing; mixed with ?none it names no one value`);
-          if (kind === 'literal') return no(cursor, 'a literal binds nothing; there is no value to name');
-          return no(cursor, `?${kind} binds nothing; a boolean carries no value`);
+          if (kind === 'none') return no(cursor, `?none binds nothing; absence carries no value`);
+          if (kind === 'bare') return no(cursor, 'a bare ? binds nothing; it tests == true');
+          return no(cursor, `?${tokens[tip].text} binds nothing; there is no value to name`);
         }
 
         const close = twin[cursor];
@@ -1748,6 +1740,12 @@ tests.push(check(word, subj));
           const r = chain(i, after[other], last, inner);
           if (r !== undefined && typeof r !== 'string') return r;
           if (typeof r === 'string') edits.push({ from: tokens[inner.from].from, to: tokens[inner.to].to, text: r });
+          else {
+            const n = after[other];
+            if (n >= 0 && tokens[n].text === '=>' && after[n] >= 0 && ['return', 'ok', 'err', 'break', 'continue'].includes(tokens[after[n]].text) && keyword(tokens, before, after[n])) {
+              return no(n, 'to decline, use an exit; drop the =>');
+            }
+          }
 
           const missAt = typeof r === 'string' ? -1 : after[other];
 
@@ -1767,7 +1765,8 @@ tests.push(check(word, subj));
 
           edits.push({ from: anchor, to: tokens[answer].from, text: `${lead}${land.open}${test} ? ` });
           edits.push({ from: tokens[before[other]].to, to: tokens[before[other]].to, text: ' : ' });
-          edits.push({ from: tokens[other].from, to: tokens[other].to, text: '' });
+          const missArrow = after[other];
+          edits.push({ from: tokens[other].from, to: typeof r !== 'string' && missArrow >= 0 && tokens[missArrow].text === '=>' ? tokens[missArrow].to : tokens[other].to, text: '' });
 
           if (land.close !== '') edits.push({ from: tokens[before[last]].to, to: tokens[before[last]].to, text: land.close });
 
@@ -2020,7 +2019,7 @@ tests.push(check(word, subj));
 
       if (tail === 'async') return no(cursor, 'async states a promise body, not a matcher tail');
       if (tail === 'else') return no(cursor, 'else chains a => answer; use ?true ... else ... for statements');
-      if (tail === ':') return no(cursor, '?: is refused; answer with ?true => ... else ...');
+      if (tail === ':') return no(cursor, '?: is refused; answer with ? => ... else ...');
       if (tail === ';' || tail === ',' || closes.includes(tail)) return no(cursor, 'a matcher needs a tail: an exit, an expression, or a block');
 
       return no(cursor, 'an expression must always be captured; to decline, use an exit');
@@ -2170,7 +2169,7 @@ tests.push(check(word, subj));
         if (!isTail) parts.push(tokens[j].text);
 
         const end = bodyEnd(j, to);
-        const inner = linkBody(i, n, end, bound, hold, { top: false, ladder: false });
+        const inner = linkBody(i, n, end, bound, hold, box === undefined ? { top: false, ladder: false } : box);
         if (typeof inner !== 'string') return inner;
 
         parts.push(inner);
@@ -2206,6 +2205,16 @@ tests.push(check(word, subj));
   };
 
   const linkOne = (i: number, at: number, last: number, floor: number, out: { code: string, end: number, start: number }, box?: { top: boolean, ladder: boolean }) => {
+    if (matcher[at] === at) {
+      const nx = after[at];
+      if (nx >= 0 && tokens[nx].text === '{' && twin[nx] >= 0 && barmed(nx, twin[nx])) {
+        out.code = source.slice(tokens[at].from, tokens[twin[nx]].to);
+        out.start = at;
+        out.end = twin[nx];
+        return undefined;
+      }
+    }
+
     const sub = temp(i);
 
     let s = before[at];
@@ -2240,54 +2249,19 @@ tests.push(check(word, subj));
 
     const subject = spell(start, stop, '', '');
 
-    const tests: string[] = [];
-    let tip = at;
-    let cursor = at;
-    let unwraps = false;
-    let bindable = true;
-    const conds: Array<{ from: number, to: number }> = [];
     const subjName = start === stop && start >= 0 && tokens[start].kind === 'word' && !reserved.includes(tokens[start].text) ? tokens[start].text : '';
     const subj = subjName === '' ? sub : subjName;
     const lead = subjName === '' ? '; ' : '';
 
-    while (cursor >= 0 && matcher[cursor] >= 0) {
-      const tag = matcher[cursor];
-
-      if (tokens[tag].text === '(') {
-        const shut = twin[tag];
-        if (shut < 0) return no(tag, 'a condition has no closing paren');
-        if (after[tag] === shut) return no(tag, 'a condition tests something');
-        if (subjName === '') return no(tag, '?(...) tests a name; bind the value first');
-        if (nested(after[tag], before[shut])) return no(tag, 'matchers do not nest; bind the inner value first');
-        conds.push({ from: after[tag], to: before[shut] });
-        tests.push(`(${spell(after[tag], before[shut], subjName, subj)}) === true`);
-        bindable = false;
-        consumed[cursor] = true;
-        tip = tag;
-        cursor = after[shut];
-        continue;
-      }
-
-      const word = tokens[tag].text;
-
-      if (tokens[tag].kind === 'number' || tokens[tag].kind === 'string' || word === '-' || word === '+' || word === 'true' || word === 'false') {
-        tests.push(`${subj} === ${literal(cursor)}`);
-        bindable = false;
-        consumed[cursor] = true;
-        tip = tag;
-        cursor = after[mend(cursor)];
-        continue;
-      }
-
-      tests.push(check(word, subj));
-      if (!plain.includes(word)) unwraps = true;
-      if (word === 'none') bindable = false;
-      consumed[cursor] = true;
-      tip = tag;
-      cursor = after[tag];
-    }
-
-    const test = tests.join(' || ');
+    const lqr = quest(at, subj, subjName);
+    if (!('test' in lqr)) return lqr;
+    if (lqr.cursor >= 0 && matcher[lqr.cursor] >= 0 && !consumed[lqr.cursor]) return no(lqr.cursor, 'halves join in a group; write ?&(...) or ?|(...)');
+    const test = lqr.test;
+    const tip = lqr.tip;
+    let cursor = lqr.cursor;
+    const unwraps = lqr.unwraps;
+    const bindable = lqr.bindable;
+    const conds = lqr.conds;
     const hold = kept(unwraps, subj);
 
     let bound = '';
@@ -2296,6 +2270,7 @@ tests.push(check(word, subj));
     if (cursor >= 0 && tokens[cursor].text === '(') {
       if (!bindable) {
         if (conds.length > 0) return no(cursor, '?(...) binds nothing; the subject is already named');
+        if (lqr.kind === 'bare') return no(cursor, 'a bare ? binds nothing; it tests == true');
         return no(cursor, `?${tokens[tip].text} binds nothing; there is no value to name`);
       }
 
@@ -2314,13 +2289,13 @@ tests.push(check(word, subj));
 
     for (const c of conds) if (bound !== '' && uses(c.from, c.to, bound) > 0) return no(c.from, 'a binding belongs to the tail; narrow the subject in the condition instead');
 
-    const exits = ['return', 'ok', 'err', 'break', 'continue'];
+    const tails = ['return', 'ok', 'err', 'break', 'continue'];
 
     if (cursor < 0 || tokens[cursor].text !== '=>') {
-      if (cursor >= 0 && exits.includes(tokens[cursor].text)) return no(cursor, 'an arrow body answers; decline in a block');
+      if (cursor >= 0 && tails.includes(tokens[cursor].text)) return no(cursor, 'an arrow body answers; decline in a block');
       if (cursor >= 0 && tokens[cursor].text === 'async') return no(cursor, 'async states a promise body, not a matcher tail');
       if (cursor >= 0 && tokens[cursor].text === 'else') return no(cursor, 'else chains a => answer');
-      if (cursor >= 0 && tokens[cursor].text === ':') return no(cursor, '?: is refused; answer with ?true => ... else ...');
+      if (cursor >= 0 && tokens[cursor].text === ':') return no(cursor, '?: is refused; answer with ? => ... else ...');
       return no(cursor < 0 ? tip : cursor, 'an arrow body answers with =>');
     }
 
@@ -2329,7 +2304,7 @@ tests.push(check(word, subj));
     if (answer < 0) return no(arrow, 'a fallback needs a value');
 
     const ahead = tokens[answer].text;
-    if (exits.includes(ahead) || ahead === 'async') return no(answer, 'an arrow body answers; decline in a block');
+    if (tails.includes(ahead) || ahead === 'async') return no(answer, 'an arrow body answers; decline in a block');
 
     let yielded = '';
     let tail = -1;
@@ -2410,6 +2385,9 @@ tests.push(check(word, subj));
         if (n < 0 || (tokens[n].text !== '=>' && mark(n, bound2) < 0)) {
           return no(other, 'a bare value answers nothing; answer with => or an exit');
         }
+        if (tokens[n].text === '=>' && after[n] >= 0 && ['return', 'ok', 'err', 'break', 'continue'].includes(tokens[after[n]].text) && keyword(tokens, before, after[n])) {
+          return no(n, 'to decline, use an exit; drop the =>');
+        }
 
         const rest = linkBody(i, after[other], bound2, '', '', box);
         if (typeof rest !== 'string') return rest;
@@ -2484,6 +2462,12 @@ tests.push(check(word, subj));
         if (t.text === '{') {
           const f = holds[j];
           const close = twin[j];
+          const qq = before[j];
+
+          if (qq >= 0 && tokens[qq].text === '?' && matcher[qq] >= 0) {
+            j = close >= 0 ? close + 1 : j + 1;
+            continue;
+          }
 
           if (f >= 0 && frames[f].kind === 'object' && close >= 0) {
             const bad = walk(j + 1, close - 1, false);
@@ -2524,6 +2508,14 @@ tests.push(check(word, subj));
   };
 
   const lift = (i: number, at: number, anchor: number, floor: number, out: { at: number }) => {
+    if (matcher[at] === at) {
+      const nx = after[at];
+      if (nx >= 0 && tokens[nx].text === '{' && twin[nx] >= 0 && barmed(nx, twin[nx])) {
+        out.at = twin[nx] + 1;
+        return undefined;
+      }
+    }
+
     const delims = ['(', ',', '[', '=', ':', ';', '{', '}', 'return', 'ok', 'err'];
 
     let s = before[at];
@@ -2559,54 +2551,19 @@ tests.push(check(word, subj));
 
     const name = temp(i);
 
-    const tests: string[] = [];
-    let tip = at;
-    let cursor = at;
-    let unwraps = false;
-    let bindable = true;
-    const conds: Array<{ from: number, to: number }> = [];
     const subjName = start === stop && start >= 0 && tokens[start].kind === 'word' && !reserved.includes(tokens[start].text) ? tokens[start].text : '';
     const subj = subjName === '' ? name : subjName;
     const lead = subjName === '' ? '; ' : '';
 
-    while (cursor >= 0 && matcher[cursor] >= 0) {
-      const tag = matcher[cursor];
-
-      if (tokens[tag].text === '(') {
-        const shut = twin[tag];
-        if (shut < 0) return no(tag, 'a condition has no closing paren');
-        if (after[tag] === shut) return no(tag, 'a condition tests something');
-        if (subjName === '') return no(tag, '?(...) tests a name; bind the value first');
-        if (nested(after[tag], before[shut])) return no(tag, 'matchers do not nest; bind the inner value first');
-        conds.push({ from: after[tag], to: before[shut] });
-        tests.push(`(${spell(after[tag], before[shut], subjName, subj)}) === true`);
-        bindable = false;
-        consumed[cursor] = true;
-        tip = tag;
-        cursor = after[shut];
-        continue;
-      }
-
-      const word = tokens[tag].text;
-
-if (tokens[tag].kind === 'number' || tokens[tag].kind === 'string' || word === '-' || word === '+' || word === 'true' || word === 'false') {
-        tests.push(`${subj} === ${literal(cursor)}`);
-        bindable = false;
-        consumed[cursor] = true;
-        tip = tag;
-        cursor = after[mend(cursor)];
-        continue;
-      }
-
-      tests.push(check(word, subj));
-      if (!plain.includes(word)) unwraps = true;
-      if (word === 'none') bindable = false;
-      consumed[cursor] = true;
-      tip = tag;
-      cursor = after[tag];
-    }
-
-    const test = tests.join(' || ');
+    const qr = quest(at, subj, subjName);
+    if (!('test' in qr)) return qr;
+    if (qr.cursor >= 0 && matcher[qr.cursor] >= 0 && !consumed[qr.cursor]) return no(qr.cursor, 'halves join in a group; write ?&(...) or ?|(...)');
+    const test = qr.test;
+    const tip = qr.tip;
+    let cursor = qr.cursor;
+    const unwraps = qr.unwraps;
+    const bindable = qr.bindable;
+    const conds = qr.conds;
     const hold = kept(unwraps, subj);
 
     let bound = '';
@@ -2615,6 +2572,7 @@ if (tokens[tag].kind === 'number' || tokens[tag].kind === 'string' || word === '
     if (cursor >= 0 && tokens[cursor].text === '(') {
       if (!bindable) {
         if (conds.length > 0) return no(cursor, '?(...) binds nothing; the subject is already named');
+        if (qr.kind === 'bare') return no(cursor, 'a bare ? binds nothing; it tests == true');
         return no(cursor, `?${tokens[tip].text} binds nothing; there is no value to name`);
       }
 
@@ -2805,6 +2763,9 @@ if (tokens[tag].kind === 'number' || tokens[tag].kind === 'string' || word === '
             const answer = after[n];
             const k = ending(answer);
             if (k < 0) return no(other, 'a fallback needs a semicolon');
+            if (tokens[answer].kind === 'word' && ['return', 'ok', 'err', 'break', 'continue'].includes(tokens[answer].text) && keyword(tokens, before, answer)) {
+              return no(n, 'to decline, use an exit; drop the =>');
+            }
             stop = before[k];
             code = spell(answer, stop, '', '');
             edits.push({ from: tokens[other].from, to: tokens[stop].to, text: '' });
@@ -2859,7 +2820,7 @@ if (tokens[tag].kind === 'number' || tokens[tag].kind === 'string' || word === '
 
     if (tail === 'async') return no(cursor, 'async states a promise body, not a matcher tail');
     if (tail === 'else') return no(cursor, 'else chains a => answer; juxtapose blocks');
-    if (tail === ':') return no(cursor, '?: is refused; answer with ?true => ... else ...');
+    if (tail === ':') return no(cursor, '?: is refused; answer with ? => ... else ...');
     if (tail === ';' || tail === ',' || closes.includes(tail)) return no(cursor, 'a matcher needs a tail: an exit, =>, or a block');
 
     return no(cursor, 'a => answers with a value; to decline, use an exit');
@@ -2872,8 +2833,7 @@ if (tokens[tag].kind === 'number' || tokens[tag].kind === 'string' || word === '
     const land = wraps[t.text];
     const kind = frames[body[i]].kind;
 
-    const held = kind === 'match' ? 'a match arm' : 'a fallback';
-    if (kind === 'match' || kind === 'iife') return no(i, `${t.text} would leave the iife rather than the function; ${held} answers with return`);
+    if (kind === 'iife') return no(i, `${t.text} would leave the iife rather than the function; a fallback answers with return`);
 
     const n = after[i];
 
@@ -2898,13 +2858,12 @@ if (tokens[tag].kind === 'number' || tokens[tag].kind === 'string' || word === '
 
     const tag = after[i];
     if (tag < 0 || tokens[tag].kind !== 'word') return undefined;
-    if (!arms && frames[owner[i]].kind === 'match') return undefined;
 
     if (!arms) {
       const own = owner[i];
       const o = own >= 0 ? frames[own].open : -1;
       const qq = o >= 0 ? before[o] : -1;
-      if (o >= 0 && (frames[own].kind === 'block' || frames[own].kind === 'object') && qq >= 0 && tokens[qq].text === '?' && matcher[qq] < 0) return undefined;
+      if (o >= 0 && (frames[own].kind === 'block' || frames[own].kind === 'object') && qq >= 0 && tokens[qq].text === '?' && (matcher[qq] < 0 || matcher[qq] === qq)) return undefined;
     }
 
     const word = tokens[tag].text;
@@ -3132,7 +3091,7 @@ if (tokens[tag].kind === 'number' || tokens[tag].kind === 'string' || word === '
       for (let j = init; j >= 0 && j <= last; j++) {
         const t = tokens[j];
         if (t.kind === 'comment') continue;
-        if (t.text === '?' && matcher[j] < 0 && !consumed[j]) {
+        if (t.text === '?' && (matcher[j] < 0 || matcher[j] === j) && !consumed[j]) {
           const n = after[j];
           if (n >= 0 && tokens[n].text === '{') { q = j; break; }
         }
@@ -3163,20 +3122,9 @@ if (tokens[tag].kind === 'number' || tokens[tag].kind === 'string' || word === '
       }
       if (arms.length === 0) return no(open, 'a ? {} block names at least one branch');
 
-      if (mode !== 'statement') {
-        const quick = arms.some((arm) => {
-          for (let j = arm.start; j >= 0 && j < arm.end; j++) {
-            const u = tokens[j];
-            if (u.kind === 'comment') continue;
-            if (u.text === ':' && j === arm.start) { j = after[j]; continue; }
-            if (u.text === '{' || u.text === '?') return true;
-            if (carries.includes(u.text)) { j = jump(j) - 1; continue; }
-            if (u.kind === 'word' && (u.text === 'return' || u.text === 'ok' || u.text === 'err' || u.text === 'break' || u.text === 'continue') && keyword(tokens, before, j)) return true;
-          }
-          return false;
-        });
-        if (!quick) return undefined;
-      }
+      let f = arms[0].start;
+      while (f >= 0 && f < close && tokens[f].kind === 'comment') f = after[f];
+      if (!barmed(open, close) && f >= 0 && f < close) return undefined;
 
       const subject = spell(subjectStart, stop, '', '');
       const name = temp(i);
@@ -3189,8 +3137,7 @@ if (tokens[tag].kind === 'number' || tokens[tag].kind === 'string' || word === '
 
       type Arm = {
         start: number, end: number,
-        kind: 'branch' | 'cond' | 'presence' | 'value' | 'wild',
-        matcher: boolean,
+        kind: 'branch' | 'cond' | 'presence' | 'cmp' | 'group' | 'else',
         tags: string[],
         expr: string,
         value: string,
@@ -3207,86 +3154,25 @@ if (tokens[tag].kind === 'number' || tokens[tag].kind === 'string' || word === '
       for (const arm of arms) {
         let k = arm.start;
         const info: Arm = {
-          start: arm.start, end: arm.end, kind: 'value', matcher: false,
+          start: arm.start, end: arm.end, kind: 'cmp',
           tags: [], expr: '', value: '', bind: '', bindAt: -1, tailAt: -1,
           tail: 'expr', exit: '', declines: false
         };
 
-        if (tokens[k].text === ':') {
-          const tag = after[k];
-          if (tag < 0 || tag >= close || tokens[tag].kind !== 'word') return no(k, 'a ? {} arm names a literal, true, false, none, some, or :tag');
-          info.kind = 'branch';
-          info.tags = [tokens[tag].text];
-          info.expr = `${subj}.branch === '${tokens[tag].text}'`;
-          info.value = tokens[tag].text;
-          k = after[tag];
-        }
-        else if (tokens[k].text === '?' && after[k] >= 0 && tokens[after[k]].text === ':' && after[after[k]] >= 0 && tokens[after[after[k]]].kind === 'word') {
-          info.kind = 'branch';
-          info.matcher = true;
-          info.declines = true;
-          const ors: string[] = [];
-          while (k >= 0 && k < close && tokens[k].text === '?' && after[k] >= 0 && tokens[after[k]].text === ':' && after[after[k]] >= 0 && tokens[after[after[k]]].kind === 'word') {
-            const w = after[after[k]];
-            info.tags.push(tokens[w].text);
-            ors.push(`${subj}.branch === '${tokens[w].text}'`);
-            k = after[w];
-          }
-          info.expr = ors.join(' || ');
-          info.value = info.tags.join(',');
-        }
-        else if (tokens[k].kind === 'word' && (tokens[k].text === 'none' || tokens[k].text === 'some')) {
-          info.kind = 'presence';
-          info.expr = `is.${tokens[k].text}(${subj})`;
-          info.value = tokens[k].text;
-          if (tokens[k].text !== 'some') info.declines = true;
-          k = after[k];
-        }
-        else if (tokens[k].text === '(') {
-          const shut = twin[k];
-          if (shut < 0 || shut >= close) return no(k, 'a condition has no closing paren');
-          if (after[k] === shut) return no(k, 'a condition tests something');
-          if (nested(after[k], before[shut])) return no(k, 'matchers do not nest; bind the inner value first');
-          info.kind = 'cond';
-          info.expr = spell(after[k], before[shut], subjName, subj);
-          k = after[shut];
-        }
-        else if (tokens[k].kind === 'number' || tokens[k].kind === 'string' || tokens[k].kind === 'template' || (tokens[k].kind === 'word' && (tokens[k].text === 'true' || tokens[k].text === 'false')) || ((tokens[k].text === '-' || tokens[k].text === '+') && after[k] >= 0 && after[k] < close && tokens[after[k]].kind === 'number')) {
-          const end = (tokens[k].text === '-' || tokens[k].text === '+') ? after[k] : k;
-          info.kind = 'value';
-          info.value = source.slice(tokens[k].from, tokens[end].to);
-          info.expr = `${subj} === ${info.value}`;
-          k = after[end];
-        }
-        else if (tokens[k].kind === 'word' && tokens[k].text === '_') {
-          info.kind = 'wild';
-          k = after[k];
-        }
-        else if (tokens[k].kind === 'word' && tokens[k].text === 'else') {
-          return no(k, 'else belongs in a ?true ... else ... statement, not in ? {}');
-        }
-        else {
-          let m = k;
-          let found = -1;
-          while (m >= 0 && m < arm.end) {
-            const u = tokens[m];
-            if (u.kind === 'comment') { m++; continue; }
-            if (carries.includes(u.text)) { m = jump(m); continue; }
-            if (u.text === '=>' || u.text === '{' || u.text === ';' || u.text === ',') { found = m; break; }
-            if (u.kind === 'word' && ['return', 'ok', 'err', 'break', 'continue'].includes(u.text) && keyword(tokens, before, m)) { found = m; break; }
-            m++;
-          }
-          if (found < 0) return no(k, 'a ? {} arm needs an expression, a block, or an exit');
-          const val = spell(k, before[found], '', '');
-          info.kind = 'value';
-          info.value = val;
-          info.expr = `${subj} === ${val}`;
-          k = found;
-        }
+        const head = headed(k, close, subj, subjName);
+        if (!('kind' in head)) return head;
+        if (head.kind === 'else') consumed[arm.start] = true;
+        if (tokens[k].text === '==' || tokens[k].text === '!=') headedOps[k] = true;
+        info.kind = head.kind;
+        info.expr = head.expr;
+        info.value = head.value;
+        info.tags = head.tags;
+        if (head.kind === 'presence' && head.value !== 'some') info.declines = true;
+        k = head.next;
 
         if (k >= 0 && k < close && tokens[k].text === '(') {
           if (info.kind === 'presence' && info.value !== 'some') return no(k, '?none binds nothing; absence carries no value');
-          if (info.kind !== 'branch' && info.kind !== 'presence' && info.kind !== 'wild') return no(k, 'a ? {} arm binds nothing; there is no value to name');
+          if (info.kind !== 'branch' && !(info.kind === 'presence' && info.value === 'some')) return no(k, 'a ? {} arm binds nothing; there is no value to name');
           const shut = twin[k];
           if (shut < 0) return no(k, 'the binding has no closing paren');
           const inner = after[k];
@@ -3335,26 +3221,23 @@ if (tokens[tag].kind === 'number' || tokens[tag].kind === 'string' || word === '
 
       let hasBranch = false;
       let hasCond = false;
-      let hasDecline = false;
+      let elseCount = 0;
       for (const info of parsed) {
         if (info.kind === 'branch') hasBranch = true;
-        if (info.kind === 'cond' || info.kind === 'presence') hasCond = true;
-        if (info.declines) hasDecline = true;
+        if (info.kind === 'cond' || info.kind === 'presence' || info.kind === 'group') hasCond = true;
+        if (info.kind === 'cmp' && tokens[info.start].text !== '==') hasCond = true;
+        if (info.kind === 'else') elseCount++;
       }
-      if (hasBranch && parsed.some((a) => a.kind === 'value')) return no(parsed.find((a) => a.kind === 'value')!.start, 'a ? {} reads branches or reads values, never both');
+      if (elseCount > 1) return no(parsed.find((a) => a.kind === 'else')!.start, 'one else names the miss');
+      if (elseCount === 1 && parsed[parsed.length - 1].kind !== 'else') return no(parsed.find((a) => a.kind === 'else')!.start, 'else names the miss; it comes last');
+      if (hasBranch && parsed.some((a) => a.kind === 'cmp')) return no(parsed.find((a) => a.kind === 'cmp')!.start, 'a ? {} reads branches or reads values, never both');
       if (hasBranch && parsed.some((a) => a.kind === 'presence')) return no(parsed.find((a) => a.kind === 'presence')!.start, 'a ? {} reads branches or reads values, never both');
 
       for (const info of parsed) {
-        if (info.matcher && info.tail !== 'exit' && !(info.tail === '{' && info.declines)) {
-          return no(info.tailAt, 'a matcher arm declines; matched branches leave');
-        }
         if (info.tail === '=>' && mode === 'statement') return no(info.tailAt, 'an expression must always be captured; a ? {} arm runs an expression or a block');
         if (info.kind === 'presence' && mode !== 'statement') return no(info.start, 'none and some test presence; use a ?none matcher or a statement ? {}');
-        if (mode === 'statement' && info.kind === 'wild') return no(info.start, 'a ? {} block names every branch; _ answers a captured one');
         if (mode !== 'statement' && info.tail !== '=>' && !info.declines) return no(info.tailAt, 'a ? {} arm answers with a value or declines');
       }
-
-      if (mode !== 'statement' && !hasDecline) return undefined;
 
       const switchOn = hasCond ? 'true' : hasBranch ? `${subj}.branch` : subj;
       consumed[q] = true;
@@ -3394,7 +3277,7 @@ if (tokens[tag].kind === 'number' || tokens[tag].kind === 'string' || word === '
           for (const a of answers) {
             const hold = hasBranch ? held : subj;
             const armEnd = a.end < close ? before[a.end] : before[close];
-            if (a.kind === 'wild') { base = spell(after[a.tailAt], armEnd, a.bind, hold); continue; }
+            if (a.kind === 'else') { base = spell(after[a.tailAt], armEnd, a.bind, hold); continue; }
             parts.push(`(${a.expr} ? ${spell(after[a.tailAt], armEnd, a.bind, hold)} : `);
           }
           value = parts.join('') + base + ')'.repeat(parts.length);
@@ -3430,7 +3313,7 @@ if (tokens[tag].kind === 'number' || tokens[tag].kind === 'string' || word === '
       }
 
       const caseLabel = (info: Arm) => {
-        if (info.kind === 'wild') return 'default: ';
+        if (info.kind === 'else') return 'default: ';
         if (hasCond) return `case (${info.expr}): `;
         if (hasBranch) return info.tags.map((t) => `case '${t}':`).join(' ') + ' ';
         return `case ${info.value}: `;
@@ -3460,8 +3343,29 @@ if (tokens[tag].kind === 'number' || tokens[tag].kind === 'string' || word === '
             edits.push({ from: tokens[info.start].from, to: armTo, text: letTemp ? `${label}${t2} = ${iife}; break;` : `${label}return ${iife};` });
           }
           else {
-            const value = spell(a, armEnd, info.bind, hold);
-            edits.push({ from: tokens[info.start].from, to: armTo, text: letTemp ? `${label}${t2} = ${value}; break;` : `${label}return ${value};` });
+            const armStop = info.end < close ? before[info.end] : before[close];
+            const bad = calling(a, armStop, -1);
+            if (bad !== undefined) return bad;
+
+            for (let st = a; st >= 0 && st <= armStop; st++) {
+              if (tokens[st].kind === 'comment') continue;
+              if (tokens[st].text === '{') { st = twin[st] >= 0 ? twin[st] : st; continue; }
+              if (tokens[st].text === ':') {
+                const raised = construct(st, true);
+                if (raised !== undefined) return raised;
+              }
+            }
+
+            edits.push({ from: tokens[info.start].from, to: tokens[a].from, text: info.bind === '' ? (letTemp ? `${label}${t2} = ` : `${label}return `) : (letTemp ? `${label}${t2} = ` : `${label} { const ${info.bind} = ${hold}; return `) });
+            if (info.bind !== '' && letTemp) rename(a, armEnd, info.bind, hold);
+
+            const shut = !letTemp && info.bind !== '' ? '; }' : '; break;';
+            const comma = find(a, close - 1, [',']);
+            if (comma >= 0) edits.push({ from: tokens[comma].from, to: tokens[comma].to, text: shut });
+            else {
+              const last = before[close];
+              edits.push({ from: tokens[last].to, to: tokens[last].to, text: shut });
+            }
           }
           continue;
         }
@@ -3512,17 +3416,17 @@ if (tokens[tag].kind === 'number' || tokens[tag].kind === 'string' || word === '
     if (t.kind === 'comment') continue;
 
     if (t.kind === 'punct') {
-      if (t.text === '==') edits.push({ from: t.from, to: t.to, text: '===' });
-      if (t.text === '!=') edits.push({ from: t.from, to: t.to, text: '!==' });
+      const questOp = before[i] >= 0 && tokens[before[i]].text === '?' && tokens[before[i]].to === t.from && matcher[before[i]] >= 0;
+      if (t.text === '==' && !headedOps[i] && !questOp) edits.push({ from: t.from, to: t.to, text: '===' });
+      if (t.text === '!=' && !headedOps[i] && !questOp) edits.push({ from: t.from, to: t.to, text: '!==' });
 
       if (t.text === ':') {
         const bad = construct(i, false);
         if (bad !== undefined) return bad;
       }
 
-      if (t.text === '?' && matcher[i] < 0 && !consumed[i] && after[i] >= 0 && tokens[after[i]].text === '{') {
-        const bad = questioning(i);
-        if (bad !== undefined) return bad;
+      if (t.text === '?' && (matcher[i] < 0 || matcher[i] === i) && !consumed[i] && after[i] >= 0 && tokens[after[i]].text === '{') {
+        return no(i, 'an expression must always be captured; a ? {} statement runs an expression or a block');
       }
 
       continue;

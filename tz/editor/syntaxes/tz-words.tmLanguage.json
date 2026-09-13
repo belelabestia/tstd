@@ -12,6 +12,7 @@
     { "include": "#exit" },
     { "include": "#else" },
     { "include": "#matcher" },
+    { "include": "#binary" },
     { "include": "#branch" },
     { "include": "#arm" },
     { "include": "#arm-cond" }
@@ -90,10 +91,17 @@
       "name": "keyword.control.trycatch.tz"
     },
     "matcher": {
-      "match": "(\\?(?:none|some|true|false|:|\\())([A-Za-z_$][\\w$]*)?",
+      "match": "(\\?(?:none|some|ok|err|:|\\())([A-Za-z_$][\\w$]*)?",
       "captures": {
         "1": { "name": "keyword.control.flow.tz" },
         "2": { "name": "entity.name.tag.tz" }
+      }
+    },
+    "binary": {
+      "match": "(\\?)(==|!=|>=|<=|>|<|&|\\|)",
+      "captures": {
+        "1": { "name": "keyword.control.flow.tz" },
+        "2": { "name": "keyword.operator.comparison.tz" }
       }
     },
     "branch": {
@@ -103,12 +111,13 @@
       }
     },
     "arm": {
-      "match": "^\\s*(?:(:)([A-Za-z_$][\\w$]*)|(_)|([0-9][\\w$.]*|'[^'\\n]*'|\"[^\"\\n]*\"))(?=\\s*(?:\\(|=>))",
+      "match": "^\\s*(?:(:)([A-Za-z_$][\\w$]*)|(else)|(==|!=|>=|<=|>|<)|([&|]))(?=\\s*(?:\\(|=>|,|;))",
       "captures": {
         "1": { "name": "punctuation.separator.tag.tz" },
         "2": { "name": "entity.name.tag.tz" },
         "3": { "name": "keyword.control.flow.tz" },
-        "4": { "name": "constant.other.tz" }
+        "4": { "name": "keyword.operator.comparison.tz" },
+        "5": { "name": "keyword.operator.comparison.tz" }
       }
     },
     "arm-cond": {

@@ -37,13 +37,13 @@ New-Item -Path "$env:USERPROFILE\.vscode\extensions\typezig" -ItemType Junction 
 
 the words are an injection rather than a pattern in the grammar because an include of `source.ts` only reaches the top level of a file, and a side quest is always inside a body. an injection is merged into every rule at every depth instead, and `-comment -string` in its selector keeps it out of prose.
 
-it knows `try`, `scope`, `protocol`, `form`, `call`, `else`, the `ok`, `err`, `async`, `return`, `break` and `continue` exits, the `?none`, `?some`, `?true`, `?false`, `?:tag` and `?(cond)` side quests, the `:tag` construction, and the `:tag`, `_`, literal, quoted and `(cond)` arms of a `? {}` block. inside a `protocol` declaration it colors the branch names and the `=>` targets, so a machine reads as arrows between names instead of a block of white.
+it knows `try`, `scope`, `protocol`, `form`, `call`, `else`, the `ok`, `err`, `async`, `return`, `break` and `continue` exits, the `?none`, `?some`, `?==`, `?:tag` and `?(cond)` side quests, the `:tag` construction, and the `:tag`, `==`, `else` and `(cond)` arms of a `? {}` block. inside a `protocol` declaration it colors the branch names and the `=>` targets, so a machine reads as arrows between names instead of a block of white.
 
 two residues, both cosmetic. typescript's grammar reads a `? {}` arm as an object literal key, so a word in a quoted arm value arrives with no string scope on it and the selector cannot see it; the grammar refuses any word with a quote against it, which covers every spelling that occurs. and a tz word inside a template hole is not highlighted, because the whole template is a string to the selector.
 
 ## what is here
 
-- the side quest family, postfix on any value: `?none` / `?some`, `?true` / `?false`, `?:tag`, `?literal`, `?(cond)`, with an exit, an arrow capture, a block, or an `else` chain after them
+- the side quest family, postfix on any value: `?none` / `?some`, `?==` / `?!=` / `?>` / `?<` / `?>=` / `?<=`, `?&(...)` / `?|(...)`, `?:tag`, `?(cond)`, with an exit, an arrow capture, a block, or an `else` chain after them
 - `? {}`, over a value, a branch, or `true`: quoted and literal arms for values, a `:tag` arm matching a branch and binding what it carries, `(cond)` arms for computed cases, and `_` for the open case, with `tsc` owning totality
 - `:tag` construction, the literal notation for a branch, with or without its value
 - `ok`, `err`, `async`, `return`, `break`, `continue`: the exit family, with the one discipline per body they buy

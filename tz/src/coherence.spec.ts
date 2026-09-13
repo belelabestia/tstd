@@ -19,7 +19,7 @@ const docs = ['README.md', 'DESIGN.md', 'TUTORIAL.md'];
 
 const read = (file: string) => readFileSync(new URL(`../${file}`, import.meta.url), 'utf8');
 
-const words = [...keywords.words, ...keywords.tails, ...keywords.matchers];
+const words = [...keywords.words, ...keywords.tails, ...keywords.matchers, ...keywords.literals];
 
 const known = new Set([...words, ...banned, ...absent, ...roles.map((r) => r.name), ...puncts]);
 

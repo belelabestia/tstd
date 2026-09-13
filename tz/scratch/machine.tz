@@ -24,7 +24,7 @@ export const ready = (x: string) => {
 
 /** the payload of the one branch that carries an answer, reached by refusing the rest */
 export const finished = (x: Load) => {
-  const rows = x ?:idle ?:loading ?:failed return;
+  const rows = x ?|(:idle, :loading, :failed) return;
   return rows;
 };
 
@@ -32,7 +32,7 @@ export const finished = (x: Load) => {
 export const describe = (x: Load) => x ? {
   :done (rows) => rows,
   :failed (why) => `failed: ${why}`,
-  _ => 'still going'
+  else => 'still going'
 };
 
 /** a failed load goes straight back to loading, which is where a retry belongs */

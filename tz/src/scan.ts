@@ -1,7 +1,7 @@
 import { Token } from './lex.js';
 
 /** what a pair of braces encloses */
-export type Kind = 'file' | 'body' | 'iife' | 'match' | 'block' | 'object';
+export type Kind = 'file' | 'body' | 'iife' | 'block' | 'object';
 
 /** one pair of braces, and what the body it encloses does */
 export type Frame = {
@@ -35,18 +35,26 @@ const objects = [
   '===', '==', '!==', '!=', '<', '>', '<=', '>=', '...', '=>'
 ];
 
-const words = ['return', 'ok', 'err', 'async', 'satisfies', 'as', 'of', 'in', 'typeof', 'new', 'extends'];
+export const words = ['return', 'ok', 'err', 'async', 'satisfies', 'as', 'of', 'in', 'typeof', 'new', 'extends'];
 
-const tails = ['if', 'for', 'while'];
+export const tails = ['if', 'for', 'while'];
 
-const matchers = ['none', 'some', 'true', 'false'];
+export const matchers = ['none', 'some', 'ok', 'err'];
+
+export const literals = ['true', 'false'];
+
+/** the binary operators a `?` quest can glue onto */
+export const comparisons = ['==', '!=', '<=', '>=', '<', '>'];
+
+/** what can follow a bare `?` and still leave it a quest */
+const bareAfter = ['return', 'ok', 'err', 'async', 'break', 'continue', '=>', '{', ';', ',', ')', ']', '}'];
 
 /** the keyword vocabulary, split by where it can appear */
-export const keywords = { words, tails, matchers };
+export const keywords = { words, tails, matchers, literals };
 
 const values = ['word', 'string', 'number', 'template', 'regex'];
 
-const bodies = ['file', 'body', 'iife', 'match'];
+const bodies = ['file', 'body', 'iife'];
 
 const frame = (kind: Kind, open: number, parent: number) =>
   ({ kind, open, close: -1, parent, suspends: false, fallible: false, answers: false, promises: false, last: -1 });
@@ -128,7 +136,11 @@ export const scan = (tokens: Token[]) => {
     if (!ended(before[i])) continue;
 
     const n = after[i];
-    if (n < 0) continue;
+    if (n < 0) {
+      matcher[i] = i;
+      tagged[i] = i;
+      continue;
+    }
 
     if (tokens[n].kind === 'word' && matchers.includes(tokens[n].text) && t.to === tokens[n].from) {
       matcher[i] = n;
@@ -136,19 +148,50 @@ export const scan = (tokens: Token[]) => {
       continue;
     }
 
-    if ((tokens[n].kind === 'number' || tokens[n].kind === 'string') && t.to === tokens[n].from) {
-      matcher[i] = n;
-      tagged[n] = i;
+    if ((tokens[n].text === '&' || tokens[n].text === '|') && t.to === tokens[n].from) {
+      const o = after[n];
+      if (o >= 0 && tokens[o].text === '(' && tokens[n].to === tokens[o].from) {
+        matcher[i] = n;
+        tagged[n] = i;
+        if (twin[o] >= 0) tagged[twin[o]] = i;
+      }
       continue;
     }
 
-    if ((tokens[n].text === '-' || tokens[n].text === '+') && t.to === tokens[n].from) {
-      const m = after[n];
-      if (m >= 0 && tokens[m].kind === 'number' && tokens[n].to === tokens[m].from) {
-        matcher[i] = n;
-        tagged[n] = i;
-        continue;
+    if (comparisons.includes(tokens[n].text) && t.to === tokens[n].from) {
+      matcher[i] = n;
+      tagged[n] = i;
+
+      let end = -1;
+      let j = after[n];
+
+      while (j >= 0) {
+        const u = tokens[j];
+        if (u.kind === 'comment') { j = after[j]; continue; }
+        if (u.text === '(' || u.text === '[') {
+          const shut = twin[j];
+          if (shut < 0) break;
+          end = shut;
+          j = after[shut];
+          continue;
+        }
+        if (u.text === '.' || u.text === '?.') {
+          j = after[j];
+          if (j >= 0 && tokens[j].kind === 'word') { end = j; j = after[j]; }
+          continue;
+        }
+        if (u.text === '!' || u.text === '-' || u.text === '+' || u.text === '~' || (u.kind === 'word' && (u.text === 'typeof' || u.text === 'void' || u.text === 'delete'))) { j = after[j]; continue; }
+        if (u.kind === 'word' || u.kind === 'number' || u.kind === 'string' || u.kind === 'template' || u.kind === 'regex') {
+          if (u.kind === 'word' && ['return', 'ok', 'err', 'async', 'break', 'continue', 'else'].includes(u.text) && keyword(tokens, before, j)) break;
+          end = j;
+          j = after[j];
+          continue;
+        }
+        break;
       }
+
+      if (end >= 0) tagged[end] = i;
+      continue;
     }
 
     if (tokens[n].text === '(' && t.to === tokens[n].from) {
@@ -161,6 +204,36 @@ export const scan = (tokens: Token[]) => {
     if (c >= 0 && tokens[c].kind === 'word' && tokens[n].to === tokens[c].from) {
       matcher[i] = c;
       tagged[c] = i;
+      continue;
+    }
+
+    if (tokens[n].kind === 'word' && bareAfter.includes(tokens[n].text) && keyword(tokens, before, n)) {
+      matcher[i] = i;
+      tagged[i] = i;
+      continue;
+    }
+
+    if (tokens[n].kind === 'punct' && bareAfter.includes(tokens[n].text)) {
+      matcher[i] = i;
+      tagged[i] = i;
+      continue;
+    }
+
+    const glued = t.to === tokens[n].from;
+    const retired = (tokens[n].kind === 'number' || tokens[n].kind === 'string' || tokens[n].kind === 'template') ||
+      (tokens[n].kind === 'word' && (tokens[n].text === 'true' || tokens[n].text === 'false')) ||
+      tokens[n].text === '=' || comparisons.includes(tokens[n].text) ||
+      tokens[n].text === '&' || tokens[n].text === '|' ||
+      tokens[n].text === ':' || tokens[n].text === '(';
+    const valued = tokens[n].kind === 'number' || tokens[n].kind === 'string' || tokens[n].kind === 'template' ||
+      (tokens[n].kind === 'word' && (tokens[n].text === 'true' || tokens[n].text === 'false')) ||
+      tokens[n].text === '-' || tokens[n].text === '+';
+
+    if (tokens[n].text !== ':' && (!retired || !glued)) {
+      if (!valued && (glued || (!comparisons.includes(tokens[n].text) && tokens[n].text !== '=' && tokens[n].text !== '&' && tokens[n].text !== '|' && tokens[n].text !== '('))) {
+        matcher[i] = i;
+        tagged[i] = i;
+      }
     }
   }
 
@@ -185,12 +258,7 @@ export const scan = (tokens: Token[]) => {
       return 'body';
     }
 
-    if (t.text === ')' && twin[p] >= 0) {
-      const head = before[twin[p]];
-      if (head >= 0 && tokens[head].text === 'match') return 'match';
-
-      return 'block';
-    }
+    if (t.text === ')' && twin[p] >= 0) return 'block';
 
     if (objects.includes(t.text) || (t.kind === 'word' && words.includes(t.text))) return 'object';
     return 'block';

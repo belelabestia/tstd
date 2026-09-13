@@ -4,7 +4,39 @@ a journal of decisions. the spec lives in `tz/TUTORIAL.md`; the design notes liv
 
 ## agenda
 
-the next item is open. the doc-code coherence spec is built (`tz/COHERENCE.md`, `tz/src/coherence.spec.ts`): it walks the lexer, emitter, and ban list as the truth, then walks the docs and asserts that every backticked identifier is a known construct and every role claim (expression vs statement) matches the actual handler. it runs in `npm test`, so drift becomes a failing build. one adaptation from the plan: the docs backtick tstd members and variables as well as constructs, so the backtick walk carries a documented whitelist of those, and the plan's handler names were replaced with the real ones in `emit.ts` (`arrowing`, `matcherTail`, `questioning`, `construct`, `propagate`, `scoping`, `calling`, `forming`, `protocoling`, `exit`).
+the next item is open. the doc-code coherence spec is built (`tz/COHERENCE.md`, `tz/src/coherence.spec.ts`): it walks the lexer, emitter, and ban list as the truth, then walks the docs and asserts that every backticked identifier is a known construct and every role claim (expression vs statement) matches the actual handler. it runs in `npm test`, so drift becomes a failing build. one adaptation from the plan: the docs backtick tstd members and variables as well as constructs, so the backtick walk carries a documented whitelist of those, and the plan's handler names were replaced with the real ones in `emit.ts` (`arrowing`, `matcherTail`, `questioning`, `construct`, `propagate`, `scoping`, `calling`, `making`, `forming`, `protocoling`, `exit`).
+
+## 2026-09-13: conditionals become binary quests
+
+a `?` sits in the middle of a comparison now: it captures the expression on its left and tests it against the right. the operator glues onto the `?`, as in `x ?== 2` or `x ?> 0`, and the operators are exactly the boolean binaries (`==`, `!=`, `>`, `<`, `>=`, `<=`). `==` is mandatory on every test, so `?true`, `?false`, `?5`, `?'hi'` and glued `?=y` all retire in favour of `?== ...`, and a bare `?` means `?== true`. arithmetic and bitwise quests go with them; a modulo case spells `?(...)` or moves the computation left of the `?`.
+
+more than one right half takes one glued combinator plus parens: `x ?&(> 0, < 100)` holds when every half holds, `x ?|(< 0, > 100)` when any half holds. groups nest, a group of one is refused, and a group never mixes `:tag` with comparisons. `?(` stays the escape hatch for a self contained boolean; the combinator tells groups apart from it.
+
+the `? {}` block takes the same heads, arms being alternatives with one `else` for the miss, which replaces `_`. a block of only `==` arms switches on the subject internally; anything mixed cascades. the tutorial carries the full spec.
+
+the emitter follows it now. one shared quest parser feeds every path: single comparisons parenthesise their operand, groups join halves, nesting recurses, and juxtaposed quests are refused with a pointer to groups. the `? {}` block is handled in one place too: the old pure-answer path is gone, captured blocks funnel through a temp, and only `==` arms keep the `switch`. `else` arms are consumed so the statement `else` ban never sees them, and the `==`/`!=` rewrite skips quest operators and arm heads it would otherwise swallow. the scan tags glued operators, groups, and bare `?`, plus operand ends so tails restart, while the ban owns the spacing and retired-shape refusals. scratch, the editor grammar, and the readme walk the new syntax; the one scratch runtime failure is pre-existing on the base.
+
+## 2026-09-13: `?` compares at runtime, against spellings and variables
+
+a `?` matcher is a strict compare now, whatever follows it. a glued template reads as a literal: `` x ?`no row ${id}` `` emits `x === `no row ${id}``, the holes evaluating at runtime, so the old "static spelling, use quotes" refusal is gone. to compare against a variable instead of a spelling, glue an `=` between the `?` and the name: `x ?=y return` emits `x === y`, the name unquoted. the word after the `=` rides glued or spaced, but it has to be a plain name — a matcher, a literal, or a keyword there is refused, because `?=ok` would not know which reading it is.
+
+the scan tags both shapes, the ban only sees the broken ones: a spaced template is told to glue itself, a `?=` with no name or a reserved target gets its own sentence, and the generic refusal points at `?=name`. the emit reuses the literal slice for templates (backticks and holes survive, it is valid js) and pushes the bare name for `?=`. the `? {}` arms already took templates, so only the four statement loops and the scan gate changed, plus the grammar's matcher rules and the tutorial table.
+
+## 2026-09-13: a branch test gets two readings
+
+`?ok` and `?err` are matchers now: they name the `Result` branches the short way and bind the payload unwrapped, `const e = $0.value;`. a coloned `?:tag` keeps the old boxed shape, `const why = $0;`, and that is what makes a chain possible: `status ?:loading ?:err => 'wait, then bail'` reads the same union twice without a temp. the price is that `?:err (why)` binds the whole subject, not the payload; the docs spell the difference, and the scope-panic example reads `why.value`.
+
+the rest of the family is untouched: `?none`/`?some` still test presence, `?true`/`?false` still ride the literal path, and a bare `?idle` is still refused — `?:` is refused is the sentence that holds because the coloned reading exists.
+
+## 2026-09-13: `match` and `guard` retire
+
+the last two old-shape words leave the code and the teaching docs. `match` was a construct, retired as a word: the scan neither tags nor bans it, so `match` is a name like any other. `guard` leaves the ban list and the tutorial table; a decline is `?none`/`?false`, a table is `? {}`. the coherence walk found the drift on its own: backticked `match` and `guard` were still sitting in `DESIGN.md` and `TUTORIAL.md` as if they were constructs, and each one failed the backtick check with a line number.
+
+the roles closed in the same pass. `?true`/`?false` no longer have rows (they were already matchers, the literal path was the duplicate), and the `:tag` construction is named `branch` in the role list with handler `construct`, so a spec writes `branch('idle')` and the docs keep spelling `:idle`.
+
+## 2026-09-13: the mechanics of the round
+
+the small fixes the notes asked for, landed together. `hook.ts` throws a plain `Error` now: the loader hook has to throw on the host side, a `Result` it returned would have been swallowed. `absent` exports as a readonly array typed for `includes(string)`. the lexer's `opens` trimmed to twelve words. the awaiter's strip covers the inter-token gap, so `await` never leaves a double space behind. `instanceof` answers "a branch test" in both ban tables.
 
 ## 2026-09-12: the side quest is a statement too
 
