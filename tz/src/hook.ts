@@ -9,27 +9,29 @@ type Resolving = (specifier: string, context: Asked) => unknown;
 
 type Loading = (url: string, context: unknown) => unknown;
 
-const raise = (message: string) => {
-  const error = make(Error, message);
-  throw error.branch === 'err' ? message : error.value;
+const raise: (message: string) => never = (message) => {
+  throw new Error(message);
 };
 
-const at = (specifier: string, parent?: string) => {
-  const url = make(URL, specifier, parent);
-  if (url.branch === 'err') return raise(`cannot resolve ${specifier}`);
-
-  return url.value.href;
-};
+/** the tz source path a specifier points at, as a result: only the exported seams throw */
+const at = (specifier: string, parent?: string) => make(URL, specifier, parent);
 
 /** points a .tz specifier, and a .js one with a .tz beside it, at the tz source */
 export const resolve = (specifier: string, context: Asked, next: Resolving) => {
   const parent = context.parentURL;
 
-  if (specifier.endsWith('.tz')) return { url: at(specifier, parent), shortCircuit: true };
+  if (specifier.endsWith('.tz')) {
+    const url = at(specifier, parent);
+    if (url.branch === 'err') raise(`cannot resolve ${specifier}`);
+
+    return { url: url.value.href, shortCircuit: true };
+  }
 
   if (specifier.endsWith('.js') && specifier.startsWith('.')) {
     const url = at(`${specifier.slice(0, -3)}.tz`, parent);
-    if (existsSync(fileURLToPath(url))) return { url, shortCircuit: true };
+    if (url.branch === 'err') raise(`cannot resolve ${specifier}`);
+
+    if (existsSync(fileURLToPath(url.value))) return { url: url.value.href, shortCircuit: true };
   }
 
   return next(specifier, context);
@@ -41,10 +43,10 @@ export const load = (url: string, context: unknown, next: Loading) => {
 
   const where = fileURLToPath(url);
   const read = call.sync(() => readFileSync(where, 'utf8'));
-  if (read.branch === 'err') return raise(`cannot read ${where}`);
+  if (read.branch === 'err') raise(`cannot read ${where}`);
 
   const out = emit(read.value);
-  if (out.branch === 'err') return raise(`${where}(${out.value.line + 1},${out.value.column + 1}): error TZ: ${out.value.message}`);
+  if (out.branch === 'err') raise(`${where}(${out.value.line + 1},${out.value.column + 1}): error TZ: ${out.value.message}`);
 
   return { format: 'module-typescript', source: out.value.code, shortCircuit: true };
 };
