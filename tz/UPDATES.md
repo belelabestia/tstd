@@ -18,6 +18,8 @@ the emitter follows it now. one shared quest parser feeds every path: single com
 
 ## 2026-09-13: `?` compares at runtime, against spellings and variables
 
+superseded by the binary quests entry above, kept for history: glued templates and `?=name` are refused now, compare with `?== ...`.
+
 a `?` matcher is a strict compare now, whatever follows it. a glued template reads as a literal: `` x ?`no row ${id}` `` emits `x === `no row ${id}``, the holes evaluating at runtime, so the old "static spelling, use quotes" refusal is gone. to compare against a variable instead of a spelling, glue an `=` between the `?` and the name: `x ?=y return` emits `x === y`, the name unquoted. the word after the `=` rides glued or spaced, but it has to be a plain name — a matcher, a literal, or a keyword there is refused, because `?=ok` would not know which reading it is.
 
 the scan tags both shapes, the ban only sees the broken ones: a spaced template is told to glue itself, a `?=` with no name or a reserved target gets its own sentence, and the generic refusal points at `?=name`. the emit reuses the literal slice for templates (backticks and holes survive, it is valid js) and pushes the bare name for `?=`. the `? {}` arms already took templates, so only the four statement loops and the scan gate changed, plus the grammar's matcher rules and the tutorial table.
@@ -26,11 +28,11 @@ the scan tags both shapes, the ban only sees the broken ones: a spaced template 
 
 `?ok` and `?err` are matchers now: they name the `Result` branches the short way and bind the payload unwrapped, `const e = $0.value;`. a coloned `?:tag` keeps the old boxed shape, `const why = $0;`, and that is what makes a chain possible: `status ?:loading ?:err => 'wait, then bail'` reads the same union twice without a temp. the price is that `?:err (why)` binds the whole subject, not the payload; the docs spell the difference, and the scope-panic example reads `why.value`.
 
-the rest of the family is untouched: `?none`/`?some` still test presence, `?true`/`?false` still ride the literal path, and a bare `?idle` is still refused — `?:` is refused is the sentence that holds because the coloned reading exists.
+the rest of the family is untouched: `?none`/`?some` still test presence, and a bare `?idle` is still refused — `?:` is refused is the sentence that holds because the coloned reading exists. superseded in part by the binary quests entry above: `?true`/`?false` retire into `?==`, and juxtaposed chains join in groups.
 
 ## 2026-09-13: `match` and `guard` retire
 
-the last two old-shape words leave the code and the teaching docs. `match` was a construct, retired as a word: the scan neither tags nor bans it, so `match` is a name like any other. `guard` leaves the ban list and the tutorial table; a decline is `?none`/`?false`, a table is `? {}`. the coherence walk found the drift on its own: backticked `match` and `guard` were still sitting in `DESIGN.md` and `TUTORIAL.md` as if they were constructs, and each one failed the backtick check with a line number.
+the last two old-shape words leave the code and the teaching docs. `match` was a construct, retired as a word: the scan neither tags nor bans it, so `match` is a name like any other. `guard` leaves the ban list and the tutorial table; a decline is `?none` (or `?== false` since the binary quests entry above), a table is `? {}`. the coherence walk found the drift on its own: backticked `match` and `guard` were still sitting in `DESIGN.md` and `TUTORIAL.md` as if they were constructs, and each one failed the backtick check with a line number.
 
 the roles closed in the same pass. `?true`/`?false` no longer have rows (they were already matchers, the literal path was the duplicate), and the `:tag` construction is named `branch` in the role list with handler `construct`, so a spec writes `branch('idle')` and the docs keep spelling `:idle`.
 
