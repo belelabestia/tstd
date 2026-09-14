@@ -46,6 +46,10 @@ this is a research project; if you like its principles i suggest you just copy m
 
 the same goes if you feel like there are too many lacking features: feel free to try to implement those without sacrificing the radical minimalism that this approach embodies.
 
+## typezig
+
+`tz/` holds a prototype that goes further: typescript with most of typescript taken away, plus a handful of constructs, transpiled back to typescript that imports `tstd`. the entry point is `tz/README.md`.
+
 ## installation
 
 this library is built as js modules with `tsc` and can be installed via its github registry; it ships as esm only.

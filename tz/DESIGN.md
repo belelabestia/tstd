@@ -41,7 +41,7 @@ the constructs, in the order they were ruled:
 
 ## the ban list
 
-yes, and this is the part that makes tz a language instead of a preprocessor. a lexer that can find `function` can refuse `class`, the same walk in one table. the readme says an eslint ruleset "might come at some point"; this is that ruleset, delivered as a syntax error, at zero extra cost, with nothing to configure and no way to switch it off.
+yes, and this is the part that makes tz a language instead of a preprocessor. a lexer that can find `function` can refuse `class`, the same walk in one table. the readme says "i might provide an eslint ruleset at some point"; this is that ruleset, delivered as a syntax error, at zero extra cost, with nothing to configure and no way to switch it off.
 
 | refused | because | replacement |
 | --- | --- | --- |
@@ -54,7 +54,7 @@ yes, and this is the part that makes tz a language instead of a preprocessor. a 
 | `enum` | a hierarchy in disguise | `Union` or `protocol` |
 | `var` | reassignment is a design decision, `let` states it | `const`, or `let` |
 | `namespace` `module` | files are modules | a file |
-| `any` | it is not a type, it is the absence of one; the ban is what frees `any:` | `unknown` |
+| `any` | it is not a type, it is the absence of one | `unknown` |
 | `instanceof` | there are no classes to be an instance of | a branch test |
 | `function*` `yield` | flow hidden in a protocol | a loop |
 | `abstract` `implements` `private` `protected` `public` | class vocabulary | gone with `class` |
@@ -70,7 +70,7 @@ yes, and this is the part that makes tz a language instead of a preprocessor. a 
 | `async` as a **modifier** | inferred from `await`, so it is a second spelling | nothing, or `async x` |
 | `Promise.reject` | a rejection is a throw that happens later | resolve with a `Result` |
 
-`extends`, `super` and `constructor` need no rule: they are unreachable once `class` is gone. `extends` stays legal where it is a type operator (`<B extends Protocol<B>>`, conditional types), which is the only place tz can still spell it.
+`super` is ruled with the class vocabulary above. `extends` and `constructor` need no rule: they are unreachable once `class` is gone. `extends` stays legal where it is a type operator (`<B extends Protocol<B>>`, conditional types), which is the only place tz can still spell it.
 
 no statement `else`. a boolean with two meaningful cases is an expression, which is where a two-sided choice belongs, and a side quest chain (`? ... else ...`) is exactly that. a statement-level `else` is a funnel that refused to funnel: its `else if` chains are early exits nobody wrote, and `? {}` is there for the case that is really a table.
 
@@ -94,13 +94,12 @@ there is no pragma. a comment that turns a ban off for one line makes the ban li
 
 ## the new words
 
-none of `scope`, `protocol`, `on`, `any`, `ok` or `err` is reserved in javascript, and two of them are already `tstd` exports: `scope.sync(...)` and `protocol.init(...)` appear in real code today. the four syntactically contextual ones are recognised by what follows them:
+none of `scope`, `protocol`, `ok` or `err` is reserved in javascript, and two of them are already `tstd` exports: `scope.sync(...)` and `protocol.init(...)` appear in real code today. the syntactically contextual ones are recognised by what follows them:
 
 - `scope` then `(`, its matching `)`, then `=>`
 - `protocol` then a name then `{`, with `<S, E>` before the brace when it is generic
-- `on` or `any` then `:` then a tag, all three adjacent, after something that ends an expression
 
-the sigils are the one place the language is whitespace sensitive, and it is confined to a token pair on purpose. `on : err` is three tokens and not the construct; `{ on: x }` is an object literal because the `on` follows a `{` rather than a value. a general `:tag` sigil everywhere would have cost more, since `{a:success}` would change meaning.
+the `on:` and `any:` sigils are retired; the one sigil left is `:tag`, and it keeps a token-pair rule on purpose. `{ a: success }` stays an object literal because the colon follows a `{` rather than a value; a general `:tag` sigil everywhere would have cost more, since `{a:success}` would change meaning.
 
 a `:tag` inside a `? {}` arm needs none of that, because an arm cannot start with a `:` for any other reason.
 
@@ -207,7 +206,7 @@ what survives of the idea is already here. `x try` is `x ?err (e) err e`, so wri
 
 ## staging
 
-the work was planned in seven steps; the current state at each is below.
+the work was planned in eight steps; the current state at each is below.
 
 1. **lexer + the simplest constructs.** proves the pipeline and proves line preservation. superseded; the current constructs are the side quests and arrow captures.
 2. **the ban list.** a lexer walk with a table; this is what makes the language a language; every later check gets cheaper once `function` and method shorthand are gone. built.

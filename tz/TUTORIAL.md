@@ -257,13 +257,13 @@ the transpiler is a lexer, so it refuses unknown words line by line. every refus
 | `this` | an argument |
 | `new` | `make` |
 | `interface` | `type` |
-| `enum` | `Union or protocol` |
+| `enum` | `Union` or `protocol` |
 | `var` | `const`, or `let` |
 | `namespace`, `module` | a file |
 | `any` | `unknown` |
 | `instanceof` | a branch test |
-| `yield` | a loop |
-| `abstract`, `implements`, `private`, `protected`, `public`, `super`, `constructor` | gone with `class` |
+| `function*`, `yield` | a loop |
+| `abstract`, `implements`, `private`, `protected`, `public`, `super` | gone with `class` |
 | `throw` | `err` |
 | `switch` | `? {}` |
 | `catch`, `finally` | `call.sync`, `call.async`, or the tz `try` |
@@ -879,7 +879,5 @@ two things are missing and both are by design.
 the lsp and the type-aware checks are next: boolean conditions, `void`-prefixed `Result` statements, exhaustive `? {}` over unions. none belong in the emitter, which has no types; the exhaustiveness check needs `tsc`, and `tsc` is already there, with diagnostics moved back onto the tz source.
 
 `tz` is self contained on purpose, so it can move to its own repo with a `git mv`. it depends on `tstd` like any consumer, and the sugar never gets ahead of the library: every construct is a hand-written tstd pattern, one step from the plain typescript it lowers to.
-
-
 
 
