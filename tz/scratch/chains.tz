@@ -16,12 +16,15 @@ export const ping = (cond: boolean, log: (x: string) => void) => {
 };
 
 export const react = (cond: boolean, seen: (x: string) => void) => {
-  cond ? seen('yes') else seen('no');
+  cond ? seen('yes')
+  else seen('no');
 };
 
 /** a comparison match, strict identity without a precondition */
 export const tick = (n: number) =>
-  n ?== 0 => 'zero' else => n ?(n < 0) => 'neg' else => 'pos';
+  n ?== 0 => 'zero'
+  else => n ?(n < 0) => 'neg'
+  else => 'pos';
 
 /** comparisons answer together, switching on true only then */
 export const word = (code: number) => code ? {
@@ -66,6 +69,9 @@ export const rows = (x: Result<string, string>) => {
 
 /** a decline tail answers on the miss, binding the survivor and continuing */
 export const funnel = (x: Result<string, string>, y: boolean) => {
-  const a = x ?:ok err 'no ok' else (v) => y ? err 'no y' else => v;
+  const a = x ?:ok err 'no ok' 
+    else (v) => y ? err 'no y'
+    else => v;
+
   ok a;
 };
