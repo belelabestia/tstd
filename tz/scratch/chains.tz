@@ -12,6 +12,7 @@ export const level = (n: number) =>
 
 export const ping = (cond: boolean, log: (x: string) => void) => {
   cond ? log('up');
+  cond ?! log('down');
   return cond;
 };
 

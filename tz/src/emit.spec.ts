@@ -561,6 +561,35 @@ test('run one side as a statement, and exit from a block', () => {
   assert.match(refused('const f = (cond: boolean) => {\n  cond ? => log(`up`);\n  return 0;\n};'), /must always be captured/);
 });
 
+test('decline when false, and never with !== true', () => {
+  // ?! is the negated bare quest, so it tests == false the way ? tests == true
+
+  assert.equal(
+    out('const f = (cond: boolean) => {\n  cond ?! return;\n  return cond;\n};'),
+    'const f = (cond: boolean) => {\n  if (cond === false) return;\n  return cond;\n};'
+  );
+
+  // the difference is strict: !== true passes a truthy non-boolean, === false does not
+
+  assert.equal(
+    out('const f = (x: unknown) => {\n  const v = x ?! => `no` else => `yes`;\n  return v;\n};'),
+    'const f = (x: unknown) => {\n  const v = x === false ? `no` :   `yes`;\n  return v;\n};'
+  );
+
+  assert.equal(
+    out('const f = (cond: boolean, log: (x: string) => void) => {\n  cond ?! log(`down`);\n  return cond;\n};'),
+    'const f = (cond: boolean, log: (x: string) => void) => {\n  if (cond === false) log(`down`);\n  return cond;\n};'
+  );
+
+  // a bare ?! binds nothing, and a ?! {} block is refused while a hit tail is not
+
+  assert.match(refused('const f = (x: number) => {\n  const a = x ?! (v) => v;\n  return a;\n};'), /tests == false/);
+  assert.match(refused('const r = out ?! {\n  :ok => 1,\n  else => 0\n};'), /arms spell == explicitly/);
+  assert.match(refused('const f = (cond: boolean) => {\n  cond ? ! log(`down`);\n  return cond;\n};'), /means \?== false/);
+  assert.match(refused('const f = (x: number) => {\n  x ?!5 return;\n  return x;\n};'), /means \?== false/);
+  assert.match(refused('const f = (x: number) => {\n  x ?! = 5 return;\n  return x;\n};'), /write \?!=/);
+});
+
 test('unwrap inside argument lists, where a statement never could', () => {
   // each failure is hoisted before the call in source order, sharing no temp
 

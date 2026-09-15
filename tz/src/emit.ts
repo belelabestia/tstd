@@ -1,6 +1,6 @@
 import { result } from '@belelabestia/tstd';
 import { Token, lex } from './lex.js';
-import { scan, keyword } from './scan.js';
+import { Scan, scan, keyword } from './scan.js';
 import { ban } from './ban.js';
 import { refusal } from './refusal.js';
 
@@ -25,6 +25,7 @@ export const roles: { name: string, role: 'expression' | 'statement' | 'both', h
   { name: '?some',    role: 'both',       handler: 'matcherTail', match: '?some' },
   { name: '?:tag',    role: 'both',       handler: 'matcherTail', match: '?:' },
   { name: '?literal', role: 'both',       handler: 'matcherTail', match: '?' },
+  { name: '?!',       role: 'both',       handler: 'matcherTail', match: '?!' },
   { name: '?(cond)',  role: 'both',       handler: 'matcherTail', match: '?(' },
   { name: '? {}',     role: 'both',       handler: 'questioning', match: '? {' },
   { name: 'branch',   role: 'expression', handler: 'construct',   match: 'branch(' },
@@ -43,6 +44,30 @@ export const roles: { name: string, role: 'expression' | 'statement' | 'both', h
 ];
 
 const exits = ['return', 'ok', 'err', 'async', 'break', 'continue'];
+
+/** whether a token tails a quest, walking back through its operand */
+export const tailing = (tokens: Token[], read: Scan, j: number) => {
+  const { before, twin, matcher } = read;
+
+  const operand = (p: number): boolean => {
+    if (p < 0) return false;
+
+    const t = tokens[p];
+    if (t.kind === 'comment') return operand(before[p]);
+    if (t.text === '?') return matcher[p] >= 0;
+    if (t.text === ')') {
+      const open = twin[p];
+      if (open >= 0 && operand(before[open])) return true;
+
+      return false;
+    }
+    if (t.text === '(' || t.text === '{' || t.text === '[' || t.text === '}' || t.text === ']' || t.text === ';' || t.text === ',' || t.text === '=') return false;
+
+    return operand(before[p]);
+  };
+
+  return operand(before[j]);
+};
 
 const carries = ['(', '[', '{'];
 
@@ -222,6 +247,9 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
   const binops = ['==', '!=', '<=', '>=', '<', '>'];
 
   type Quest = { test: string, tip: number, cursor: number, unwraps: boolean, bindable: boolean, kind: string, tags: boolean, compares: boolean, conds: Array<{ from: number, to: number }> };
+
+  const negated = (qq: number) =>
+    matcher[qq] === qq && after[qq] >= 0 && tokens[after[qq]].text === '!' && tokens[qq].to === tokens[after[qq]].from ? after[qq] : -1;
 
   const operandEnd = (from: number, bound: number) => {
     let j = from;
@@ -409,7 +437,9 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
     const tag = matcher[qq];
 
     if (tag === qq) {
+      const neg = after[qq] >= 0 && tokens[after[qq]].text === '!' && tokens[qq].to === tokens[after[qq]].from ? after[qq] : -1;
       consumed[qq] = true;
+      if (neg >= 0) return { test: `${subj} === false`, tip: neg, cursor: after[neg], unwraps: false, bindable: false, kind: 'bare', tags: false, compares: true, conds: [] };
       return { test: `${subj} === true`, tip: qq, cursor: after[qq], unwraps: false, bindable: false, kind: 'bare', tags: false, compares: true, conds: [] };
     }
 
@@ -1554,7 +1584,7 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
         if (!bindable) {
           if (conds.length > 0) return no(cursor, '?(...) binds nothing; the subject is already named');
           if (kind === 'none') return no(cursor, `?none binds nothing; absence carries no value`);
-          if (kind === 'bare') return no(cursor, 'a bare ? binds nothing; it tests == true');
+          if (kind === 'bare') return no(cursor, tokens[tip].text === '!' ? 'a bare ?! binds nothing; it tests == false' : 'a bare ? binds nothing; it tests == true');
           return no(cursor, `?${tokens[tip].text} binds nothing; there is no value to name`);
         }
 
@@ -1799,6 +1829,7 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
         const open = cursor;
         const close = twin[open];
         if (close < 0) return no(open, 'a tail block has no closing brace');
+        if (negated(at) >= 0 && barmed(open, close)) return no(open, '?! {} is refused; arms spell == explicitly');
 
         if (bound !== '' && uses(open, close, bound) === 0) {
           return no(bindAt, `(${bound}) is never used; drop the binding`);
@@ -2270,7 +2301,7 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
     if (cursor >= 0 && tokens[cursor].text === '(') {
       if (!bindable) {
         if (conds.length > 0) return no(cursor, '?(...) binds nothing; the subject is already named');
-        if (lqr.kind === 'bare') return no(cursor, 'a bare ? binds nothing; it tests == true');
+        if (lqr.kind === 'bare') return no(cursor, tokens[tip].text === '!' ? 'a bare ?! binds nothing; it tests == false' : 'a bare ? binds nothing; it tests == true');
         return no(cursor, `?${tokens[tip].text} binds nothing; there is no value to name`);
       }
 
@@ -2572,7 +2603,7 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
     if (cursor >= 0 && tokens[cursor].text === '(') {
       if (!bindable) {
         if (conds.length > 0) return no(cursor, '?(...) binds nothing; the subject is already named');
-        if (qr.kind === 'bare') return no(cursor, 'a bare ? binds nothing; it tests == true');
+        if (qr.kind === 'bare') return no(cursor, tokens[tip].text === '!' ? 'a bare ?! binds nothing; it tests == false' : 'a bare ? binds nothing; it tests == true');
         return no(cursor, `?${tokens[tip].text} binds nothing; there is no value to name`);
       }
 
@@ -2801,6 +2832,7 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
       const open = cursor;
       const close = twin[open];
       if (close < 0) return no(open, 'a tail block has no closing brace');
+      if (negated(at) >= 0 && barmed(open, close)) return no(open, '?! {} is refused; arms spell == explicitly');
 
       const bad = flat(open, close);
       if (bad !== undefined) return bad;

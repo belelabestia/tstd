@@ -11,8 +11,9 @@
     { "include": "#call" },
     { "include": "#exit" },
     { "include": "#else" },
-    { "include": "#matcher" },
-    { "include": "#binary" },
+    { "include": "#side-quest" },
+    { "include": "#binary-quest" },
+    { "include": "#bare-quest" },
     { "include": "#branch" },
     { "include": "#arm" },
     { "include": "#arm-cond" }
@@ -90,18 +91,24 @@
       "match": "(?<![.$\\w'\"`])call\\b(?!['\"`])",
       "name": "keyword.control.trycatch.tz"
     },
-    "matcher": {
+    "side-quest": {
       "match": "(\\?(?:none|some|ok|err|:|\\())([A-Za-z_$][\\w$]*)?",
       "captures": {
         "1": { "name": "keyword.control.flow.tz" },
         "2": { "name": "entity.name.tag.tz" }
       }
     },
-    "binary": {
+    "binary-quest": {
       "match": "(\\?)(==|!=|>=|<=|>|<|&|\\|)",
       "captures": {
         "1": { "name": "keyword.control.flow.tz" },
         "2": { "name": "keyword.operator.comparison.tz" }
+      }
+    },
+    "bare-quest": {
+      "match": "(\\?(!)?)(?=\\s|$|;|,|\\)|\\]|=>|\\{|\\(|return|ok|err|async|break|continue)",
+      "captures": {
+        "1": { "name": "keyword.control.flow.tz" }
       }
     },
     "branch": {

@@ -207,6 +207,41 @@ export const scan = (tokens: Token[]) => {
       continue;
     }
 
+    if (tokens[n].text === '!') {
+      const glued = t.to === tokens[n].from;
+      if (!glued) continue;
+      const m = after[n];
+      if (m < 0) {
+        matcher[i] = i;
+        tagged[i] = i;
+        continue;
+      }
+      const bare = (k: number) =>
+        k >= 0 && ((tokens[k].kind === 'word' && bareAfter.includes(tokens[k].text) && keyword(tokens, before, k)) ||
+        (tokens[k].kind === 'punct' && bareAfter.includes(tokens[k].text)));
+      if (bare(m) || (m >= 0 && tokens[m].text === '(')) {
+        matcher[i] = i;
+        tagged[i] = i;
+        continue;
+      }
+      const mglued = tokens[n].to === tokens[m].from;
+      const mretired = (tokens[m].kind === 'number' || tokens[m].kind === 'string' || tokens[m].kind === 'template') ||
+        (tokens[m].kind === 'word' && (tokens[m].text === 'true' || tokens[m].text === 'false')) ||
+        tokens[m].text === '=' || comparisons.includes(tokens[m].text) ||
+        tokens[m].text === '&' || tokens[m].text === '|' ||
+        tokens[m].text === ':' || tokens[m].text === '(';
+      const mvalued = tokens[m].kind === 'number' || tokens[m].kind === 'string' || tokens[m].kind === 'template' ||
+        (tokens[m].kind === 'word' && (tokens[m].text === 'true' || tokens[m].text === 'false')) ||
+        tokens[m].text === '-' || tokens[m].text === '+';
+      if (tokens[m].text !== ':' && (!mretired || !mglued)) {
+        if (!mvalued && (mglued || (!comparisons.includes(tokens[m].text) && tokens[m].text !== '=' && tokens[m].text !== '&' && tokens[m].text !== '|' && tokens[m].text !== '('))) {
+          matcher[i] = i;
+          tagged[i] = i;
+        }
+      }
+      continue;
+    }
+
     if (tokens[n].kind === 'word' && bareAfter.includes(tokens[n].text) && keyword(tokens, before, n)) {
       matcher[i] = i;
       tagged[i] = i;

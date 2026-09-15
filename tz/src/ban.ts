@@ -68,11 +68,14 @@ export const ban = (tokens: Token[], scanned: Scan) => {
       }
 
       if (t.text === '?' && typing < 0 && matcher[i] === i) {
-        const a = after[i];
+        const neg = after[i] >= 0 && tokens[after[i]].text === '!' && t.to === tokens[after[i]].from ? after[i] : -1;
+        const a = neg >= 0 ? after[neg] : after[i];
 
-        if (a >= 0 && comparisons.includes(tokens[a].text) && t.to !== tokens[a].from) return no('the operator glues onto the ?; write ?== ...');
-        if (a >= 0 && (tokens[a].text === '&' || tokens[a].text === '|') && t.to !== tokens[a].from) return no('a group glues onto the ?; write ?&(...) or ?|(...)');
-        if (a >= 0 && tokens[a].text === '=' && t.to === tokens[a].from) return no('?= compares nothing; compare with ?== ...');
+        if (neg < 0) {
+          if (a >= 0 && comparisons.includes(tokens[a].text) && t.to !== tokens[a].from) return no('the operator glues onto the ?; write ?== ...');
+          if (a >= 0 && (tokens[a].text === '&' || tokens[a].text === '|') && t.to !== tokens[a].from) return no('a group glues onto the ?; write ?&(...) or ?|(...)');
+          if (a >= 0 && tokens[a].text === '=' && t.to === tokens[a].from) return no('?= compares nothing; compare with ?== ...');
+        }
         if (a >= 0 && tokens[a].kind === 'word' && ['none', 'some', 'ok', 'err'].includes(tokens[a].text)) {
           const w = after[a];
           if (w < 0 || tokens[w].text === ';' || tokens[w].text === ',' || tokens[w].text === ')' || tokens[w].text === ']' || tokens[w].text === '}') {
@@ -81,7 +84,7 @@ export const ban = (tokens: Token[], scanned: Scan) => {
         }
         if (a >= 0 && tokens[a].kind === 'word' && (tokens[a].text === 'null' || tokens[a].text === 'undefined')) return no('null and undefined are never spelled; test presence with ?none or ?some');
 
-        let j = after[i];
+        let j = neg >= 0 ? after[neg] : after[i];
 
         while (j >= 0) {
           const u = tokens[j];
@@ -97,6 +100,13 @@ export const ban = (tokens: Token[], scanned: Scan) => {
 
       if (t.text === '?' && typing < 0 && matcher[i] < 0 && after[i] >= 0 && tokens[after[i]].text !== ':' && tokens[after[i]].text !== '{' && !optional.includes(tokens[after[i]].text)) {
         const a = after[i];
+
+        if (tokens[a].text === '!') {
+          if (t.to !== tokens[a].from) return no('the ! glues onto the ?; ?! means ?== false');
+          const m = after[a];
+          if (m >= 0 && tokens[m].text === '=' && tokens[a].to !== tokens[m].from) return no('?! = is refused; write ?!= ...');
+          return no('?! takes an exit, =>, or a block; it means ?== false');
+        }
 
         let j = after[i];
 
@@ -184,6 +194,7 @@ export const ban = (tokens: Token[], scanned: Scan) => {
     if (t.text === 'return' && (after[i] < 0 || tokens[after[i]].text === ';' || tokens[after[i]].text === '}')) {
       const bound = (p: number) => {
         if (p >= 0 && tagged[p] >= 0) return true;
+        if (p >= 0 && tokens[p].text === '!' && before[p] >= 0 && tagged[before[p]] >= 0) return true;
 
         if (p >= 0 && tokens[p].text === ')') {
           const open = twin[p];
