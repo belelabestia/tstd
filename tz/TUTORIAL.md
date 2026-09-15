@@ -28,249 +28,17 @@ the style that falls out is procedural, fallible-where-it-must-be, branch-shaped
 
 once the style rules are that strict, the language itself can enforce them. that is the tz idea, as the prototype readme puts it: "typescript with most of typescript taken away, plus a few constructs, transpiled back to typescript that imports `tstd`".
 
-`tz` is a sugar transpiler: a token level rewriter that leaves every character it does not recognise alone. it never parses typescript, it lexes it. one line in makes one line out, so the line number is the whole source map. the emitter has no opinions, knows no types, and never writes an import.
-
-two consequences to internalise before reading any tz:
-
-- the emitter never writes an import. a tz file that says `ok` imports `result`, one that uses a side quest imports `is`, one that writes a `call` imports `call`, one that writes a `form` imports `form`. forget one and `tsc` tells you, in the usual way, on the right line.
-- a type-only import has to say `type`. the runtime loader leans on node's own type stripping, which cannot tell a type from a value, so write `import { result, type Result } from ...`.
-
-the two commands mirror the typescript ecosystem. `tzc` mirrors `tsc`: it emits, runs `tsc` on the emit, and moves every diagnostic back onto the `.tz` line and column. `tzx` mirrors `tsx`: a node loader hook turns `.tz` into typescript in memory and lets node strip the types, so nothing lands on disk.
-
-```
-node dist/tzc.js scratch                        # emit the .ts beside each .tz, then typecheck it
-node dist/tzx.js --test scratch/signup.spec.tz  # run a spec
-node dist/tzx.js scratch/main.tz                # run a program
-```
+`tz` is a sugar transpiler: how to run it (`tzc`, `tzx`) and what to import (the emitter never writes one; a type-only import says `type`) lives in `tz/README.md`, and why it is shaped this way lives in `tz/DESIGN.md`.
 
 the promise for the rest of this tutorial: everything tz does is sugar. every construct lowers to a hand-writable `tstd` pattern. tz writes it consistently, refuses the spellings that break the discipline, and both halves typecheck through the same `tsc`, so the sugar and the plain code never drift.
 
 ## how things are in typescript
 
-before any tz, the scenarios the library documents, written in typescript under tstd's own rules. these are the patterns; tz is what they look like when a transpiler writes them. know them by heart before the sugar makes sense.
-
-### the funnel: refuse a payload
-
-validation in this style is narrowing, and narrowing owns every failure; what comes after a guard is total:
-
-```ts
-import { is, result } from '@belelabestia/tstd';
-
-const shape = {
-  email: is.string,
-  age: is.number
-} satisfies is.Schema;
-
-const signup = (body: unknown) => {
-  if (!is.model(body, shape)) return result.err('malformed body');
-  if (body.age < 18) return result.err('under age');
-
-  return result.ok(body);
-};
-```
-
-the schema literal stays a schema through `satisfies` instead of widening, and `is.model` is a type guard, so past it `body.age` is a checked number. no casts, no parse step: the funnel, from exceptional to general.
-
-### presence and absence
-
-we never tell `null` and `undefined` apart. a value is either present or absent, and `is.some` / `is.none` are the only words needed. a table lookup that may miss:
-
-```ts
-const table: Record<string, string> = { '1': '{"name":"ada"}' };
-
-const row = (id: string) => {
-  const found = table[id];
-  if (is.none(found)) return result.err(`no row ${id}`);
-
-  return result.ok(found);
-};
-```
-
-and a substitute value that fills in on absence:
-
-```ts
-const port = (env: Record<string, string>) => {
-  const found = env.PORT;
-  if (is.none(found)) return 8080;
-
-  return found;
-};
-```
-
-typescript would write these with `??`; tz refuses it (and the `?:` ternary), so the absence check is the only spelling, and "is it here" and "if not, what" stay separate lines.
-
-### a branch worth naming
-
-when presence and absence are not enough, you name an outcome: a tagged branch. the one rule from the readme: "use `branch` only if checking against presence or absence of a return value isn't enough". a two-side claim, refusing the side already taken:
-
-```ts
-const claimed: Record<string, boolean> = {};
-
-const claim = (id: string) => {
-  if (is.some(claimed[id])) return result.err(`already claimed: ${id}`);
-  claimed[id] = true;
-
-  return result.ok(id);
-};
-```
-
-and a decision with more answers, where `branch(...)` is the literal notation for the value and `Union<{...}>` for the type:
-
-```ts
-const toughDecision = (n: number) => {
-  if (n < 0.2) return branch('xs', { a: 1 });
-  if (n < 0.4) return branch('s', 'hello');
-  if (n < 0.6) return branch('m', 2);
-  if (n < 0.8) return branch('l', [1, 2, 3]);
-  return branch('xl');
-};
-```
-
-no `else`, no `switch`, no single exit point; `branch('xl')` needs nothing, which is the point of `void` payloads.
-
-### failure as a value
-
-the rule of the house: **we do not throw. a panic is always something you did not write.** a throw is invisible to a signature, exactly like a method's `this` requirement, so throwing calls live in `make` and `call`, whose job is to turn the unsafety into a `Result`.
-
-```ts
-const url = make(URL, href);
-if (url.branch === 'err') return url;
-url.value.href;
-```
-
-```ts
-const parsed = call.sync(JSON.parse, raw);
-if (parsed.branch === 'err') return parsed;
-parsed.value;
-```
-
-and the same boundary feeding a guard, which is the recipe the `call` keyword will compress:
-
-```ts
-const rowShape = { name: is.string } satisfies is.Schema;
-
-const name = (id: string) => {
-  const raw = row(id);
-  if (raw.branch === 'err') return raw;
-
-  const parsed = call.sync(JSON.parse, raw.value);
-  if (parsed.branch === 'err') return parsed;
-
-  if (!is.model(parsed.value, rowShape)) return result.err('not a row');
-
-  return result.ok(parsed.value.name);
-};
-```
-
-no `try` in business code, and no monadic api on `result`: no `map`, no `andThen`, no `unwrap`. you check the tag and exit; flow is never hidden behind data. a function that cannot fail exits with the bare value, not a `Result`.
-
-### resources, handed back in reverse
-
-`scope` holds resources and hands them back in reverse, whatever happened: `close` on success, `abort` on failure, and whatever refuses to go back shows up in `leaked`:
-
-```ts
-const pool = {
-  take: (name: string) => ({
-    open: () => name,
-    close: (conn: string) => void conn,
-    abort: (conn: string) => void conn
-  })
-};
-
-const both = (a: string, b: string) =>
-  scope.sync(hold => {
-    const one = hold(pool.take(a));
-    if (one.branch === 'err') return result.err('cannot hold the first');
-
-    const two = hold(pool.take(b));
-    if (two.branch === 'err') return result.err('cannot hold the second');
-
-    return result.ok(`${one.value} and ${two.value}`);
-  });
-```
-
-the resource declares `open`, `close` and `abort`; `hold` acquires through `call`, so each acquisition is one guard line like every other narrowing. promise-returning resources use `scope.async`, where a mapped type turns `hold` into its `await`-ing twin.
-
-### schemas without codecs
-
-narrowing answers "is this the shape", but some values genuinely differ on the two sides: an instant is a timestamp on the wire and a `DateTime` in memory, and the two conversions must stay inverses forever. two functions that must stay inverses are declared in one place, or they drift apart the first time a field is renamed. that pairing is a **form**:
-
-```ts
-import { form, is, iso } from '@belelabestia/tstd';
-
-const instant = {
-  is: iso.timestamp,
-  decode: (x: iso.Timestamp) => iso.fromTimestamp(x),
-  encode: (x: iso.DateTime) => iso.toTimestamp(x)
-} satisfies form.Field<iso.Timestamp, iso.DateTime>;
-
-const user = { id: form.plain(is.string), seen: instant } satisfies form.Fields;
-
-type encoded = form.Encoded<typeof user>;   // what travels and what gets stored
-type decoded = form.Decoded<typeof user>;   // what you carry in memory
-```
-
-fields that read the same on both sides wrap in `form.plain`, ones that differ are a `{ is, decode, encode }` triple, a whole model nests with `form.nest`. proving the shape and mapping it stay two steps.
-
-```ts
-if (!form.model(raw, user)) return result.err('malformed wire format');
-const me = form.decode(raw, user);    // cannot fail, the guard already ran
-const wire = form.encode(me, user);   // a moment later, on the way out
-```
-
-this is not a codec: failure does not live in it. `decode` runs after the guard, so it exits with the value unboxed; no `Either`, no error accumulation, none of the combinator tower those force on a library.
-
-### machines as data
-
-a union is a set of branches, a machine is a union that knows what follows what, and both are declared the same way: as functions. a parameter is the only slot in a value that states a type, so one object of functions states one type per key, and the runtime literal and its type cannot drift.
-
-```ts
-import { protocol, Union } from '@belelabestia/tstd';
-
-const load = protocol.init({
-  idle: () => ['loading'],
-  loading: (value: { at: number }) => ['done', 'failed'],
-  done: (value: string[]) => {},
-  failed: (value: string) => ['loading']
-});
-
-type Load = Union<protocol.Model<typeof load>>;
-
-const describe = (x: Load) => {
-  if (x.branch === 'done') return `rows: ${x.value}`;
-  if (x.branch === 'failed') return `failed: ${x.value}`;
-
-  return 'still going';
-};
-```
-
-nothing following anything is a union, something following is a machine, and `protocol.init` is the one call for both. the parameter declares what a branch carries, and the result names which branches may follow, or nothing.
+before any tz, know the `tstd` patterns by heart: the funnel and narrowing, presence and absence, named branches, failure as a value, resources handed back in reverse, schemas without codecs, and machines as data. they live where they are owned: the principles in `../README.md` and the demonstrations in the `../src/` specs. tz is what those patterns look like when a transpiler writes them.
 
 ## what tz takes away
 
-the transpiler is a lexer, so it refuses unknown words line by line. every refusal is a readme decision, spelled as a diagnostic on the source line. the full table from `src/ban.ts`:
-
-| banned | instead |
-| --- | --- |
-| `class` | a module, or a closure with an `init` |
-| `function` | an arrow const |
-| `this` | an argument |
-| `new` | `make` |
-| `interface` | `type` |
-| `enum` | `Union` or `protocol` |
-| `var` | `const`, or `let` |
-| `namespace`, `module` | a file |
-| `any` | `unknown` |
-| `instanceof` | a branch test |
-| `function*`, `yield` | a loop |
-| `abstract`, `implements`, `private`, `protected`, `public`, `super` | gone with `class` |
-| `throw` | `err` |
-| `switch` | `? {}` |
-| `catch`, `finally` | `call.sync`, `call.async`, or the tz `try` |
-| `get`, `set` | a function wearing a hat |
-| method shorthand `x() {}` | `x: () => {}` |
-
-then the punctuation and shape refusals:
+the transpiler is a lexer, so it refuses unknown words line by line. every refusal is a readme decision, spelled as a diagnostic on the source line. the keyword bans live in one table in `tz/DESIGN.md` (`src/ban.ts` is the truth); what follows are the punctuation and shape refusals:
 
 - `===` and `!==` are refused; you write `==` and `!=`, and they emit the strict ones. one spelling of equality, guarded by the transpiler instead of by habit.
 - `??` is refused; `?none` says which half it is doing. `?:` is refused; use `? => ... else ...` instead.
@@ -335,6 +103,9 @@ all the side quests are postfix, all under `?`:
 | `?\|(...)` | any listed comparison holds | `x ?|(< 0, > 100) { print('out'); }` |
 | `?(cond)` | a self contained boolean expression | `x ?(x % 2 == 0) => 'even'` |
 | `?` | true, shorthand for `?== true` | `cond ? log('up')` |
+| `?!` | false, shorthand for `?== false` | `cond ?! log('down')` |
+
+a bare `?`, a `?!` and a trigger test a boolean; anything wider warns in the editor, so a string condition spells its comparison out.
 
 place a `?` in the middle of a comparison and it captures the expression on its left and tests it against what follows on its right. the operator glues onto the `?`: `x ?== 2`, `x ?!= 3`, `x ?> 0`. the operators are exactly the boolean binaries: `==`, `!=`, `>`, `<`, `>=`, `<=`. `==` and `!=` emit the strict ones, the way they do everywhere else in tz:
 
@@ -343,7 +114,7 @@ x ?> 0 err 'not positive';
 const speed = val ?>= 100 => 1.0 else 0.5;
 ```
 
-`==` is mandatory on every test, even where the old spelling glued a value straight onto the `?`: `x ?5`, `x ?'hi'` and `x ?=y` are refused, and read `x ?== 5`, `x ?== 'hi'`, `x ?== y`. `?true` and `?false` retire the same way, and a bare `?` means `?== true`, so a boolean subject just reads `cond ?`. arithmetic and bitwise quests go with them: there is no `?%`, and a modulo case spells `x ?(x % 2 == 0)` or moves the computation left, `x % 2 ?== 0`.
+`==` is mandatory on every test, even where the old spelling glued a value straight onto the `?`: `x ?5`, `x ?'hi'` and `x ?=y` are refused, and read `x ?== 5`, `x ?== 'hi'`, `x ?== y`. `?true` and `?false` retire the same way, and a bare `?` means `?== true` while `?!` means `?== false` (never `?!= true`, so a truthy non-boolean misses it), so a boolean subject just reads `cond ?` or `cond ?!`. arithmetic and bitwise quests go with them: there is no `?%`, and a modulo case spells `x ?(x % 2 == 0)` or moves the computation left, `x % 2 ?== 0`.
 
 when the right side has more than one half, one combinator glues on plus parens joins them: `&` means every half holds, `|` means any half holds:
 
@@ -477,7 +248,7 @@ export const clamp = (n: number) => {
 
 ### `? {}`: arrow capture exhaustively
 
-`? {}` arrow captures over a value or over a branch: `==` arms for values, `:tag` arms that bind the payload for branches, `(cond)` arms for computed cases. `else` is the open case, a last resort: when the arms cover the whole union `tsc` proves the block exits, and a missing branch lands as `| undefined`. exhaustiveness is `tsc`'s job, not the transpiler's:
+`? {}` arrow captures over a value or over a branch: `==` arms for values, `:tag` arms that bind the payload for branches, `(cond)` arms for computed cases. `else` is the open case, a last resort: when the arms cover the whole union `tsc` proves the block exits, and a missing branch lands as `| undefined`. the editor names the missing member on the `?` line; exhaustiveness stays `tsc`'s job, not the transpiler's:
 
 ```tz
 export const say = (code: number) => code ? {
@@ -564,11 +335,11 @@ one side is all you care about: a comparison with a single expression, no exit, 
 status ?!= 'ready' log('going down');
 ```
 
-the single-branch `if (cond) { ... }` from typescript, kept because it reads forward: condition, then what fires, on one line. an expression must always be captured, so `=>` as a statement is refused: a statement runs an expression or a block. a `=>` block as a statement is refused too, scopes do not take `=>`; `break` and `continue` are exits like any other on a side quest tail, but a `=>` block is a function boundary, so they are refused on it. longer reactions take the bare block form, one line or one block per side with `else` between them, and longer matches list every arm under a bare `?`.
+the single-branch `if (cond) { ... }` from typescript, kept because it reads forward: condition, then what fires, on one line. a trigger stays bare under the widened `void` rule: the `?` head already marks the effect, so `void` is only for naked statements with no tz head. an expression must always be captured, so `=>` as a statement is refused: a statement runs an expression or a block. a `=>` block as a statement is refused too, scopes do not take `=>`; `break` and `continue` are exits like any other on a side quest tail, but a `=>` block is a function boundary, so they are refused on it. longer reactions take the bare block form, one line or one block per side with `else` between them, and longer matches list every arm under a bare `?`.
 
 ### what side quests refuse
 
-the flip side of the ladder, in one place. an expression captures with `=>` and must always be captured, so `=>` as a statement is refused and a bare value after a side quest in an arrow capture is refused; a statement runs an expression or a block, with `else` between its two sides and a bare `?` block listing every arm of a longer match; a side quest after a consumed tail belongs to no subject, so chain with `else` or start a new statement; side quests do not nest, so bind the inner value first; one `else` per arrow capture; exits never hide in arrow bodies, `=>` blocks or `? {}` arms, and `try` never shares a statement with a side quest; bindings name values, not keywords, and the miss branch cannot borrow them. binary quests add their own: glued values (`?5`, `?'hi'`, `?=y`), `?true` and `?false`, arithmetic tails, single-item groups, groups mixing `:tag` with comparisons, bare arm values, and `_` arms are all refused; a gap between `?` and its operator is refused too, and so is a missing one between the operator and its operand, so `? == 5` reads `?== 5` and `?==5` reads `?== 5`. each refusal points at the line that needs restructuring, and `tsc` never sees the confusion.
+the flip side of the ladder, in one place. an expression captures with `=>` and must always be captured, so `=>` as a statement is refused and a bare value after a side quest in an arrow capture is refused; a statement runs an expression or a block, with `else` between its two sides and a bare `?` block listing every arm of a longer match; a side quest after a consumed tail belongs to no subject, so chain with `else` or start a new statement; side quests do not nest, so bind the inner value first; one `else` per arrow capture; exits never hide in arrow bodies, `=>` blocks or `? {}` arms, and `try` never shares a statement with a side quest; bindings name values, not keywords, and the miss branch cannot borrow them. binary quests add their own: glued values (`?5`, `?'hi'`, `?=y`), `?true` and `?false`, arithmetic tails, single-item groups, groups mixing `:tag` with comparisons, bare arm values, and `_` arms are all refused; a gap between `?` and its operator is refused too, and so is a missing one between the operator and its operand, so `? == 5` reads `?== 5` and `?==5` reads `?== 5`. the `!` glues onto the `?` the same way, so `? !` reads `?!` and `?!` takes only an exit, `=>`, or a block, since it means `?== false`. each refusal points at the line that needs restructuring, and `tsc` never sees the confusion.
 
 ### summary of the construct matrix
 
@@ -874,10 +645,6 @@ trace each line: `scope` holds the file and gives it back whatever happens; `try
 
 ## scope, honestly
 
-two things are missing and both are by design.
-
-the lsp and the type-aware checks are next: boolean conditions, `void`-prefixed `Result` statements, exhaustive `? {}` over unions. none belong in the emitter, which has no types; the exhaustiveness check needs `tsc`, and `tsc` is already there, with diagnostics moved back onto the tz source.
-
-`tz` is self contained on purpose, so it can move to its own repo with a `git mv`. it depends on `tstd` like any consumer, and the sugar never gets ahead of the library: every construct is a hand-written tstd pattern, one step from the plain typescript it lowers to.
+what is missing lives in the other two docs: the lsp and the type-aware checks are next in `tz/DESIGN.md`, and the self containment that lets `tz` move with a `git mv` is in `tz/README.md`.
 
 

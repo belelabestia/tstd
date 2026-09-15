@@ -7,7 +7,8 @@ export type Source = { emitted: string, origin: string, lines: Anchor[][]; };
 
 const same = (a: string, b: string) => path.resolve(a).toLowerCase() === path.resolve(b).toLowerCase();
 
-const column = (anchors: Anchor[], at: number) => {
+/** a typescript column back on the tz column it came from */
+export const column = (anchors: Anchor[], at: number) => {
   if (is.none(anchors) || anchors.length === 0) return at;
 
   let was = anchors[0].was;

@@ -6,7 +6,8 @@
   "private": true,
   "bin": {
     "tzc": "./dist/tzc.js",
-    "tzx": "./dist/tzx.js"
+    "tzx": "./dist/tzx.js",
+    "tzd": "./dist/tzd.js"
   },
   "scripts": {
     "start": "tsc --watch",
