@@ -23,8 +23,8 @@ export const pair = (a: string, b: string) => {
 export const remote = (url: string) => {
   const res = try await call => { return fetch(url) };
   const text = try await call => res.text();
-  const out = call => JSON.parse(text);
-  const body = out ?:err (e) err `bad payload: ${e}`;
+  const parse = (raw: string) => call => JSON.parse(raw);
+  const body = parse(text) ?:err (e) err `bad payload: ${e}`;
   ok body;
 };
 

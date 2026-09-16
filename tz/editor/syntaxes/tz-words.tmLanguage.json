@@ -3,6 +3,8 @@
   "scopeName": "tz.words",
   "injectionSelector": "L:source.tz -comment -string",
   "patterns": [
+    { "include": "#quest-block" },
+    { "include": "#quest-body" },
     { "include": "#try" },
     { "include": "#scope" },
     { "include": "#protocol-decl" },
@@ -19,6 +21,56 @@
     { "include": "#arm-cond" }
   ],
   "repository": {
+    "quest-block": {
+      "begin": "(\\?)\\s*(\\{)",
+      "beginCaptures": {
+        "1": { "name": "keyword.control.flow.tz" },
+        "2": { "name": "punctuation.definition.block.tz" }
+      },
+      "end": "\\}",
+      "endCaptures": {
+        "0": { "name": "punctuation.definition.block.tz" }
+      },
+      "patterns": [
+        { "include": "#quest-block" },
+        { "include": "#quest-body" },
+        { "include": "#arm" },
+        { "include": "#arm-cond" },
+        { "include": "#branch" },
+        { "include": "#exit" },
+        { "include": "#else" },
+        { "include": "#side-quest" },
+        { "include": "#binary-quest" },
+        { "include": "#bare-quest" },
+        { "include": "source.ts" }
+      ]
+    },
+    "quest-body": {
+      "begin": "(\\?)(!|none|some|ok|err|==|!=|>=|<=|>|<|&|\\||:([A-Za-z_$][\\w$]*)|\\()?((?:(?!=>)[^;`'\"\\{\\n])*?)(\\{)",
+      "beginCaptures": {
+        "1": { "name": "keyword.control.flow.tz" },
+        "2": { "name": "keyword.control.flow.tz" },
+        "3": { "name": "entity.name.tag.tz" },
+        "5": { "name": "punctuation.definition.block.tz" }
+      },
+      "end": "\\}",
+      "endCaptures": {
+        "0": { "name": "punctuation.definition.block.tz" }
+      },
+      "patterns": [
+        { "include": "#quest-block" },
+        { "include": "#quest-body" },
+        { "include": "#arm" },
+        { "include": "#arm-cond" },
+        { "include": "#branch" },
+        { "include": "#exit" },
+        { "include": "#else" },
+        { "include": "#side-quest" },
+        { "include": "#binary-quest" },
+        { "include": "#bare-quest" },
+        { "include": "source.ts" }
+      ]
+    },
     "try": {
       "match": "(?<![.$\\w'\"`])try\\b(?!['\"`])",
       "name": "keyword.control.trycatch.tz"
@@ -84,7 +136,7 @@
       "name": "keyword.control.flow.tz"
     },
     "form": {
-      "match": "(?<![.$\\w'\"`])form\\b(?!['\"`])",
+      "match": "(?<![.$\\w'\"`])form\\b(?!['\"`.])",
       "name": "keyword.control.form.tz"
     },
     "call": {
@@ -106,19 +158,19 @@
       }
     },
     "bare-quest": {
-      "match": "(\\?(!)?)(?=\\s|$|;|,|\\)|\\]|=>|\\{|\\(|return|ok|err|async|break|continue)",
+      "match": "(\\?(!)?)(?!\\s*\\{)(?=\\s|$|;|,|\\)|\\]|=>|\\{|\\(|return|ok|err|async|break|continue)",
       "captures": {
         "1": { "name": "keyword.control.flow.tz" }
       }
     },
     "branch": {
-      "match": "(?<=[(,\\[=:]|=>|(?:return|ok|err)\\s):([A-Za-z_$][\\w$]*)",
+      "match": "(?<=[(,\\[=:]|=>|(?:return|ok|err)\\s)\\s*:([A-Za-z_$][\\w$]*)",
       "captures": {
         "1": { "name": "entity.name.tag.tz" }
       }
     },
     "arm": {
-      "match": "^\\s*(?:(:)([A-Za-z_$][\\w$]*)|(else)|(==|!=|>=|<=|>|<)|([&|]))(?=\\s*(?:\\(|=>|,|;))",
+      "match": "^\\s*(?:(:)([A-Za-z_$][\\w$]*)(?=\\s*(?:\\(|=>|,|;))|(else)(?=\\s*(?:\\(|=>|,|;))|(==|!=|>=|<=|>|<)(?=\\s*\\S)|([&|])(?=\\s*(?:\\(|=>|,|;)))",
       "captures": {
         "1": { "name": "punctuation.separator.tag.tz" },
         "2": { "name": "entity.name.tag.tz" },

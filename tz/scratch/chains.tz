@@ -24,7 +24,7 @@ export const react = (cond: boolean, seen: (x: string) => void) => {
 /** a comparison match, strict identity without a precondition */
 export const tick = (n: number) =>
   n ?== 0 => 'zero'
-  else => n ?(n < 0) => 'neg'
+  else ?< 0 => 'neg'
   else => 'pos';
 
 /** comparisons answer together, switching on true only then */
