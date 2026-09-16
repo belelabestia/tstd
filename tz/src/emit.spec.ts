@@ -707,6 +707,40 @@ test('a decline tail answers on the miss, binding the survivor', () => {
   );
 });
 
+test('continue a chain on the locked subject', () => {
+  // an else quest tests the same subject, so every miss still yields it
+
+  assert.equal(
+    out('export const sign = (n: number) =>\n  n ?== 0 => `zero`\n  else ?< 0 => `neg`\n  else => `pos`;'),
+    'export const sign = (n: number) =>\n  (n === (0) ? `zero` : (() => { return n < (0) ? `neg` : `pos`; })());'
+  );
+
+  // a condition in parens locks nothing new either: the name is already bound
+
+  assert.equal(
+    out('export const sign = (n: number) => n ?== 0 => `zero` else ?(n < 0) => `neg` else => `pos`;'),
+    'export const sign = (n: number) => (n === (0) ? `zero` : (() => { return (n < 0) === true ? `neg` : `pos`; })());'
+  );
+
+  // without a final else the miss yields the locked subject, as always
+
+  assert.equal(
+    out('export const sign = (n: number) => n ?== 0 => `zero` else ?< 0 => `neg`;'),
+    'export const sign = (n: number) => (n === (0) ? `zero` : (() => { return n < (0) ? `neg` : n; })());'
+  );
+
+  // an else answer may still nest a chain of its own, which locks its own subject
+
+  assert.equal(
+    out('export const sign = (n: number, b: number) => n ?== 0 => `zero` else => b ?== 0 => `b` else => `pos`;'),
+    'export const sign = (n: number, b: number) => (n === (0) ? `zero` : (b === (0) ? `b` : `pos`));'
+  );
+
+  // a quest with no chain behind it answers nothing, so it is refused
+
+  assert.match(refused('export const sign = (n: number) => ?(n < 0) => `neg` else => `pos`;'), /is refused/);
+});
+
 test('construct a branch with a colon', () => {
   // :tag is the literal notation for a branch, with or without its value
 

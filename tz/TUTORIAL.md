@@ -188,6 +188,17 @@ export const label = (n: number) =>
   n ?< 0 => 'below' else => n ?== 0 => 'nothing' else => 'above';
 ```
 
+when the next test reads the same subject, the `else` carries the quest itself and the subject stays locked: one chain, one subject, and the miss yields it, so the final `else` is optional:
+
+```tz
+export const sign = (n: number) =>
+  n ?== 0 => 'zero'
+  else ?< 0 => 'neg'
+  else => 'pos';
+```
+
+an `else` answer may still nest a chain of its own with `else =>`, and that chain locks its own subject; nesting is composition, not rebinding, and each chain still answers its own miss. a quest with no chain behind it answers nothing: `?(n < 0) => 'neg'` standing alone is refused, since a miss would have no value to yield. in a decline the `else` keeps answering: a quest after `else` continues an answering chain, never a decline.
+
 the miss side arrow-captures like any side quest tail: `=> expression`, `=> { block }`, or an exit. a bare value after `else` captures nothing, so `else 'above'` is refused and reads `else => 'above'`. an exit in the final else flips the whole chain to an exit ladder: the value branches become exits, and the subjects evaluate only on their miss:
 
 ```tz

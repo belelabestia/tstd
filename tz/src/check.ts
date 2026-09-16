@@ -394,6 +394,9 @@ const guards = (text: string) => {
     if (token.text === '?') {
       if (read.matcher[ti] >= 0 && read.matcher[ti] !== ti) continue;
       if (nested(toks, read, ti)) continue;
+      let prev = read.before[ti];
+      while (prev >= 0 && toks[prev].kind === 'comment') prev = read.before[prev];
+      if (prev >= 0 && toks[prev].kind === 'word' && toks[prev].text === 'else' && keyword(toks, read.before, prev)) continue;
       const cond = holding(text, toks, read, ti).replace(/!$/, '').trim();
       if (cond === '' || cond.startsWith('!')) continue;
       if (cond.includes('=>') || cond.includes('{') || cond.includes('}') || cond.includes(';')) continue;

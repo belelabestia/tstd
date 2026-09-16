@@ -248,6 +248,9 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
 
   type Quest = { test: string, tip: number, cursor: number, unwraps: boolean, bindable: boolean, kind: string, tags: boolean, compares: boolean, conds: Array<{ from: number, to: number }> };
 
+  /** the subject an else continues testing, already bound where it was locked */
+  type Locked = { subj: string, subjName: string, bound: boolean };
+
   const negated = (qq: number) =>
     matcher[qq] === qq && after[qq] >= 0 && tokens[after[qq]].text === '!' && tokens[qq].to === tokens[after[qq]].from ? after[qq] : -1;
 
@@ -1323,10 +1326,17 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
     return false;
   };
 
-  const chain: (i: number, from: number, last: number, span: { from: number, to: number }, box?: { temp: string }) => string | undefined | Failure = (i, from, last, span, box) => {
+  const chain: (i: number, from: number, last: number, span: { from: number, to: number }, box?: { temp: string }, locked?: Locked) => string | undefined | Failure = (i, from, last, span, box, locked) => {
     let startArrow = -1;
     if (from >= 0 && tokens[from].text === '=>') { startArrow = from; from = after[from]; }
-    const q = mark(from, last);
+
+    // an else answers or continues: a quest here tests the locked subject,
+    // so one chain holds one subject and the miss always yields it
+    const continuer = from >= 0 && matcher[from] >= 0 && !consumed[from];
+    if (continuer && locked === undefined) return no(from, 'a quest after else continues its chain; bind the value first');
+    if (continuer && locked === undefined) return no(from, 'a quest after else continues its chain; bind the value first');
+
+    const q = continuer ? from : mark(from, last);
     if (q < 0) {
       if (box === undefined) return undefined;
 
@@ -1345,16 +1355,28 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
         : `${wraps[t.text].open}${body}${wraps[t.text].close};`;
     }
 
-    const sub = temp(i);
-    const subject = spell(from, before[q], '', '');
-
-    if (nested(from, before[q])) return no(q, 'matchers do not nest; bind the inner value first');
-
     const conds: Array<{ from: number, to: number }> = [];
-    const subjStop = before[q];
-    const subjName = from === subjStop && from >= 0 && tokens[from].kind === 'word' && !reserved.includes(tokens[from].text) ? tokens[from].text : '';
-    const subj = subjName === '' ? sub : subjName;
-    const lead = subjName === '' ? '; ' : '';
+    let subject = '';
+    let subj: string;
+    let subjName: string;
+    let lead: string;
+
+    if (continuer && locked !== undefined) {
+      subj = locked.subj;
+      subjName = locked.subjName;
+      lead = locked.bound ? '' : (subjName === '' ? '; ' : '');
+    }
+    else {
+      const sub = temp(i);
+      subject = spell(from, before[q], '', '');
+
+      if (nested(from, before[q])) return no(q, 'matchers do not nest; bind the inner value first');
+
+      const subjStop = before[q];
+      subjName = from === subjStop && from >= 0 && tokens[from].kind === 'word' && !reserved.includes(tokens[from].text) ? tokens[from].text : '';
+      subj = subjName === '' ? sub : subjName;
+      lead = subjName === '' ? '; ' : '';
+    }
 
     const qr = quest(q, subj, subjName);
     if (!('test' in qr)) return qr;
@@ -1438,6 +1460,7 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
         j++;
       }
 
+      // a caller may end the range on the answer, without its terminator
       if (other < 0 && end < 0) return no(arrow, 'a fallback needs a semicolon');
       if (other < 0 && nested(answer, tail)) return no(q, 'matchers do not nest; bind the inner value first');
       if (other < 0 && bound !== '' && uses(answer, tail, bound) === 0) {
@@ -1450,10 +1473,12 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
     let code = '';
     let chainTo = tail;
 
+    const down: Locked = { subj, subjName, bound: subjName === '' };
+
     if (other >= 0) {
       consumed[other] = true;
       const inner = { from: -1, to: -1 };
-      const r = chain(i, after[other], last, inner, box);
+      const r = chain(i, after[other], last, inner, box, down);
       if (r !== undefined && typeof r !== 'string') return r;
 
       if (typeof r === 'string') {
@@ -1530,11 +1555,14 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
     span.to = chainTo;
     dropped.push({ from, to: chainTo });
 
+    // a bound temp is declared where the subject was locked, never twice
+    const declares = subjName === '' && !(continuer && locked !== undefined && locked.bound);
+
     if (box !== undefined) {
-      return subjName === '' ? `const ${sub} = ${subject}${lead}if (${test}) { ${box.temp} = ${yielded}; } else { ${code} }` : `${lead}if (${test}) { ${box.temp} = ${yielded}; } else { ${code} }`;
+      return declares ? `const ${subj} = ${subject}${lead}if (${test}) { ${box.temp} = ${yielded}; } else { ${code} }` : `${lead}if (${test}) { ${box.temp} = ${yielded}; } else { ${code} }`;
     }
 
-    return subjName === '' ? `${opens}{ const ${sub} = ${subject}; return ${test} ? ${yielded} : ${code}; })()` : `${opens}{ return ${test} ? ${yielded} : ${code}; })()`;
+    return declares ? `${opens}{ const ${subj} = ${subject}; return ${test} ? ${yielded} : ${code}; })()` : `${opens}{ return ${test} ? ${yielded} : ${code}; })()`;
   };
 
   const declining = (i: number, init: number, at: number, last: number, land?: Landing) => {
@@ -1662,7 +1690,7 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
           if (kIsElse) {
             consumed[k] = true;
             const inner = { from: -1, to: -1 };
-            const r = chain(i, after[k], last, inner);
+            const r = chain(i, after[k], last, inner, undefined, { subj, subjName, bound: subjName === '' });
             if (r !== undefined && typeof r !== 'string') return r;
 
             if (typeof r === 'string') {
@@ -1712,7 +1740,7 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
           j++;
         }
 
-        if (other < 0 && end < 0) return no(arrow, 'a fallback needs a semicolon');
+      if (other < 0 && end < 0) return no(arrow, 'a fallback needs a semicolon [chain-scan]');
 
         if (other >= 0) {
           consumed[other] = true;
@@ -1752,7 +1780,7 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
 
             const value = temp(i);
             const inner = { from: -1, to: -1 };
-            const r = chain(i, after[other], last, inner, { temp: value });
+            const r = chain(i, after[other], last, inner, { temp: value }, { subj, subjName, bound: subjName === '' });
             if (r !== undefined && typeof r !== 'string') return r;
             if (r === undefined) return no(other, 'a chain that declines ends with an exit');
 
@@ -1767,7 +1795,7 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
             return undefined;
           }
           const inner = { from: -1, to: -1 };
-          const r = chain(i, after[other], last, inner);
+          const r = chain(i, after[other], last, inner, undefined, { subj, subjName, bound: subjName === '' });
           if (r !== undefined && typeof r !== 'string') return r;
           if (typeof r === 'string') edits.push({ from: tokens[inner.from].from, to: tokens[inner.to].to, text: r });
           else {
@@ -2217,6 +2245,12 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
       }
 
       if (matcher[j] >= 0 && !consumed[j]) {
+        let prev = before[j];
+        while (prev >= 0 && tokens[prev].kind === 'comment') prev = before[prev];
+        if (prev >= 0 && tokens[prev].kind === 'word' && tokens[prev].text === 'else' && keyword(tokens, before, prev)) {
+          return no(j, 'an else quest continues its chain; it never starts one');
+        }
+
         const link = { code: '', end: j, start: j };
         const bad = linkOne(i, j, to, from, link, box);
         if (bad !== undefined) return bad;
@@ -2398,7 +2432,30 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
         k++;
       }
 
-      if ((box !== undefined && box.ladder) || falls(after[other], bound2)) {
+      // an else quest tests the locked subject, so the chain keeps answering it
+      const continued = after[other];
+      if (continued >= 0 && matcher[continued] >= 0 && !consumed[continued]) {
+        // the range ends on the answer, so the terminator sits past it
+        let term = last;
+        let m = after[bound2];
+        while (m >= 0 && m < tokens.length) {
+          const u = tokens[m];
+          if (u.kind === 'comment') { m = after[m]; continue; }
+          if (carries.includes(u.text)) { m = jump(m); continue; }
+          if (u.text === ';' || u.text === ',' || closes.includes(u.text)) { term = m; break; }
+          break;
+        }
+
+        const inner = { from: -1, to: -1 };
+        const r = chain(i, continued, term, inner, undefined, { subj, subjName, bound: subjName === '' });
+        if (r !== undefined && typeof r !== 'string') return r;
+        if (typeof r !== 'string') return no(continued, 'an else quest answers with =>');
+
+        code = r;
+        end = bound2;
+        rend = bound2;
+      }
+      else if ((box !== undefined && box.ladder) || falls(after[other], bound2)) {
         if (box !== undefined && box.top === false) {
           return no(after[other], 'a chain that declines cannot be a value here; bind it or keep the funnel');
         }
@@ -2703,8 +2760,8 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
         const k = after[close];
         if (k >= 0 && tokens[k].kind === 'word' && tokens[k].text === 'else' && keyword(tokens, before, k)) {
           consumed[k] = true;
-          const inner = { from: -1, to: -1 };
-          const r = chain(i, after[k], tokens.length - 1, inner);
+            const inner = { from: -1, to: -1 };
+            const r = chain(i, after[k], tokens.length - 1, inner, undefined, { subj, subjName, bound: subjName === '' });
           if (r !== undefined && typeof r !== 'string') return r;
 
           let code = '';
@@ -2775,7 +2832,7 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
         }
 
         const inner = { from: -1, to: -1 };
-        const r = chain(i, after[other], tokens.length - 1, inner);
+        const r = chain(i, after[other], tokens.length - 1, inner, undefined, { subj, subjName, bound: subjName === '' });
         if (r !== undefined && typeof r !== 'string') return r;
 
         let code = '';
