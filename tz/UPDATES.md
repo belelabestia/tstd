@@ -6,6 +6,18 @@ a journal of decisions. the spec lives in `tz/TUTORIAL.md`; the design notes liv
 
 the boolean and exhaustive checks ship; the next item is the editor affordances on the same surface (completions, hover, goto, rename) and a keystroke loop that stops shelling out. the coherence spec runs in `npm test`.
 
+open defect, found 2026-09-16 while building else-quest chains: an arrow-body chain over an expression subject (`f(x) ?== 0 => 'zero' else => 'pos'`) emits garbled code, duplicating the subject around the temp application; a named subject emits cleanly, which is why the docs already say matchers test names.
+
+## 2026-09-16: an else quest continues the locked subject
+
+the `chains.tz` fixme asked for `?(n < 0)` where the chain reads `n ?(n < 0)`, and the author ruled the reading, not just the spelling: a bare quest without a subject has nothing to yield on a miss, while a comparison reuses the subject it already holds. so an `else` now carries a quest itself — `else ?< 0 => 'neg'` — and the subject stays locked for the whole chain: one chain, one subject, the miss yields it, the final `else` is optional, and a quest with no chain behind it is refused since a miss would have no value to yield.
+
+rebinding is refused, not missing. `else => b ?== value => 'also yes'` nests a chain with its own subject inside the answer; the outer miss still yields the outer subject, so nesting is composition and each chain answers its own miss. the refusal targets only the shape that would move the fallback mid-chain, and the rule is documented, not just encoded: one chain, one subject, in `tz/TUTORIAL.md` and the `tz/DESIGN.md` side quest bullet.
+
+what changed: `chain` threads the locked subject through its `else` recursion and skips the temp it did not declare; the callers (`declining` three times, `lift` twice, `linkOne` once) hand theirs down, and `linkOne` extends the range past the answer so the terminator stays in it. a `?` that opens no chain stays refused, and a statement decline keeps refusing a quest after `else` (`one decline per statement`), since tails there are exits, blocks and `=>` answers. the checker skips a chain `?` the way it skips every answer-side quest.
+
+what verified: 5 new `emit.spec` cases (locked comparisons, a locked `?(cond)`, miss yields subject, nested composition, subjectless refusal), the `tick` example rewritten to the locked sketch, `npm test` green at 59 tz plus 43 root, `tzc scratch` clean. docs move one sentence in `DESIGN.md`, one paragraph in `TUTORIAL.md`.
+
 ## 2026-09-14: the checker behind the interim surface
 
 "blocked" was a quick probe, not a study, and the challenge was fair. what the 7.0 package actually ships: the root exports only a version, no compiler js, no server js, no bundled declarations; the surface is `unstable/*`, class-based and server-backed, spawning the bundled native binary in about a hundred milliseconds. the published status matches: 7.0 checks exactly like 6.0 by design, there is no stable programmatic api before 7.1, and 7.1 promises a new and different one, so 6.x-shaped code is not worth writing even once. the compat package stays out of the tree: a second compiler for one feature, and the rewrite comes either way.
