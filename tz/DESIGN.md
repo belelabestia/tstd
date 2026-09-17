@@ -160,10 +160,74 @@ const row = table[id] ?(is.some(row));
 
 it works. it emits `const $0 = table[id]; if (!(is.some($0))) return; const row = $0;`, and narrowing flows through `$0`, so `row` lands narrowed. it is refused anyway, because it is character for character the same decision as the two lines it replaces:
 
+<!--
+  # marco to agent:
+
+  this should be `const row = table[id] ?none return;`
+  it is better because it allows the dev to pick the guard's behavior:
+  it can provide a fallback or exit, and if it exits it can provide
+  an exit path (ok, err) or a return value.
+  this way the guard syntax becomes much more versatile despite being
+  a bit more explicit and verbose.
+
+  ## instructions:
+
+  fact-check this comment: if correct, apply it.
+  when done, remove this comment and clean up every mention of it.
+  let git carry its memory.
+ -->
+
 ```tz
 const row = table[id];
 is.none(row) ?none return;
 ```
+
+<!--
+  # marco to agent
+
+  the rest of this section isn't much readable or human friendly.
+  simplify the explanation; make examples; clarify the flow of your reasoning.
+
+  i don't understand how many topics you're dealing with:
+
+  ?err in postfix; then the binding of `.value`, then _braced-exiting-`if`_.
+
+  then you start the next paragraph with:
+  **`if (c) side quest <exit>`**, reading the side quest as the `else` branch in disguise.
+  and it isn't clear whether you are mentioning a different topic, of you're following up
+  with your reasoning.
+
+  same with **an answering guard**. try to structure sentences in a very journalistic way.
+  wh* questions, straight subject verb object short statements, etc. and make examples.
+
+  the reader should be able to imagine what the language could have been, and why we picked
+  one option instead of another. make our choices shine from our core values.
+
+  instructions:
+
+  put yourself on a mission to make all the documentation more educational and less regulatory.
+  documents in this repo are training material, although they might express habits that work
+  well in a language with fewer constructs and low to zero overlap of constructs, resulting in
+  what i hope to be a very very linear and lean grammar.
+
+  make an effort to feel the human footprint of this repo's author. this library and this language
+  could have been dramatically different than how they are. typescript is so rich that
+  the purpose of "finding a strong subset of constructs that grants easy good practices and
+  manageable complexity" could have been achieved in so many different ways.
+
+  but i picked this way over any other; because it felt better, because of all my personal biases.
+  because i learnt c++ and c#, and then moved to typescript, and learnt about reactive programming
+  with rxjs, and then studied f# and haskell. because i also tried to study rust and realized i
+  hated the language, not because of any technical lacks, but rather because i hate the taste
+  of how its creators made it look.
+
+  instead, i fucking fell in love with the taste of Zig's creator Andrew Kelley. comptime is genius,
+  and so are `orelse`, `catch` and `try`. i tried to expand on that with my side quest
+  family of constructs.
+
+  i want you to embody my taste a little more. put it in your docs. make it a memory.
+  take all the action necessary to write more like me.
+ -->
 
 `?err` needs the postfix position; that is not a preference. the value you want from it is `.value`, not what the expression produced, so the unwrapping has to happen where the binding happens and there is no statement form that can do it. a side quest that tests a boolean transforms nothing, so its statement form is already complete and a postfix spelling is a second way to say one thing. that is the thing the braced-exiting-`if` ruling removed.
 

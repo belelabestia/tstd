@@ -25,6 +25,19 @@ const known = new Set([...words, ...banned, ...absent, ...roles.map((r) => r.nam
 
 const doc = (name: string, text: string) => {
   const lines = text.split('\n');
+  let inside = false;
+
+  // a prompt parked in a doc is a note to an agent, not documentation: it names words the
+  // language does not own, so the walk blanks the comment block and keeps the line numbers
+  for (let i = 0; i < lines.length; i++) {
+    const opens = lines[i].includes('<!--');
+    const closes = lines[i].includes('-->');
+    const parked = inside || opens;
+
+    inside = opens ? !closes : inside && !closes;
+    if (parked) lines[i] = '';
+  }
+
   return { name, lines };
 };
 
