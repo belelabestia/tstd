@@ -8,6 +8,14 @@ the boolean and exhaustive checks ship; the next item is the editor affordances 
 
 open defect, found 2026-09-16 while building else-quest chains: an arrow-body chain over an expression subject (`f(x) ?== 0 => 'zero' else => 'pos'`) emits garbled code, duplicating the subject around the temp application; a named subject emits cleanly, which is why the docs already say matchers test names.
 
+## 2026-09-20: the build runs the showcase
+
+the suite typechecked the emit and tested the emitter, but never ran the emitted program: `node dist/tzx.js --test scratch/signup.spec.tz` exited 1 while both suites stayed green. that gap let a showcase defect sit under green lights, so the fix is the harness, and the two failures are left standing on purpose. they are sessions 02 through 05.
+
+what changed: one line in `tz/package.json`. the `test` script now ends with `tsc -p tsconfig.build.json && node dist/tzx.js --test scratch/**/*.spec.tz`, after the existing `tsc --noEmit` gate and the src suite. the build is required because the loader's `register('./hook.js')` only resolves against the emitted `dist`; the run goes last so the 59 src tests stay visible when the showcase is red; the glob pulls in a future scratch spec for free.
+
+what verified: `npm test` in `tz/` is red, exit 1, the src suite at 59 pass and the scratch suite at 10 pass 2 fail, naming `scratch\signup.spec.tz:60:1` and `:84:1` with the assertion frames at `66:10` and `97:56`. all 11 non-spec scratch `.tz` files run and exit 0, and `main.tz` prints its output. no new dependency, no new framework.
+
 ## 2026-09-16: an else quest continues the locked subject
 
 the `chains.tz` fixme asked for `?(n < 0)` where the chain reads `n ?(n < 0)`, and the author ruled the reading, not just the spelling: a bare quest without a subject has nothing to yield on a miss, while a comparison reuses the subject it already holds. so an `else` now carries a quest itself — `else ?< 0 => 'neg'` — and the subject stays locked for the whole chain: one chain, one subject, the miss yields it, the final `else` is optional, and a quest with no chain behind it is refused since a miss would have no value to yield.
