@@ -1,6 +1,6 @@
 # tstd style knowledge base
 
-working notes behind `CLAUDE.md`. every entry is grounded in a real line of this repo.
+working notes behind `AGENTS.md`. every entry is grounded in a real line of this repo.
 
 ## open work
 
@@ -24,7 +24,7 @@ the two designs that were open on 2026-09-06 are built and ruled: resources beca
 two kinds of entry:
 
 - **house**: the repo's way. my default would have differed; the repo wins. an agent should write the ✅ side.
-- **open**: where i still think the repo is wrong. flagged, not applied. needs a ruling before it goes into `claude.md`.
+- **open**: where i still think the repo is wrong. flagged, not applied. needs a ruling before it goes into `AGENTS.md`.
 
 ---
 
@@ -438,7 +438,7 @@ async: async <U extends Result<unknown, unknown>>(work: (hold: Holds) => Promise
 what follows from reading a type as a const:
 
 - **a shape written twice is duplication**, exactly as a repeated expression is, and naming it costs one line. nobody would inline the same four-line object literal in two functions to avoid declaring a `const`.
-- **naming and exporting are different decisions.** `Resource`, `Async`, `Release`, `Hold` and `Holds` are named and stay in `scope.ts`; only `Scope` and `Exit` leave it. the api surface rule is about what a caller can reach, not about what the author is allowed to name. the old wording of the naming rule ran the two together and said the argument record "stays inline and unnamed"; that was wrong and `CLAUDE.md` has been corrected.
+- **naming and exporting are different decisions.** `Resource`, `Async`, `Release`, `Hold` and `Holds` are named and stay in `scope.ts`; only `Scope` and `Exit` leave it. the api surface rule is about what a caller can reach, not about what the author is allowed to name. the old wording of the naming rule ran the two together and said the argument record "stays inline and unnamed"; that was wrong and `AGENTS.md` has been corrected.
 - **a generic type is a function call.** `Async<Resource<R>>` reads as one, and it is the reason the async half is not a second copy of the sync one.
 - **a computation is fine in a type.** a lookup like `Extract<U, Branch<'err', unknown>>['value']` is not cleverness; the alternative is `as` in the body, which loses what the compiler already knew (o19).
 - **the same rules that govern values govern types**: one concept per name, no category suffixes, no `Type` on the end, lowercase file names, and no `types.ts`, because a const does not live in a `consts.ts` either.
@@ -944,7 +944,7 @@ git worktree remove --force worktree
 
 ---
 
-## j. prose voice (for readme / docs / claude.md itself)
+## j. prose voice (for readme / docs / AGENTS.md itself)
 
 - lowercase throughout, including headings and sentence starts
 - semicolons to join clauses rather than splitting into short sentences
@@ -962,7 +962,7 @@ git worktree remove --force worktree
 - **sentences run twelve to twenty words**, joined with semicolons rather than split, and they stop when the point lands.
 - **contractions throughout**: "aren't", "it's", "doesn't", "everything's". the assistant writes none, which is the loudest tell of the two voices.
 - **person is casual and moves**: "we have many kinds of runtime type checks", "you can usually do free-branching", "i have a module that needs to be instantiated as a class".
-- **identifiers are bare in the prose**: "branch is a factory function used to make single branches of tagged union types". backticks are for the readme and for `claude.md`, not for a spec essay.
+- **identifiers are bare in the prose**: "branch is a factory function used to make single branches of tagged union types". backticks are for the readme and for `AGENTS.md`, not for a spec essay.
 - **comments inside tests are one line**, and they say what is about to happen rather than why it is right: "here's a bunch of unknown variables", "let's narrow them down", "now a is a number, and b is a string".
 - **nothing is restated.** the reader has the readme and the code in front of them. the essay says what the module is for and stops; it does not argue the design, list what was refused, or narrate what the types are doing.
 
@@ -980,7 +980,7 @@ git worktree remove --force worktree
 
 these are the places where i think the code contradicts the readme. each needs a ruling before it becomes a rule.
 
-**status:** every o entry is ruled and applied on `claude-onboarding`. o6 → o6b, `is.number` → o4b, schema validation → o12, forms → o13, time zones → o14.
+**status:** every o entry is ruled and applied. o6 → o6b, `is.number` → o4b, schema validation → o12, forms → o13, time zones → o14.
 
 ### o1. published output does not resolve
 
@@ -1058,7 +1058,7 @@ readme rule: "when a guard checks more than its type can say, brand the requirem
 
 f7 says imperative loops; `json` uses `Object.values(x).every(json)` and `x.every(json)`.
 
-**ruled: keep `.every`, and state the exception.** a guard body has to stay an expression (e1), because that is what keeps boolean algebra matching type algebra (d5); a `for` would force a statement body and break it. so `.every` inside a guard is sanctioned, and everywhere else you loop and return early. it is now a rule in `CLAUDE.md` rather than an accident in one file, and per o6b it goes in the docs, not in a comment.
+**ruled: keep `.every`, and state the exception.** a guard body has to stay an expression (e1), because that is what keeps boolean algebra matching type algebra (d5); a `for` would force a statement body and break it. so `.every` inside a guard is sanctioned, and everywhere else you loop and return early. it is now a rule in `AGENTS.md` rather than an accident in one file, and per o6b it goes in the docs, not in a comment.
 
 ### o8. `call.sync(instance.method, ...)` silently loses `this`
 
@@ -1275,7 +1275,7 @@ lease.sync({
 - **`close` and `abort`, never a `finally`.** zig's `defer`/`errdefer` split, renamed: `abort` names what happens to the *resource*, where `errdefer` names *when the callback fires*. commit/rollback maps onto close/abort exactly. when the two really are the same, pass the same named function twice; that states the sameness instead of hiding it, and a single release parameter would decide it for the caller.
 - **the outcome is a free branch union, not a `Result`**: `Union<{ success: V, open: unknown, use: unknown, close: unknown, abort: unknown }>`. one branch per step that can throw. `Result<V, unknown>` would erase the distinction the module exists to make: "the use failed" versus "you no longer hold the resource". every non-success payload is `unknown`, so the funnel still collapses in one line when a caller does not care.
 - **decide, never accumulate.** use ok + close throws → branch `close`, and the used value is dropped. use throws + abort throws → branch `abort`, and the use error is lost: the failed call is over, the resource is still out there. that loss is the price of refusing error accumulation, and the spec says so in prose rather than hiding it.
-- taking four functions is **not** the callback rule being broken. `lease` is a boundary module like `make` and `call`; it is where `try`/`catch` lives, so it is an entrypoint by construction. this was the one thing the subagent had to guess at; it is now stated in `CLAUDE.md`.
+- taking four functions is **not** the callback rule being broken. `lease` is a boundary module like `make` and `call`; it is where `try`/`catch` lives, so it is an entrypoint by construction. this was the one thing the subagent had to guess at; it is now stated in `AGENTS.md`.
 
 ### o16. a zoned form, and the brand that names its zone: house (ruled, built by a subagent)
 
@@ -1426,7 +1426,7 @@ if (fail.branch === 'err') ... // fail.value is the named error, done is still w
 
 **`scope` became `call`.** it takes a function and calls it; `unsafe`, `bound` and `catcher` all name how it works rather than what it is, and `call` passes the literalness test `Json` and `iso` set. o15's second bullet is superseded here: the outcome is no longer one `Result` whose error side is a step union.
 
-**the argument record is named now.** `Steps<R, U>` is declared in `lease.ts` and never exported, with `Async<S>` mapping each step to its promise-returning twin, so the four lines are written once instead of twice. the old wording of the naming rule said the record "stays inline and unnamed", which confused *where a name is exported* with *whether a shape is repeated*; only the first is a rule. `CLAUDE.md` says so now.
+**the argument record is named now.** `Steps<R, U>` is declared in `lease.ts` and never exported, with `Async<S>` mapping each step to its promise-returning twin, so the four lines are written once instead of twice. the old wording of the naming rule said the record "stays inline and unnamed", which confused *where a name is exported* with *whether a shape is repeated*; only the first is a rule. `AGENTS.md` says so now.
 
 ### o20. a scope holds many resources without nesting, and `lease` is gone: house (ruled)
 
@@ -1507,7 +1507,7 @@ assert.deepEqual(done, branch('success', 42));
 const stored = branch(loading.branch, loading.value);
 ```
 
-- **it is the value-level twin of a rule already in `claude.md`.** unions come from `Union<{ ... }>` and are never hand-written; branches come from `branch(...)` for the same reason, so the notation for a branch is one thing and not two.
+- **it is the value-level twin of a rule already in `AGENTS.md`.** unions come from `Union<{ ... }>` and are never hand-written; branches come from `branch(...)` for the same reason, so the notation for a branch is one thing and not two.
 - **it cost five literals in the whole library**, two of them in `branch.spec.ts`, and `protocol.ts` was already building every state through the factory.
 - **it is value-level only.** a type still comes from `Union<{ ... }>` or `Branch<...>`, and inline against a union-typed target the factory infers its value from every member at once, so bind first and then assign.
 - **one collision, worth knowing.** `assert.deepEqual` is an assertion signature, `asserts actual is T`, so asserting against `branch('small', 0.1)` narrows the actual to that one branch and a later `switch` over the union stops compiling. the literal used to widen the tag to `string` and hid this. the fix is to assert inside the case rather than before the switch, which is what `branch.spec.ts` does now.

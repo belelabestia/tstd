@@ -126,7 +126,7 @@ the pipeline, in two commands:
 
 `tsc` on the emitted `.ts`, then rewrite each diagnostic's file and position back to the `.tz`. with one line in, one line out, the line is already correct and only the column shifts. worst case, report the line and underline the whole line: still usable.
 
-do not use the compiler api to typecheck in-memory at first. shell out to `tsc --pretty false`, read the exit code, parse the lines. `claude.md` already says judge a typecheck by its exit code.
+do not use the compiler api to typecheck in-memory at first. shell out to `tsc --pretty false`, read the exit code, parse the lines. `AGENTS.md` already says judge a typecheck by its exit code.
 
 ### coherence
 

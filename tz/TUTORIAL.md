@@ -448,7 +448,7 @@ for a generic block there are three, and the first is scaffolding:
 
 a plain block has two, because there is no shape to hide: the literal sits in the init call, and the type reads the factory record it produces.
 
-the capitalisation is not a convention the language invented. `claude.md` already says: the same word, case-distinguished, for a type and its factory. `Branch`/`branch`, `Result`/`result`, `Loader`/`loader`. so the block needs one name and the emit derives the other two.
+the capitalisation is not a convention the language invented. `AGENTS.md` already says: the same word, case-distinguished, for a type and its factory. `Branch`/`branch`, `Result`/`result`, `Loader`/`loader`. so the block needs one name and the emit derives the other two.
 
 `Loader` is the data form, `Union<protocol.Model<...>>`, which is what `result.ts` names and what you store. the live form, the one carrying `to`, stays `protocol.Of<typeof loader>` at the use site, the way `protocol.spec.ts` writes it. one name for the thing you put away, an expression for the thing you are walking.
 
