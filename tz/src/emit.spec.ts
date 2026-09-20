@@ -59,6 +59,14 @@ test('decline with a matcher, and bind what it refuses', () => {
     out('const f = (id: string) => {\n  const user = db.get(id) ?:err (e) err e;\n  ok user;\n};'),
     'const f = (id: string) => {\n  const $0 = db.get(id); if ($0.branch === \'err\') { const e = $0; return result.err(e); } const user = $0;\n  return result.ok(user);\n};'
   );
+
+  // a refusal that leaves one branch keeps it boxed too, so the survivor's
+  // payload is read with .value where the narrowing has proved the branch
+
+  assert.equal(
+    out('const f = (x: Load) => {\n  const rows = x ?|(:idle, :loading, :failed) return;\n  return rows.value;\n};'),
+    'const f = (x: Load) => {\n  if (((x.branch === \'idle\') || (x.branch === \'loading\') || (x.branch === \'failed\'))) return; const rows = x;\n  return rows.value;\n};'
+  );
 });
 
 test('combine halves in a group before the tail', () => {

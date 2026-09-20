@@ -40,7 +40,7 @@ material that onboards people and agents. derived from the battle test, not inve
 | # | session | phase | status | resolves |
 | --- | --- | --- | --- | --- |
 | 01 | run the code in the build | truth | done | the suite runs the showcase |
-| 02 | survivor binding | truth | planned | q1 |
+| 02 | survivor binding | truth | done | q1 |
 | 03 | expression-subject chains | truth | planned | the 2026-09-16 defect |
 | 04 | the checker's honesty | truth | planned | q2 |
 | 05 | scratch, the showcase | truth | planned | the remote fixture |

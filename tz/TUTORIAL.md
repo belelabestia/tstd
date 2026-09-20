@@ -144,7 +144,7 @@ each half carries its own operator, groups nest, and a group of one is refused, 
 x ?|(?&(> 0, < 1), == 5) => 'small' else => 'big';
 ```
 
-a group never mixes branch tags with comparisons: `:err` tests the branch while `== 1` tests the value, so `|(:err, == 1)` is refused. `?(` stays the escape hatch, a self contained boolean expression that may or may not mention the subject; groups always carry their combinator, so `?&(`, `?|(` and `?(` never collide. `?ok` and `?err` name the `Result` branches the short way and hand the payload back unwrapped; the coloned `?:tag` reads any branch by name with the subject left boxed, so the chain can test the same union twice.
+a group never mixes branch tags with comparisons: `:err` tests the branch while `== 1` tests the value, so `|(:err, == 1)` is refused. `?(` stays the escape hatch, a self contained boolean expression that may or may not mention the subject; groups always carry their combinator, so `?&(`, `?|(` and `?(` never collide. `?ok` and `?err` name the `Result` branches the short way and hand the payload back unwrapped; the coloned `?:tag` reads any branch by name with the subject left boxed, so the chain can test the same union twice. a coloned refusal keeps the box too, so reaching the branch that survived is one more step: `const rows = x ?|(:idle, :loading, :failed) return;` leaves `rows` boxed, and `rows.value` reads its payload, because the narrowing already proved which branch it is.
 
 ### the same heads in `? {}`
 

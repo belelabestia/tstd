@@ -8,6 +8,16 @@ the boolean and exhaustive checks ship; the next item is the editor affordances 
 
 open defect, found 2026-09-16 while building else-quest chains: an arrow-body chain over an expression subject (`f(x) ?== 0 => 'zero' else => 'pos'`) emits garbled code, duplicating the subject around the temp application; a named subject emits cleanly, which is why the docs already say matchers test names.
 
+## 2026-09-20: a survivor keeps its box
+
+q1 is ruled: a coloned refusal keeps the subject boxed, so the showcase source was wrong, not the language. `finished` in `scratch/machine.tz` now reads `const rows = x ?|(:idle, :loading, :failed) return; return rows.value;`, and `scratch/signup.spec.tz` passes unchanged.
+
+the box is not a wart. a coloned test names one branch, so the survivor is that branch's complement: `?|(:idle, :loading, :failed)` leaves `done` alone, but `?:loading` on the same union leaves three members, some carrying nothing, and `.value` on those does not typecheck. `?ok` and `?err` are the only tests that may unwrap, because the complement of one branch of a two-member union is always the other branch, and that one always carries the payload. the emitter is syntactic and knows no union, so it can never decide a group's complement. unwrapping the survivor would break the multi-member cases and the chain that reads the same union twice.
+
+what changed: one line in `scratch/machine.tz`; one `emit.spec` case pinning that a group refusal binds `rows = x` while the caller reads `.value`, with the reason in the comment; one sentence in the `tz/TUTORIAL.md` side quest paragraph; one clause in the `tz/DESIGN.md` side quest bullet.
+
+what verified: `npm test` in `tz/` runs 59 src plus 12 scratch, the `finished` assertions pass and the suite stays red on the one pre-existing failure at `scratch/signup.spec.tz:84`, which is session 05's remote fixture; `npm test` at the root is green at 43; `tzc scratch` exits 0; `tzd scratch` exits 0 with only `TZL0003` warnings.
+
 ## 2026-09-20: the build runs the showcase
 
 the suite typechecked the emit and tested the emitter, but never ran the emitted program: `node dist/tzx.js --test scratch/signup.spec.tz` exited 1 while both suites stayed green. that gap let a showcase defect sit under green lights, so the fix is the harness, and the two failures are left standing on purpose. they are sessions 02 through 05.

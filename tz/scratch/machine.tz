@@ -25,7 +25,7 @@ export const ready = (x: string) => {
 /** the payload of the one branch that carries an answer, reached by refusing the rest */
 export const finished = (x: Load) => {
   const rows = x ?|(:idle, :loading, :failed) return;
-  return rows;
+  return rows.value;
 };
 
 /** and the same question asked as an answer instead of a decline */
