@@ -14,8 +14,12 @@
     "types": [
       "node"
     ],
-    "rootDir": "src",
-    "outDir": "dist"
+    "paths": {
+      "@belelabestia/tstd": [
+        "../src/index.ts"
+      ]
+    },
+    "noEmit": true
   },
   "include": [
     "src"
