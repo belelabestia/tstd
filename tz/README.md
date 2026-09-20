@@ -1,6 +1,6 @@
 # tz - the typezig prototype
 
-typescript with most of typescript taken away, plus a handful of constructs, transpiled back to typescript that imports `tstd`. the design notes are in `tz/DESIGN.md`; the spec is in `tz/TUTORIAL.md`; the journal of decisions is in `tz/UPDATES.md`. this file is the entry point: how to run it and where the rest lives.
+typescript with most of typescript taken away, plus a handful of constructs, transpiled back to typescript that imports `tstd`. the design notes are in `tz/DESIGN.md`; the spec is in `tz/TUTORIAL.md`; the journal of decisions is in `tz/UPDATES.md`; the plan of action is in `tz/plan/roadmap.md`. this file is the entry point: how to run it and where the rest lives.
 
 ## running it
 
