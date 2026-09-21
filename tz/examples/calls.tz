@@ -22,10 +22,10 @@ export const pair = (a: string, b: string) => {
 /** fetch with try, parse with a decline that says why */
 export const remote = (url: string) => {
   const res = try await call => { return fetch(url) };
-  const text = try await call => res.text();
+  const text = try await call => { return res.text() };
   const parse = (raw: string) => call => JSON.parse(raw);
   const body = parse(text) ?:err (e) err `bad payload: ${e}`;
-  ok body;
+  ok body.value;
 };
 
 /** fire and forget: void drops the whole boundary, void try propagates the err and drops the ok */
