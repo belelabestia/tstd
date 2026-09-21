@@ -183,9 +183,10 @@ test('compare with an operator, and test a condition in parens', () => {
   assert.match(refused('const f = (x: number) => {\n  const a = x ?== 0 (v) => v;\n  return a;\n};'), /binds nothing/);
   assert.match(refused('const f = (x: number) => {\n  const a = x ?(x > 0) (v) => v;\n  return a;\n};'), /binds nothing; the subject is already named/);
 
-  // a condition tests a bare name, and needs something to test
+  // a condition over an expression subject cannot test the subject it stands
+  // on: the second evaluation hides behind a name the reader supplies
 
-  assert.match(refused('const f = (a: number) => {\n  const v = f(a) ?(f(a) > 0) => 1;\n  return v;\n};'), /tests a name/);
+  assert.match(refused('const f = (a: number) => {\n  const v = f(a) ?(f(a) > 0) => 1;\n  return v;\n};'), /cannot test the subject it stands on/);
   assert.match(refused('const f = (x: number) => {\n  const v = x ?() => 1;\n  return v;\n};'), /tests something/);
   assert.equal(
     out('const f = (x: string) => {\n  const v = x ?== `lit` => 1;\n  return v;\n};'),
@@ -580,8 +581,8 @@ test('decline when false, and never with !== true', () => {
   // the difference is strict: !== true passes a truthy non-boolean, === false does not
 
   assert.equal(
-    out('const f = (x: unknown) => {\n  const v = x ?! => `no` else => `yes`;\n  return v;\n};'),
-    'const f = (x: unknown) => {\n  const v = x === false ? `no` :   `yes`;\n  return v;\n};'
+    out('const f = (x: unknown) => {\n  const v = `yes` ?!(x) => `no`;\n  return v;\n};'),
+    'const f = (x: unknown) => {\n  const v = !((x) === true) ? `no` : `yes`;\n  return v;\n};'
   );
 
   assert.equal(
@@ -591,7 +592,7 @@ test('decline when false, and never with !== true', () => {
 
   // a bare ?! binds nothing, and a ?! {} block is refused while a hit tail is not
 
-  assert.match(refused('const f = (x: number) => {\n  const a = x ?! (v) => v;\n  return a;\n};'), /tests == false/);
+  assert.match(refused('const f = (x: number) => {\n  const a = x ?! (v) => v;\n  return a;\n};'), /takes an exit, =>, or a block/);
   assert.match(refused('const r = out ?! {\n  :ok => 1,\n  else => 0\n};'), /arms spell == explicitly/);
   assert.match(refused('const f = (cond: boolean) => {\n  cond ? ! log(`down`);\n  return cond;\n};'), /means \?== false/);
   assert.match(refused('const f = (x: number) => {\n  x ?!5 return;\n  return x;\n};'), /means \?== false/);
@@ -747,6 +748,99 @@ test('continue a chain on the locked subject', () => {
   // a quest with no chain behind it answers nothing, so it is refused
 
   assert.match(refused('export const sign = (n: number) => ?(n < 0) => `neg` else => `pos`;'), /is refused/);
+});
+
+test('hold an expression subject in a temp, and chain on it', () => {
+  // a subject that is not a name is held once, so the chain tests the temp and
+  // the expression is evaluated exactly once, on the same line it was written
+
+  assert.equal(
+    out('export const label = (n: number) =>\n  f(n) ?== 0 => `zero` else => `pos`;'),
+    'export const label = (n: number) =>\n  (($0) => $0 === (0) ? `zero` : `pos`)(f(n));'
+  );
+
+  // an else continuation locks the same temp, so its quest reads $0, never f(n)
+
+  assert.equal(
+    out('export const label = (n: number) =>\n  f(n) ?== 0 => `zero` else ?< 0 => `neg` else => `pos`;'),
+    'export const label = (n: number) =>\n  (($0) => $0 === (0) ? `zero` : (() => { return $0 < (0) ? `neg` : `pos`; })())(f(n));'
+  );
+
+  // a named subject still tests in place: no temp and no application
+
+  assert.equal(
+    out('export const label = (n: number) =>\n  n ?== 0 => `zero` else => `pos`;'),
+    'export const label = (n: number) =>\n  (n === (0) ? `zero` : `pos`);'
+  );
+
+  // a call spanning groups is one subject, not a group the chain rewrites twice
+
+  assert.equal(
+    out('export const label = (a: number) =>\n  g(f(a)) ?== 0 => `zero` else => `pos`;'),
+    'export const label = (a: number) =>\n  (($0) => $0 === (0) ? `zero` : `pos`)(g(f(a)));'
+  );
+});
+
+test('test a foreign condition with ?( and ?!(', () => {
+  // a condition spells its own boolean, so the subject is not what it reads
+
+  assert.equal(
+    out('const f = (x: T) => {\n  x ?(is.valid(x)) err `no`;\n  ok x;\n};'),
+    'const f = (x: T) => {\n  if ((is.valid(x)) === true) return result.err(`no`);\n  return result.ok(x);\n};'
+  );
+
+  // ?!(cond) is the negated quest: the miss is when the condition holds
+
+  assert.equal(
+    out('const f = (x: T) => {\n  x ?!(is.valid(x)) err `no`;\n  ok x;\n};'),
+    'const f = (x: T) => {\n  if (!((is.valid(x)) === true)) return result.err(`no`);\n  return result.ok(x);\n};'
+  );
+
+  // an expression subject the condition never repeats runs only on the miss,
+  // so a bare statement has nowhere to yield it and is refused
+
+  assert.match(refused('const f = (id: string) => {\n  auth(id) ?(!isAdmin(id)) err `no`;\n  ok 1;\n};'), /needs somewhere to yield it/);
+
+  // captured, the miss value is the expression itself, so it runs only on the
+  // miss, after the test, and never before it
+
+  assert.equal(
+    out('const f = (id: string) => {\n  const a = auth(id) ?(!isAdmin(id)) err `no`;\n  ok a;\n};'),
+    'const f = (id: string) => {\n  if ((!isAdmin(id)) === true) return result.err(`no`); const a = auth(id);\n  return result.ok(a);\n};'
+  );
+
+  // a condition cannot test the subject it stands on: the temp would be held
+  // while the test re-reads the source expression
+
+  assert.match(refused('const f = (m: number) => {\n  const a = db(m) ?(db(m) > 0) => 1;\n  ok a;\n};'), /cannot test the subject it stands on/);
+});
+
+test('yield the else value and test it, rather than answer a bare boolean', () => {
+  // a bare condition with a value else is the inverted form of a subject-first
+  // quest, so it is refused and the else value becomes the subject
+
+  assert.match(refused('const f = (p: boolean) => {\n  const r = p ? => a else => b;\n  ok r;\n};'), /yield the else value and test it/);
+
+  // and the refactor is the same program: the else is the subject, the arm the hit
+
+  assert.equal(
+    out('const f = (p: boolean) => {\n  const r = b ?!(p) => a;\n  ok r;\n};'),
+    'const f = (p: boolean) => {\n  const r = !((p) === true) ? a : b;\n  return result.ok(r);\n};'
+  );
+
+  // a bare condition with no else still yields its own subject
+
+  assert.equal(
+    out('const f = (p: boolean) => {\n  const r = p ? => a;\n  ok r;\n};'),
+    'const f = (p: boolean) => {\n  const r = p === true ? a : p;\n  return result.ok(r);\n};'
+  );
+
+  // an exit else and a chained else are not inverted; they keep their spelling
+
+  assert.equal(
+    out('const f = (p: boolean) => {\n  const r = p ? => a else err `no`;\n  ok r;\n};'),
+    'const f = (p: boolean) => {\n  if (!(p === true)) return result.err(`no`); const r = a;\n  return result.ok(r);\n};'
+  );
 });
 
 test('construct a branch with a colon', () => {

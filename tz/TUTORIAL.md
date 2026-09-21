@@ -117,6 +117,7 @@ all the side quests are postfix, all under `?`:
 | `?&(...)` | every listed comparison holds | `x ?&(> 0, < 100) { print('in range'); }` |
 | `?\|(...)` | any listed comparison holds | `x ?|(< 0, > 100) { print('out'); }` |
 | `?(cond)` | a self contained boolean expression | `x ?(x % 2 == 0) => 'even'` |
+| `?!(cond)` | the negation of a self contained boolean | `x ?!(is.valid(x)) err 'invalid'` |
 | `?` | true, shorthand for `?== true` | `cond ? log('up')` |
 | `?!` | false, shorthand for `?== false` | `cond ?! log('down')` |
 
@@ -144,7 +145,7 @@ each half carries its own operator, groups nest, and a group of one is refused, 
 x ?|(?&(> 0, < 1), == 5) => 'small' else => 'big';
 ```
 
-a group never mixes branch tags with comparisons: `:err` tests the branch while `== 1` tests the value, so `|(:err, == 1)` is refused. `?(` stays the escape hatch, a self contained boolean expression that may or may not mention the subject; groups always carry their combinator, so `?&(`, `?|(` and `?(` never collide. `?ok` and `?err` name the `Result` branches the short way and hand the payload back unwrapped; the coloned `?:tag` reads any branch by name with the subject left boxed, so the chain can test the same union twice. a coloned refusal keeps the box too, so reaching the branch that survived is one more step: `const rows = x ?|(:idle, :loading, :failed) return;` leaves `rows` boxed, and `rows.value` reads its payload, because the narrowing already proved which branch it is.
+a group never mixes branch tags with comparisons: `:err` tests the branch while `== 1` tests the value, so `|(:err, == 1)` is refused. `?(` stays the escape hatch, a self contained boolean expression that may or may not mention the subject, and `?!(cond)` is its negation: `?(` refuses when the condition is false, `?!(cond)` when it is true. a custom side quest is `x ?!(is.valid(x)) err 'invalid'`: the condition is a third party predicate, and the expression on the left is the value the quest is about. when the condition never repeats that expression, the expression is the miss value alone, read once; an expression a condition does repeat is refused, because the test would read it a second time, so bind it to a name first. groups always carry their combinator, so `?&(`, `?|(`, `?(` and `?!( ` never collide. `?ok` and `?err` name the `Result` branches the short way and hand the payload back unwrapped; the coloned `?:tag` reads any branch by name with the subject left boxed, so the chain can test the same union twice. a coloned refusal keeps the box too, so reaching the branch that survived is one more step: `const rows = x ?|(:idle, :loading, :failed) return;` leaves `rows` boxed, and `rows.value` reads its payload, because the narrowing already proved which branch it is.
 
 ### the same heads in `? {}`
 
@@ -213,6 +214,8 @@ export const sign = (n: number) =>
 ```
 
 an `else` answer may still nest a chain of its own with `else =>`, and that chain locks its own subject; nesting is composition, not rebinding, and each chain still answers its own miss. a quest with no chain behind it answers nothing: `?(n < 0) => 'neg'` standing alone is refused, since a miss would have no value to yield. in a decline the `else` keeps answering: a quest after `else` continues an answering chain, never a decline.
+
+a side quest reads as "but if": yield the subject, but if the test holds, do this instead. when a bare boolean carries a value `else`, the subject is only the final value, so the whole thing is the inverted form of testing that value: `pred ? => hit else => miss` is refused in favour of `miss ?!(pred) => hit`, which reads "yield `miss`, but if `pred` is false, yield `hit`". the `else` value moves to the front, the condition moves into the parens, and the two say the same thing in the order the machine runs: test first, value on the miss. a bare condition with no `else` keeps its own subject (`pred ? => hit` yields `pred` on the miss), and an exit `else` or a chained `else` is not a plain value, so each keeps its own spelling.
 
 the miss side arrow-captures like any side quest tail: `=> expression`, `=> { block }`, or an exit. a bare value after `else` captures nothing, so `else 'above'` is refused and reads `else => 'above'`. an exit in the final else flips the whole chain to an exit ladder: the value branches become exits, and the subjects evaluate only on their miss:
 

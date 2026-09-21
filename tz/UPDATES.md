@@ -6,7 +6,21 @@ a journal of decisions. the spec lives in `tz/TUTORIAL.md`; the design notes liv
 
 the boolean and exhaustive checks ship; the next item is the editor affordances on the same surface (completions, hover, goto, rename) and a keystroke loop that stops shelling out. the coherence spec runs in `npm test`.
 
-open defect, found 2026-09-16 while building else-quest chains: an arrow-body chain over an expression subject (`f(x) ?== 0 => 'zero' else => 'pos'`) emits garbled code, duplicating the subject around the temp application; a named subject emits cleanly, which is why the docs already say matchers test names.
+the 2026-09-16 defect is fixed, and the session that fixed it closed the custom quest: `?(cond)` and `?!(cond)` are side quests whose condition is a third party predicate, a side quest is postfix in syntax and first in execution, and a value `else` is the inverted form. sessions 04 and 05 remain in phase 0.
+
+## 2026-09-20: a condition is a custom side quest
+
+a side quest reads as "but if", and the reading is now the law: the test runs before the subject, a miss yields the subject, and a value written after `else` is the subject of the inverted form. three things landed.
+
+the 2026-09-16 defect is fixed. an arrow-body chain over an expression subject, `f(x) ?== 0 => 'zero' else => 'pos'`, emitted `f(x)(($0) => ...)(f(x))`: `linkBody` reached the `(` of `f(x)` before the matcher, emitted the group literally, then emitted the matcher's code which spells the same subject again. the walk now skips a `(`, `[`, object `{` or `=>` that opens a span a later quest's subject covers, using `subjStart` so the subject logic stays in one place.
+
+`?(cond)` and `?!(cond)` are the custom quests. the condition is a free boolean emitted verbatim; the expression on the left is the value the miss yields, not what the condition reads. the `?(...) tests a name` refusal is gone: it bought nothing, because the condition never reaches the subject. `?!(cond)` is the negation, tagged in the scan and negated in `quest`. when the condition never repeats the subject, the subject is read once, only on the miss: captured it lands after the test, `if (...) return err; const a = auth(id)`, and a bare statement with no land refuses it, because a postfix quest with nowhere to yield has nowhere to put the value. a condition that does repeat the subject is refused, because the test would read it twice.
+
+the inversion closes the family. a bare boolean with a value `else` is refused in favour of the subject-first form: `pred ? => hit else => miss` reads "yield `miss`, but if `pred` then `hit`", which is `miss ?!(pred) => hit`, and `?!` pairs with `?` the same way. a bare condition with no `else` keeps its own subject, `pred ? => a` emitting `pred === true ? a : pred`; an exit `else` stays the funnel and a chained `else` stays composition, since neither is a plain value.
+
+what changed: `subjectAhead` and the four subject sites in `emit.ts`; `condRange`, `condOnly`, `condRepeats`, `repeats`, `elseAfter` and the `?!(cond)` negation; the `?!(` row in `roles`; the `?!(cond)` tag in `scan.ts`; three `emit.spec` cases and two message updates; the side quest tables and the custom-quest rule in `TUTORIAL.md` and `DESIGN.md`; `guard` in `scratch/signup.tz` carries the captured custom quest, with a spec.
+
+what verified: `npm test` in `tz/` runs 62 src plus 13 scratch, all green but the one pre-existing remote fixture at `scratch/signup.spec.ts` (session 05); `npm test` at the root is green at 43; `tzc scratch` exits 0; `tzd scratch` exits 0 with only `TZL0003` warnings; the emitted chains and quests typecheck under `tsc --strict`.
 
 ## 2026-09-20: a survivor keeps its box
 

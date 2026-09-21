@@ -12,6 +12,12 @@ export const signup = (body: unknown) => {
   ok body;
 };
 
+/** the actor a request is allowed for, refused when the role is not theirs */
+export const guard = (actor: string, role: string) => {
+  const actor2 = actor ?!(role == 'admin') err 'not authorized';
+  ok actor2;
+};
+
 /** the rows worth keeping, one refusal per turn of the loop */
 export const active = (rows: string[]) => {
   const out: string[] = [];

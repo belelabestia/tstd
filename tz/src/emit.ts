@@ -27,6 +27,7 @@ export const roles: { name: string, role: 'expression' | 'statement' | 'both', h
   { name: '?literal', role: 'both',       handler: 'matcherTail', match: '?' },
   { name: '?!',       role: 'both',       handler: 'matcherTail', match: '?!' },
   { name: '?(cond)',  role: 'both',       handler: 'matcherTail', match: '?(' },
+  { name: '?!(cond)', role: 'both',       handler: 'matcherTail', match: '?!(' },
   { name: '? {}',     role: 'both',       handler: 'questioning', match: '? {' },
   { name: 'branch',   role: 'expression', handler: 'construct',   match: 'branch(' },
   { name: 'try',      role: 'statement',  handler: 'propagate',   match: 'try' },
@@ -436,6 +437,83 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
     return { test: `(${parts.join(joiner)})`, unwraps, tags, compares, conds, shut };
   };
 
+  // a condition test spells its own boolean, so a subject the condition never
+  // repeats is only the value the miss yields, never a temp the test reads
+  const condOnly = (qq: number, start: number, stop: number) => {
+    const tag = matcher[qq];
+    if (tag < 0 || tokens[tag].text !== '(') return false;
+
+    const shut = twin[tag];
+    if (shut < 0) return false;
+
+    return !repeats(after[tag], before[shut], start, stop);
+  };
+
+  // an expression subject a condition repeats cannot be retargeted to its
+  // temp, so the second evaluation hides behind a name the reader supplies
+  const condRepeats = (qq: number, start: number, stop: number) => {
+    const tag = matcher[qq];
+    if (tag < 0 || tokens[tag].text !== '(') return false;
+    if (start > stop) return false;
+
+    const shut = twin[tag];
+    if (shut < 0) return false;
+
+    return repeats(after[tag], before[shut], start, stop);
+  };
+
+  const repeats = (from: number, to: number, start: number, stop: number) => {
+    const width = stop - start + 1;
+    if (width <= 0 || to - from + 1 < width) return false;
+
+    for (let k = from; k + width - 1 <= to; k++) {
+      let same = true;
+
+      for (let m = 0; m < width; m++) {
+        if (tokens[k + m].text !== tokens[start + m].text) { same = false; break; }
+      }
+
+      if (same) return true;
+    }
+
+    return false;
+  };
+
+  // the else => value an arrow tail may carry: only a plain value else is the
+  // redundant spelling of a subject-first quest. an exit else declines, and a
+  // chained else is composition, so both keep their own spelling
+  const elseAfter = (arrow: number, last: number) => {
+    let j = after[arrow];
+
+    while (j >= 0 && j <= last) {
+      const t = tokens[j];
+      if (t.kind === 'comment') { j++; continue; }
+      if (carries.includes(t.text)) { j = jump(j); continue; }
+      if (t.kind === 'word' && t.text === 'else' && keyword(tokens, before, j)) {
+        const n = after[j];
+        if (n < 0 || n > last || tokens[n].text !== '=>' || after[n] < 0) return -1;
+        if (tokens[after[n]].kind === 'word' && ['return', 'ok', 'err', 'break', 'continue', 'async'].includes(tokens[after[n]].text) && keyword(tokens, before, after[n])) return -1;
+
+        let stop = after[n];
+
+        while (stop >= 0 && stop <= last) {
+          const u = tokens[stop];
+          if (u.kind === 'comment') { stop++; continue; }
+          if (carries.includes(u.text)) { stop = jump(stop); continue; }
+          if (matcher[stop] >= 0 && !consumed[stop]) return -1;
+          if (u.text === ';' || u.text === ',' || closes.includes(u.text)) break;
+          stop++;
+        }
+
+        return j;
+      }
+      if (t.text === ';' || t.text === ',' || closes.includes(t.text)) return -1;
+      j++;
+    }
+
+    return -1;
+  };
+
   const quest = (qq: number, subj: string, subjName: string): Quest | Failure => {
     const tag = matcher[qq];
 
@@ -450,10 +528,14 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
       const shut = twin[tag];
       if (shut < 0) return no(tag, 'a condition has no closing paren');
       if (after[tag] === shut) return no(tag, 'a condition tests something');
-      if (subjName === '') return no(tag, '?(...) tests a name; bind the value first');
       if (nested(after[tag], before[shut])) return no(tag, 'matchers do not nest; bind the inner value first');
+
+      // ?!(cond) is the negated condition quest: the miss is when it holds
+      const bang = before[tag];
+      const neg = bang >= 0 && tokens[bang].text === '!' && tokens[bang].to === tokens[tag].from && tokens[bang].from >= tokens[qq].to ? bang : -1;
+      const test = `(${spell(after[tag], before[shut], subjName, subj)}) === true`;
       consumed[qq] = true;
-      return { test: `(${spell(after[tag], before[shut], subjName, subj)}) === true`, tip: tag, cursor: after[shut], unwraps: false, bindable: false, kind: 'cond', tags: false, compares: true, conds: [{ from: after[tag], to: before[shut] }] };
+      return { test: neg >= 0 ? `!(${test})` : test, tip: tag, cursor: after[shut], unwraps: false, bindable: false, kind: 'cond', tags: false, compares: true, conds: [{ from: after[tag], to: before[shut] }] };
     }
 
     if (binops.includes(tokens[tag].text)) {
@@ -506,7 +588,6 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
       if (shut < 0 || shut >= close) return no(k, 'a condition has no closing paren');
       if (after[k] === shut) return no(k, 'a condition tests something');
       if (nested(after[k], before[shut])) return no(k, 'matchers do not nest; bind the inner value first');
-      if (subjName === '') return no(k, 'a condition tests a name; bind the value first');
       if (uses(after[k], before[shut], subjName) > 0) return no(k, 'the subject is lifted; elide it or bind the inner value first');
       return { kind: 'cond', expr: `(${spell(after[k], before[shut], subjName, subj)}) === true`, value: '', tags: [], next: after[shut], conds: [{ from: after[k], to: before[shut] }] };
     }
@@ -1374,6 +1455,7 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
 
       const subjStop = before[q];
       subjName = from === subjStop && from >= 0 && tokens[from].kind === 'word' && !reserved.includes(tokens[from].text) ? tokens[from].text : '';
+      if (subjName === '' && condRepeats(q, from, subjStop)) return no(q, 'a condition cannot test the subject it stands on; bind it first');
       subj = subjName === '' ? sub : subjName;
       lead = subjName === '' ? '; ' : '';
     }
@@ -1581,13 +1663,20 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
 
     const subjStop = before[at];
     const subjName = init === subjStop && init >= 0 && tokens[init].kind === 'word' && !reserved.includes(tokens[init].text) ? tokens[init].text : '';
-    const subj = subjName === '' ? name : subjName;
-    const lead = subjName === '' ? '; ' : '';
+    if (subjName === '' && condRepeats(at, init, subjStop)) return no(at, 'a condition cannot test the subject it stands on; bind it first');
+    // a condition spells its own test, so an expression subject is only the
+    // value the miss yields: it never runs before the test, so it needs a land
+    const free = subjName === '' && condOnly(at, init, subjStop);
+    if (free && land === undefined) return no(at, 'a condition over an expression needs somewhere to yield it; bind it first');
+    const subj = free ? spell(init, subjStop, '', '') : subjName === '' ? name : subjName;
+    const lead = subjName === '' && !free ? '; ' : '';
 
-    edits.push(subjName === ''
-      ? { from: tokens[i].from, to: tokens[init].from, text: `const ${name} = ` }
-      : { from: tokens[i].from, to: tokens[before[at]].to, text: '' });
-    if (subjName !== '') dropped.push({ from: init, to: subjStop });
+    edits.push(free
+      ? { from: tokens[i].from, to: tokens[subjStop].to, text: '' }
+      : subjName === ''
+        ? { from: tokens[i].from, to: tokens[init].from, text: `const ${name} = ` }
+        : { from: tokens[i].from, to: tokens[before[at]].to, text: '' });
+    if (subjName !== '' || free) dropped.push({ from: init, to: subjStop });
 
     let anchor = tokens[before[at]].to;
     let cursor: number = at;
@@ -1640,6 +1729,9 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
         const arrow = cursor;
         const answer = after[arrow];
         if (answer < 0) return no(arrow, 'a fallback needs a value');
+        if (kind === 'bare' && elseAfter(arrow, last) >= 0) {
+          return no(arrow, tokens[tip].text === '!' ? 'a boolean answers with ?! => ... else; yield the else value and test it with ?(...) instead' : 'a boolean answers with ? => ... else; yield the else value and test it with ?!(...) instead');
+        }
 
         const ahead = tokens[answer].text;
         if (tails.includes(ahead)) return no(answer, 'a => answers with a value; to decline, use an exit');
@@ -2154,10 +2246,30 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
       }
     };
 
+    // a group or arrow that opens a quest's subject belongs to that subject,
+    // so it waits for the quest rather than being rewritten on its own
+    const subjectAhead = (at: number) => {
+      let depth = 0;
+
+      for (let k = at; k >= 0 && k <= to; k++) {
+        const t = tokens[k];
+        if (t.kind === 'comment') continue;
+        if (t.text === '(' || t.text === '[' || t.text === '{') { depth++; continue; }
+        if (t.text === ')' || t.text === ']' || t.text === '}') { depth--; continue; }
+        if (depth > 0) continue;
+        if (t.text === ';' || t.text === ',') return false;
+        if (t.text === '?' && matcher[k] >= 0 && !consumed[k]) return subjStart(before[k], from) <= at;
+      }
+
+      return false;
+    };
+
     while (j >= 0 && j <= to) {
       const t = tokens[j];
 
       if (t.kind === 'comment') { j++; continue; }
+
+      if ((t.text === '(' || t.text === '[' || t.text === '{' || t.text === '=>') && subjectAhead(j)) { j++; continue; }
 
       if (t.text === '(' || t.text === '[') {
         const close = twin[j];
@@ -2315,6 +2427,7 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
     const subject = spell(start, stop, '', '');
 
     const subjName = start === stop && start >= 0 && tokens[start].kind === 'word' && !reserved.includes(tokens[start].text) ? tokens[start].text : '';
+    if (subjName === '' && condRepeats(at, start, stop)) return no(at, 'a condition cannot test the subject it stands on; bind it first');
     const subj = subjName === '' ? sub : subjName;
     const lead = subjName === '' ? '; ' : '';
 
@@ -2367,6 +2480,9 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
     const arrow = cursor;
     const answer = after[arrow];
     if (answer < 0) return no(arrow, 'a fallback needs a value');
+    if (lqr.kind === 'bare' && elseAfter(arrow, last) >= 0) {
+      return no(arrow, tokens[tip].text === '!' ? 'a boolean answers with ?! => ... else; yield the else value and test it with ?(...) instead' : 'a boolean answers with ? => ... else; yield the else value and test it with ?!(...) instead');
+    }
 
     const ahead = tokens[answer].text;
     if (tails.includes(ahead) || ahead === 'async') return no(answer, 'an arrow body answers; decline in a block');
@@ -2640,6 +2756,7 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
     const name = temp(i);
 
     const subjName = start === stop && start >= 0 && tokens[start].kind === 'word' && !reserved.includes(tokens[start].text) ? tokens[start].text : '';
+    if (subjName === '' && condRepeats(at, start, stop)) return no(at, 'a condition cannot test the subject it stands on; bind it first');
     const subj = subjName === '' ? name : subjName;
     const lead = subjName === '' ? '; ' : '';
 
@@ -2726,6 +2843,9 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
       const arrow = cursor;
       const answer = after[arrow];
       if (answer < 0) return no(arrow, 'a fallback needs a value');
+      if (qr.kind === 'bare' && elseAfter(arrow, tokens.length - 1) >= 0) {
+        return no(arrow, tokens[tip].text === '!' ? 'a boolean answers with ?! => ... else; yield the else value and test it with ?(...) instead' : 'a boolean answers with ? => ... else; yield the else value and test it with ?!(...) instead');
+      }
 
       const ahead = tokens[answer].text;
       if (tails.includes(ahead)) return no(answer, 'a => answers with a value; to decline, use an exit');

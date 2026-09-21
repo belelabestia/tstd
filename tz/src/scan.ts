@@ -216,10 +216,16 @@ export const scan = (tokens: Token[]) => {
         tagged[i] = i;
         continue;
       }
+      // ?!(cond) is a negated condition quest: the test lives in the parens
+      if (tokens[m].text === '(' && tokens[n].to === tokens[m].from) {
+        matcher[i] = m;
+        tagged[m] = i;
+        continue;
+      }
       const bare = (k: number) =>
         k >= 0 && ((tokens[k].kind === 'word' && bareAfter.includes(tokens[k].text) && keyword(tokens, before, k)) ||
         (tokens[k].kind === 'punct' && bareAfter.includes(tokens[k].text)));
-      if (bare(m) || (m >= 0 && tokens[m].text === '(')) {
+      if (bare(m)) {
         matcher[i] = i;
         tagged[i] = i;
         continue;

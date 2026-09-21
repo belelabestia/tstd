@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import { branch, form, result } from '@belelabestia/tstd';
 import * as assert from 'node:assert/strict';
-import { active, clamp, label, say, signup } from './signup.js';
+import { active, clamp, guard, label, say, signup } from './signup.js';
 import { claim, name } from './load.js';
 import { quiet, zone } from './fallback.js';
 import { describe, finished } from './machine.js';
@@ -26,6 +26,14 @@ test('accept one that is, and carry it narrowed', () => {
 
 test('walk a list with a refusal per turn', () => {
   assert.deepEqual(active(['a', '', 'b']), ['a', 'b']);
+});
+
+test('guard an actor with a predicate of your own', () => {
+  // the condition is a third party test, and the expression on its left is the
+  // value the quest yields: it runs only on the miss, after the test
+  assert.equal(guard('ada', 'admin').branch, 'ok');
+  assert.equal(guard('ada', 'admin').value, 'ada');
+  assert.equal(guard('ada', 'guest').branch, 'err');
 });
 
 test('choose between two sides, and answer without refusing', () => {
