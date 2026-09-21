@@ -6,9 +6,21 @@ a journal of decisions. the spec lives in `tz/TUTORIAL.md`; the design notes liv
 
 the boolean and exhaustive checks ship; the `void` check now reads types too, so the next item is the editor affordances on the same surface (completions, hover, goto, rename) and a keystroke loop that stops shelling out. the coherence spec runs in `npm test`.
 
-the showcase is now irreducible: every construct in the `roles` list has a deck under `constructs/`, and the whole programs live under `examples/`. phase 0 is one session from closed: the `?!` tail defect, `cond ?! err 'x'` emitting an unreWritten `err`, is now session 06, the last truth defect, and the docs work that follows shifts to 07 through 09.
+the showcase is now irreducible: every construct in the `roles` list has a deck under `constructs/`, and the whole programs live under `examples/`. phase 0 is closed: the `?!` tail defect, `cond ?! err 'x'` emitting an unreWritten `err`, landed in session 06, and the docs work that follows is 07 through 09.
 
 three notes the author raised at the close of session 05 are now scheduled. the comment channel is a living protocol, not a phase: comments carrying forward work are part of the no-debt approach, and session 07 writes the protocol rather than deleting the notes. `form` gets an audit (q8, session 15) because its emit is inconsistent, some code written and some emitted along an arbitrary line. a `test` keyword like zig's, in the file it tests and reaching module internals, is explored in session 16 (q9).
+
+## 2026-09-22: the not tail lands its value
+
+q7 is ruled, and the defect was not where the ledger said. the tail rewrite was never the problem: the bare `?!` is lexed as `?` then a glued `!`, and `scan.ts` set the statement start on the `?` while the very next token, the `!`, consumed it. so `starts[!]` was true and `starts[err]` was false, and the exit pass that rewrites `err` into `return result.err(...)` never saw the tail. bare `?` puts the start on the tail itself, which is the whole asymmetry. the working forms hid it: `?! return` needs no rewrite, `?! log(...)` needs none, and `?! { ... }` is a block, so only a tail that lands a value through `wraps` ever exposed it.
+
+the fix is in the read, not the tail: the glued `!` of a bare quest is transparent to the statement-start state, so the start lands on the token after it, exactly where `?` leaves it. rejected: rewriting the `?!` exit tail inside `declining` (it duplicates the `wraps` logic and leaves `frames[at].fallible` and `.answers` unset, because both key off `starts` too, so the symptom moves instead of closing).
+
+the shipped reading was right, so the docs get a note rather than a fix: both `TUTORIAL.md` and `DESIGN.md` already promised `?!` the same tail family, and now say a landing exit rewrites the same way, with `cond ?! err 'x'` landing the error `cond ? err` does.
+
+what changed: `scan.ts` (the `!` skip), two `emit.spec` cases pinning `?! err` and `?! ok`, the `not` deck extended with a landing refusal, and the two doc notes.
+
+what verified: `cond ?! err 'x'` now emits `if (cond === false) return result.err('x');`, matching `cond ? err`, while `?! return`, `?! log(...)` and `?! { ... }` stay byte-identical. `npm test` in `tz/` is exit 0, 65 src plus 54 decks and examples (the `not` deck gains one test); the root suite is exit 0; `tzc examples constructs` and `tzd examples constructs` both exit 0. phase 0 is closed.
 
 ## 2026-09-22: a truth session before the docs
 

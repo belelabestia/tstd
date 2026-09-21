@@ -47,7 +47,7 @@ material that onboards people and agents. derived from the battle test, not inve
 | 03 | expression-subject chains | truth | done | the 2026-09-16 defect |
 | 04 | the checker's honesty | truth | done | q2 |
 | 05 | scratch, the showcase | truth | done | the remote fixture |
-| 06 | the not tail | truth | planned | q7 |
+| 06 | the not tail | truth | done | q7 |
 | 07 | the comment protocol | ownership | planned | q3 |
 | 08 | the teaching dissertation | ownership | planned | tutorial organization |
 | 09 | the educational rewrite | ownership | planned | author voice |
@@ -71,7 +71,7 @@ sessions run in order. 09 is blocked by 08, and 13 and 14 are blocked by 12. eve
 - **q4, the target.** what is the first honest program tz must carry? session 11.
 - **q5, stable enough to split.** `../DESIGN.md` says tz moves to its own repo with a `git mv` once the prototype is stable. what does stable mean, in measurable terms? session 10.
 - **q6, publishing.** `@belelabestia/tz` is private at `0.0.0`. when and how does it become a package someone can install? session 13.
-- **q7, the `?!` tail.** `cond ?! err 'x'` emits an unreWritten `err`, while `cond ? err` and `cond ?== false err` rewrite it. found in session 05; the deck avoids it. session 06, the last truth defect.
+- **q7, the `?!` tail.** `cond ?! err 'x'` emitted an unreWritten `err`, while `cond ? err` and `cond ?== false err` rewrote it. found in session 05. resolved in session 06: the tail rewrite was never the hole; the glued `!` of a bare `?!` ate the statement start in `scan.ts`, so the exit pass that rewrites the tail never saw it. making the `!` transparent to the start fixes it, and the working forms stay byte-identical.
 - **q8, the form line.** some of `form` is emitted, some is written by hand, and the author charges that the line is arbitrary. where does it belong? session 15, with a `protocol` note if the audit finds an adjacent inconsistency (that would be q12).
 - **q9, the in-file test.** a `test` keyword like zig's, in the file it tests, reaching module internals. feasible, and under what house-rule amendment? session 16.
 - **q10, the deck `declare`.** `declare` inside a deck produces a false `TZL0002`, while `const` does not; found in session 05 while writing the `?literal` deck, which used `const` instead. a checker false positive over a legitimate declaration. unassigned.
