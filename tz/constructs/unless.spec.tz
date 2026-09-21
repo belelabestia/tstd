@@ -1,0 +1,21 @@
+import { test } from 'node:test';
+import * as assert from 'node:assert/strict';
+import { result } from '@belelabestia/tstd';
+
+/*
+  ?!(cond) tests the negation of a condition of your own
+
+  it matches when the condition is false, so it reads as "refuse unless".
+  the subject is the miss value, read once, and the condition never
+  borrows the binding of the match side.
+*/
+
+const guard = (actor: string, role: string) => {
+  const allowed = actor ?!(role == 'admin') err 'not authorized';
+  ok allowed;
+};
+
+void test('refuse unless the condition holds', () => {
+  assert.equal(guard('ada', 'admin').branch, 'ok');
+  assert.equal(guard('ada', 'guest').branch, 'err');
+});

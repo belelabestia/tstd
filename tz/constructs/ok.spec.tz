@@ -1,0 +1,23 @@
+import { test } from 'node:test';
+import * as assert from 'node:assert/strict';
+import { is, result } from '@belelabestia/tstd';
+
+/*
+  ok answers a fallible body
+
+  a body exits with exactly one of return, ok, err or async. ok carries
+  the success value, and the implied ok at the end of a fallible body
+  makes the last line the answer.
+*/
+
+const row = (table: Record<string, string>, id: string) => {
+  const found = table[id] ?none err `no row ${id}`;
+  ok found;
+};
+
+void test('answer with ok on the happy path', () => {
+  const out = row({ '1': 'ada' }, '1');
+
+  assert.equal(out.branch, 'ok');
+  assert.equal(out.value, 'ada');
+});

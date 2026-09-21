@@ -1,0 +1,25 @@
+import { test } from 'node:test';
+import * as assert from 'node:assert/strict';
+
+/*
+  continue skips to the next turn
+
+  the loop's other exit, spelled the same way: a side quest tail that
+  leaves this turn and starts the next. like break, it belongs to a loop,
+  never to a function boundary.
+*/
+
+const active = (rows: string[]) => {
+  const kept: string[] = [];
+
+  for (const row of rows) {
+    row.length ?== 0 continue;
+    void kept.push(row);
+  }
+
+  return kept;
+};
+
+void test('skip a turn and keep the loop', () => {
+  assert.deepEqual(active(['a', '', 'b']), ['a', 'b']);
+});

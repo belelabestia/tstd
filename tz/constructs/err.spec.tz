@@ -1,0 +1,23 @@
+import { test } from 'node:test';
+import * as assert from 'node:assert/strict';
+import { is, result } from '@belelabestia/tstd';
+
+/*
+  err answers a fallible body's refusal
+
+  err carries why the body refused, and it is the same Result the caller
+  branches on. a body that can only succeed returns the value unboxed and
+  never writes one.
+*/
+
+const row = (table: Record<string, string>, id: string) => {
+  const found = table[id] ?none err `no row ${id}`;
+  ok found;
+};
+
+void test('answer with err on the refusal', () => {
+  const out = row({}, '2');
+
+  assert.equal(out.branch, 'err');
+  assert.equal(out.value, 'no row 2');
+});

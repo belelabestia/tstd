@@ -1,0 +1,28 @@
+import { test } from 'node:test';
+import * as assert from 'node:assert/strict';
+import { result, type Result } from '@belelabestia/tstd';
+
+/*
+  ?:tag reads any branch by name, the subject left boxed
+
+  ?ok and ?err unwrap because the complement of one branch is always the
+  other. a coloned test names any branch and keeps the whole box, so the
+  chain can read the payload with `.value` once the narrowing proved which
+  branch it is, or test the same subject again.
+*/
+
+const quote = (out: Result<string, string>) => {
+  const found = out ?:err return;
+  return found.value;
+};
+
+const keep = (out: Result<string, string>) => out ?:ok => out.value;
+
+void test('refuse a named branch and read the payload with value', () => {
+  assert.equal(quote(result.ok('ada')), 'ada');
+  assert.equal(quote(result.err('down')), undefined);
+});
+
+void test('match the branch you want and keep it boxed', () => {
+  assert.equal(keep(result.ok('ada')), 'ada');
+});

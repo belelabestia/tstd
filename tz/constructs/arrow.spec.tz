@@ -1,0 +1,46 @@
+import { test } from 'node:test';
+import * as assert from 'node:assert/strict';
+import { is } from '@belelabestia/tstd';
+
+/*
+  arrow capture produces a value without leaving
+
+  a `=>` after a side quest takes the answer and stays in scope, so the
+  value flows on where it stood. it is what replaces `??` and the ternary:
+  one side captures a value, and `else` names the miss when both sides are
+  worth answering.
+
+  the capture is an expression, so it works after an assignment, inside an
+  argument list, or as the answer of another arrow.
+*/
+
+// #marco to agent: showcase all uses of arrow capture. even after call and in other constructs
+
+const port = (env: Record<string, string | undefined>) => env.PORT ?none => '8080';
+
+const label = (n: number) =>
+  n ?< 0 => 'below' else => n ?== 0 => 'nothing' else => 'above';
+
+const who = (value: string | undefined) => {
+  const found = value ?none => {
+    return 'anonymous';
+  };
+
+  return found;
+};
+
+void test('capture a value in place instead of leaving', () => {
+  assert.equal(port({}), '8080');
+  assert.equal(port({ PORT: '3000' }), '3000');
+});
+
+void test('capture one of two sides, chaining on the miss', () => {
+  assert.equal(label(-1), 'below');
+  assert.equal(label(0), 'nothing');
+  assert.equal(label(1), 'above');
+});
+
+void test('capture from a block, where return answers the capture', () => {
+  assert.equal(who(undefined), 'anonymous');
+  assert.equal(who('ada'), 'ada');
+});

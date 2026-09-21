@@ -1,0 +1,44 @@
+import { test } from 'node:test';
+import * as assert from 'node:assert/strict';
+import { form, is, iso, result } from '@belelabestia/tstd';
+
+/*
+  form declares the wire shape and the memory shape once
+
+  a field is a guard, a guard triple, or a triple renamed with `as`. the
+  derived forms come out named after the declaration: the encoded form
+  stays on the wire, the decoded form travels in memory.
+
+  narrowing owns the failure, so form.decode receives a proven value and
+  cannot fail; it returns the domain value unboxed.
+*/
+
+export form user {
+  id: is.string,
+  created_at: {
+    is: iso.timestamp,
+    decode: iso.fromTimestamp,
+    encode: iso.toTimestamp
+  } as createdAt
+}
+
+const greet = (raw: unknown) => {
+  form.model(raw, user) ?== false err 'malformed wire format';
+  const u = form.decode(raw, user);
+  ok `hello ${u.id}, seen ${u.createdAt}`;
+};
+
+void test('prove the shape, then map both ways', () => {
+  const raw: unknown = JSON.parse('{"id":"a","created_at":1704164645006}');
+
+  if (!form.model(raw, user)) assert.fail();
+
+  const u = form.decode(raw, user);
+
+  assert.equal(u.createdAt, '2024-01-02T03:04:05.006Z');
+  assert.deepEqual(form.encode(u, user), raw);
+});
+
+void test('refuse a payload that is not the form', () => {
+  assert.equal(greet({}).branch, 'err');
+});

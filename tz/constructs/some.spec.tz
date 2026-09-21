@@ -1,0 +1,34 @@
+import { test } from 'node:test';
+import * as assert from 'node:assert/strict';
+import { is, result } from '@belelabestia/tstd';
+
+/*
+  ?some tests presence
+
+  the mirror of ?none: the quest matches when the subject carries
+  something, and the binding hands the value to the tail. absence is the
+  miss, so a missing value flows on as the subject.
+*/
+
+const claim = (taken: Record<string, boolean>, id: string) => {
+  taken[id] ?some err `already claimed: ${id}`;
+  taken[id] = true;
+  ok id;
+};
+
+const welcome = (seen: string[], who: string | undefined) => {
+  who ?some (found) seen.push(`hello ${found}`);
+  return seen;
+};
+
+void test('refuse what is already there', () => {
+  const taken: Record<string, boolean> = {};
+
+  assert.equal(claim(taken, 'x').branch, 'ok');
+  assert.equal(claim(taken, 'x').branch, 'err');
+});
+
+void test('bind the value that is present', () => {
+  assert.deepEqual(welcome([], 'ada'), ['hello ada']);
+  assert.deepEqual(welcome([], undefined), []);
+});

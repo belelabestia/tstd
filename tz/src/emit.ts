@@ -18,30 +18,30 @@ const wraps: Record<string, Landing> = {
   return: { open: 'return ', close: '' }
 };
 
-/** the constructs tz adds, with the role they play and the handler that rewrites them */
-export const roles: { name: string, role: 'expression' | 'statement' | 'both', handler: string, match: string }[] = [
-  { name: '=>',       role: 'expression', handler: 'arrowing',    match: '=>' },
-  { name: '?none',    role: 'both',       handler: 'matcherTail', match: '?none' },
-  { name: '?some',    role: 'both',       handler: 'matcherTail', match: '?some' },
-  { name: '?:tag',    role: 'both',       handler: 'matcherTail', match: '?:' },
-  { name: '?literal', role: 'both',       handler: 'matcherTail', match: '?' },
-  { name: '?!',       role: 'both',       handler: 'matcherTail', match: '?!' },
-  { name: '?(cond)',  role: 'both',       handler: 'matcherTail', match: '?(' },
-  { name: '?!(cond)', role: 'both',       handler: 'matcherTail', match: '?!(' },
-  { name: '? {}',     role: 'both',       handler: 'questioning', match: '? {' },
-  { name: 'branch',   role: 'expression', handler: 'construct',   match: 'branch(' },
-  { name: 'try',      role: 'statement',  handler: 'propagate',   match: 'try' },
-  { name: 'scope',    role: 'statement',  handler: 'scoping',     match: 'scope' },
-  { name: 'call',     role: 'both',       handler: 'calling',     match: 'call' },
-  { name: 'make',     role: 'both',       handler: 'making',      match: 'make' },
-  { name: 'form',     role: 'statement',  handler: 'forming',     match: 'form' },
-  { name: 'protocol', role: 'statement',  handler: 'protocoling', match: 'protocol' },
-  { name: 'return',   role: 'statement',  handler: 'exit',        match: 'return' },
-  { name: 'ok',       role: 'statement',  handler: 'exit',        match: 'ok' },
-  { name: 'err',      role: 'statement',  handler: 'exit',        match: 'err' },
-  { name: 'async',    role: 'statement',  handler: 'exit',        match: 'async' },
-  { name: 'break',    role: 'statement',  handler: 'exit',        match: 'break' },
-  { name: 'continue', role: 'statement',  handler: 'exit',        match: 'continue' }
+/** the constructs tz adds, with the role they play, the deck that shows them, and the handler that rewrites them */
+export const roles: { name: string, role: 'expression' | 'statement' | 'both', deck: string, handler: string, match: string }[] = [
+  { name: '=>',       role: 'expression', deck: 'arrow',    handler: 'arrowing',    match: '=>' },
+  { name: '?none',    role: 'both',       deck: 'none',     handler: 'matcherTail', match: '?none' },
+  { name: '?some',    role: 'both',       deck: 'some',     handler: 'matcherTail', match: '?some' },
+  { name: '?:tag',    role: 'both',       deck: 'tag',      handler: 'matcherTail', match: '?:' },
+  { name: '?literal', role: 'both',       deck: 'literal',  handler: 'matcherTail', match: '?' },
+  { name: '?!',       role: 'both',       deck: 'not',      handler: 'matcherTail', match: '?!' },
+  { name: '?(cond)',  role: 'both',       deck: 'cond',     handler: 'matcherTail', match: '?(' },
+  { name: '?!(cond)', role: 'both',       deck: 'unless',   handler: 'matcherTail', match: '?!(' },
+  { name: '? {}',     role: 'both',       deck: 'block',    handler: 'questioning', match: '? {' },
+  { name: 'branch',   role: 'expression', deck: 'branch',   handler: 'construct',   match: 'branch(' },
+  { name: 'try',      role: 'statement',  deck: 'try',      handler: 'propagate',   match: 'try' },
+  { name: 'scope',    role: 'statement',  deck: 'scope',    handler: 'scoping',     match: 'scope' },
+  { name: 'call',     role: 'both',       deck: 'call',     handler: 'calling',     match: 'call' },
+  { name: 'make',     role: 'both',       deck: 'make',     handler: 'making',      match: 'make' },
+  { name: 'form',     role: 'statement',  deck: 'form',     handler: 'forming',     match: 'form' },
+  { name: 'protocol', role: 'statement',  deck: 'protocol', handler: 'protocoling', match: 'protocol' },
+  { name: 'return',   role: 'statement',  deck: 'return',   handler: 'exit',        match: 'return' },
+  { name: 'ok',       role: 'statement',  deck: 'ok',       handler: 'exit',        match: 'ok' },
+  { name: 'err',      role: 'statement',  deck: 'err',      handler: 'exit',        match: 'err' },
+  { name: 'async',    role: 'statement',  deck: 'async',    handler: 'exit',        match: 'async' },
+  { name: 'break',    role: 'statement',  deck: 'break',    handler: 'exit',        match: 'break' },
+  { name: 'continue', role: 'statement',  deck: 'continue', handler: 'exit',        match: 'continue' }
 ];
 
 const exits = ['return', 'ok', 'err', 'async', 'break', 'continue'];

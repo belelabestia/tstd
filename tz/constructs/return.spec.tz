@@ -1,0 +1,34 @@
+import { test } from 'node:test';
+import * as assert from 'node:assert/strict';
+import { is } from '@belelabestia/tstd';
+
+/*
+  return leaves the scope carrying a value
+
+  a bare `return;` is refused: every return is a decline, so it rides a
+  side quest and names what it refuses. a function that cannot fail
+  returns the value unboxed, so most returns are plain.
+*/
+
+const clamp = (n: number) => {
+  if (n < 0) return 0;
+  if (n > 100) return 100;
+
+  return n;
+};
+
+const find = (table: Record<string, string>, id: string) => {
+  const found = table[id] ?none return '';
+  return found;
+};
+
+void test('leave a function carrying a value', () => {
+  assert.equal(clamp(-1), 0);
+  assert.equal(clamp(400), 100);
+  assert.equal(clamp(50), 50);
+});
+
+void test('leave on the miss of a side quest', () => {
+  assert.equal(find({ '1': 'ada' }, '1'), 'ada');
+  assert.equal(find({}, '2'), '');
+});

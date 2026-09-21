@@ -1,0 +1,32 @@
+import { test } from 'node:test';
+import * as assert from 'node:assert/strict';
+import { branch, type Union } from '@belelabestia/tstd';
+
+/*
+  a colon constructs a branch
+
+  the same colon that matches a branch in a `? {}` arm builds one in any
+  value position: `:idle` carries nothing, `:failed(why)` carries a value.
+  exactly one value or nothing, and a Union reads them all.
+*/
+
+const idle = :idle;
+
+const failed = (why: string) => :failed(why);
+
+type Load = Union<{ idle: void, failed: string; }>;
+
+const code = (x: Load) => x ? {
+  :idle => 0,
+  :failed (why) => why.length
+};
+
+void test('build a branch with a colon', () => {
+  assert.deepEqual(idle, branch('idle'));
+  assert.deepEqual(failed('down'), branch('failed', 'down'));
+});
+
+void test('read what a colon built', () => {
+  assert.equal(code(idle), 0);
+  assert.equal(code(failed('down')), 4);
+});

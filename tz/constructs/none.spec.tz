@@ -1,0 +1,28 @@
+import { test } from 'node:test';
+import * as assert from 'node:assert/strict';
+import { is, result } from '@belelabestia/tstd';
+
+/*
+  ?none tests absence
+
+  absence is a first class outcome: the quest matches when the subject is
+  nothing at all, and the tail decides between leaving and substituting.
+  presence is the miss, so the subject flows on untouched.
+*/
+
+const row = (table: Record<string, string>, id: string) => {
+  const found = table[id] ?none err `no row ${id}`;
+  ok found;
+};
+
+const or = (value: string | undefined, dflt: string) => value ?none => dflt;
+
+void test('refuse when the value is absent', () => {
+  assert.equal(row({ '1': 'ada' }, '1').branch, 'ok');
+  assert.equal(row({}, '2').branch, 'err');
+});
+
+void test('substitute a value when nothing is there', () => {
+  assert.equal(or(undefined, 'utc'), 'utc');
+  assert.equal(or('rome', 'utc'), 'rome');
+});

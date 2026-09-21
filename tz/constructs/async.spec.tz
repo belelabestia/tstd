@@ -1,0 +1,18 @@
+import { test } from 'node:test';
+import * as assert from 'node:assert/strict';
+
+/*
+  async states a promise that never suspends
+
+  an await in a body infers the promise; when there is none to infer from,
+  `async x` says it anyway, emitting `return Promise.resolve(x)`. one
+  body exits with one discipline, so async never mixes with return.
+*/
+
+const ready = (x: string) => {
+  async x;
+};
+
+void test('state a promise explicitly', () => {
+  assert.equal(await ready('hi'), 'hi');
+});

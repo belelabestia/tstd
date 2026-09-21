@@ -1,0 +1,46 @@
+import { test } from 'node:test';
+import * as assert from 'node:assert/strict';
+import { protocol, type Union } from '@belelabestia/tstd';
+
+/*
+  protocol declares a union or a machine in one block
+
+  angles say what a branch carries, a list after `=>` says where it may
+  go, and nothing after a leaf. the declaration reads as arrows between
+  names, and the transpiler derives the union type and the factories, so
+  neither is written twice.
+
+  the live form, the one carrying `to`, is read with protocol.Of at the
+  use site; the stored form is the union the block names.
+*/
+
+protocol load {
+  idle => loading,
+  loading<{ at: number }> => done | failed,
+  done<string>,
+  failed<string> => loading
+}
+
+const finished = (x: Load) => {
+  const rows = x ?|(:idle, :loading, :failed) return;
+  return rows.value;
+};
+
+const describe = (x: Load) => x ? {
+  :done (rows) => rows,
+  :failed (why) => `failed: ${why}`,
+  else => 'still going'
+};
+
+const retry = (x: protocol.Of<typeof load, 'failed'>) => x.to.loading({ at: 1 });
+
+void test('read a machine branch by refusing the others', () => {
+  assert.equal(finished(load.done('rows')), 'rows');
+  assert.equal(finished(load.idle()), undefined);
+});
+
+void test('answer over a machine, and walk it forward', () => {
+  assert.equal(describe(load.failed('down')), 'failed: down');
+  assert.equal(describe(load.idle()), 'still going');
+  assert.equal(retry(load.failed('down')).value.at, 1);
+});

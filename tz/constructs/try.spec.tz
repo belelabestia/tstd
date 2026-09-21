@@ -1,0 +1,37 @@
+import { test } from 'node:test';
+import * as assert from 'node:assert/strict';
+import { call, is, result } from '@belelabestia/tstd';
+
+/*
+  try propagates a failure without naming it
+
+  it binds the unwrapped value and, on the err branch, exits with the
+  payload. spelled out, `try x` is `x ?err (e) err e`, so the failure
+  climbs and the happy path stays flat. it prefixes a plain call, a call
+  at the boundary, or a hold inside a scope.
+*/
+
+const row = (table: Record<string, string>, id: string) => {
+  const found = table[id] ?none err `no row ${id}`;
+  ok found;
+};
+
+const name = (table: Record<string, string>, id: string) => {
+  const raw = try row(table, id);
+  ok raw;
+};
+
+const parsed = (raw: string) => {
+  const value = try call => JSON.parse(raw);
+  ok value;
+};
+
+void test('propagate a failure without naming it twice', () => {
+  assert.equal(name({ '1': 'ada' }, '1').value, 'ada');
+  assert.equal(name({}, '2').branch, 'err');
+});
+
+void test('unwrap a foreign call', () => {
+  assert.deepEqual(parsed('{"a":1}').value, { a: 1 });
+  assert.equal(parsed('{oops').branch, 'err');
+});

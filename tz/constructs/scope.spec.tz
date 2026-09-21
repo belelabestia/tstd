@@ -1,0 +1,36 @@
+import { test } from 'node:test';
+import * as assert from 'node:assert/strict';
+import { result, scope } from '@belelabestia/tstd';
+
+/*
+  scope holds resources and hands them back in reverse
+
+  each `hold` opens a resource and `try hold` unwraps it. the block is a
+  function body: it ends with an exit, and every resource it took is
+  released in reverse order, whatever the work answered.
+
+  the exit carries your own result untouched, so the caller reads the work
+  answer through `.exit`.
+*/
+
+const pool = {
+  take: (name: string) => ({
+    open: () => name,
+    close: (conn: string) => void conn,
+    abort: (conn: string) => void conn
+  })
+};
+
+const both = (first: string, second: string) => scope (hold) => {
+  const a = try hold(pool.take(first));
+  const b = try hold(pool.take(second));
+  ok `${a} and ${b}`;
+};
+
+void test('hold two resources and read the work answer', () => {
+  const out = both('a', 'b');
+
+  assert.equal(out.exit.branch, 'done');
+  assert.equal(out.exit.value.branch, 'ok');
+  assert.equal(out.exit.value.value, 'a and b');
+});

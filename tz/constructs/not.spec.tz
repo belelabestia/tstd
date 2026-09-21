@@ -1,0 +1,33 @@
+import { test } from 'node:test';
+import * as assert from 'node:assert/strict';
+
+/*
+  a bare ?! tests false
+
+  the negation of a bare `?`: the bare `?!` means `?== false`, never
+  `?!= true`, so a truthy non-boolean misses. the ! glues onto the ?, and
+  the quest takes a trigger, a return, `=>`, or a block.
+*/
+
+const ping = (cond: boolean, log: (x: string) => void) => {
+  cond ?! log('down');
+  return cond;
+};
+
+const sign = (cond: boolean) => {
+  cond ?! return 'unset';
+  return 'set';
+};
+
+void test('trigger an effect when false', () => {
+  const seen: string[] = [];
+
+  void ping(false, (x) => void seen.push(x));
+  void ping(true, (x) => void seen.push(x));
+  assert.deepEqual(seen, ['down']);
+});
+
+void test('leave early when false, and fall through when not', () => {
+  assert.equal(sign(true), 'set');
+  assert.equal(sign(false), 'unset');
+});

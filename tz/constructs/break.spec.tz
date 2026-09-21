@@ -1,0 +1,25 @@
+import { test } from 'node:test';
+import * as assert from 'node:assert/strict';
+
+/*
+  break leaves a loop
+
+  an exit like any other on a side quest tail, so it leaves the nearest
+  loop. it is refused in a `=>` block or a `? {}` block, because those are
+  function boundaries and break would have no loop to leave.
+*/
+
+const until = (rows: string[], stop: string) => {
+  const kept: string[] = [];
+
+  for (const row of rows) {
+    row ?== stop break;
+    void kept.push(row);
+  }
+
+  return kept;
+};
+
+void test('leave a loop early', () => {
+  assert.deepEqual(until(['a', 'b', 'stop', 'c'], 'stop'), ['a', 'b']);
+});

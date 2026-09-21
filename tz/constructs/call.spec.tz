@@ -1,0 +1,53 @@
+import { test } from 'node:test';
+import * as assert from 'node:assert/strict';
+import { call, result } from '@belelabestia/tstd';
+
+/*
+  call isolates what throws
+
+  a panic is invisible to a signature, so the boundary turns it into a
+  Result: `call => f(a)` passes the function and its arguments straight
+  through, a block holds multi-line work, and `await call` crosses a
+  promise. `try call` unwraps and `void call` drops the boundary on
+  purpose; an uncaptured call is refused, never silent.
+
+  an await inside the arrow lifts the body to async on its own, so nobody
+  writes the async modifier.
+*/
+
+const parse = (raw: string) => call => JSON.parse(raw);
+
+const read = (file: { read: () => string }) => call => {
+  const content = file.read();
+  return JSON.parse(content);
+};
+
+const get = (url: string) => await call => fetch(url);
+
+const forget = (save: (x: string) => void, x: string) => {
+  void call => save(x);
+  ok 'saved';
+};
+
+void test('answer the boundary straight back', () => {
+  assert.deepEqual(parse('{"a":1}').value, { a: 1 });
+  assert.equal(parse('{oops').branch, 'err');
+});
+
+void test('isolate several lines', () => {
+  assert.deepEqual(read({ read: () => '{"a":1}' }).value, { a: 1 });
+});
+
+void test('cross a promise at the boundary', () => {
+  const out = await get('data:text/plain,hi');
+
+  assert.equal(out.branch, 'ok');
+  assert.equal(out.value.status, 200);
+});
+
+void test('drop a boundary on purpose', () => {
+  const saved: string[] = [];
+
+  assert.equal(forget((x) => void saved.push(x), 'hi').value, 'saved');
+  assert.deepEqual(saved, ['hi']);
+});

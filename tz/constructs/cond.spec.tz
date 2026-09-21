@@ -1,0 +1,32 @@
+import { test } from 'node:test';
+import * as assert from 'node:assert/strict';
+import { result } from '@belelabestia/tstd';
+
+/*
+  ?(cond) tests a condition of your own
+
+  the escape hatch of the comparison quests: the condition is a plain
+  expression that may mention the subject or other values. the subject is
+  the value the miss yields, read once, so the condition must not repeat a
+  non-name expression. `?(` matches when the condition holds.
+*/
+
+// #marco to agent: this case doesn't make sense and should be forbidden
+// the starting n acts as a useless subject because you have both a hit and a miss
+const even = (n: number) => n ?(n % 2 == 0) => 'even' else => 'odd';
+
+const positive = (n: number) => {
+  // same here
+  n ?(n <= 0) err `not positive: ${n}`;
+  ok n;
+};
+
+void test('answer a computed case', () => {
+  assert.equal(even(2), 'even');
+  assert.equal(even(3), 'odd');
+});
+
+void test('refuse a computed case', () => {
+  assert.equal(positive(1).branch, 'ok');
+  assert.equal(positive(-1).branch, 'err');
+});

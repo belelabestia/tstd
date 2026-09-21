@@ -1,0 +1,37 @@
+import { test } from 'node:test';
+import * as assert from 'node:assert/strict';
+import { result, type Result } from '@belelabestia/tstd';
+
+/*
+  ? {} answers exhaustively
+
+  one subject, listed arms: `==` comparisons for values, `:tag` arms that
+  bind a branch payload, `(cond)` arms for computed cases, and one `else`
+  naming the open case. arms are alternatives, first hit winning.
+
+  tsc owns totality: a missing branch lands as `| undefined`, and the
+  editor points at the `?` line rather than the transpiler guessing.
+*/
+
+const say = (code: number) => code ? {
+  == 200 => 'ok',
+  == 400 => 'bad request',
+  else => 'something else'
+};
+
+// #marco to agent: out should be Branch<..>
+const describe = (out: Result<string, string>) => out ? {
+  :ok (value) => `ok: ${value}`,
+  :err (why) => `err: ${why}`
+};
+
+void test('answer over a value, the first hit winning', () => {
+  assert.equal(say(200), 'ok');
+  assert.equal(say(400), 'bad request');
+  assert.equal(say(500), 'something else');
+});
+
+void test('answer over branches, binding what each carries', () => {
+  assert.equal(describe(result.ok('ada')), 'ok: ada');
+  assert.equal(describe(result.err('down')), 'err: down');
+});
