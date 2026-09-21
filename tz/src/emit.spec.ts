@@ -590,6 +590,19 @@ test('decline when false, and never with !== true', () => {
     'const f = (cond: boolean, log: (x: string) => void) => {\n  if (cond === false) log(`down`);\n  return cond;\n};'
   );
 
+  // every tail ? takes, ?! takes: a landing exit rewrites through wraps, so
+  // ?! err declares the same err ? err does rather than leaving it bare
+
+  assert.equal(
+    out('const f = (cond: boolean) => {\n  cond ?! err `x`;\n  ok `done`;\n};'),
+    'const f = (cond: boolean) => {\n  if (cond === false) return result.err(`x`);\n  return result.ok(`done`);\n};'
+  );
+
+  assert.equal(
+    out('const f = (cond: boolean) => {\n  cond ?! ok `x`;\n  ok `done`;\n};'),
+    'const f = (cond: boolean) => {\n  if (cond === false) return result.ok(`x`);\n  return result.ok(`done`);\n};'
+  );
+
   // a bare ?! binds nothing, and a ?! {} block is refused while a hit tail is not
 
   assert.match(refused('const f = (x: number) => {\n  const a = x ?! (v) => v;\n  return a;\n};'), /takes an exit, =>, or a block/);

@@ -344,6 +344,14 @@ export const scan = (tokens: Token[]) => {
     owner[i] = cur;
     body[i] = holder(cur);
 
+    const negation = text === '!' &&
+      before[i] >= 0 &&
+      tokens[before[i]].text === '?' &&
+      matcher[before[i]] === before[i] &&
+      tokens[before[i]].to === tokens[i].from;
+
+    if (negation) continue;
+
     if (start) { starts[i] = true; if (!tail) frames[cur].last = i; start = false; tail = false; }
 
     if (text === '{') {

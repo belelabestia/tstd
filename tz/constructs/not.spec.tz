@@ -1,12 +1,14 @@
 import { test } from 'node:test';
 import * as assert from 'node:assert/strict';
+import { result } from '@belelabestia/tstd';
 
 /*
   a bare ?! tests false
 
   the negation of a bare `?`: the bare `?!` means `?== false`, never
   `?!= true`, so a truthy non-boolean misses. the ! glues onto the ?, and
-  the quest takes a trigger, a return, `=>`, or a block.
+  the quest takes a trigger, a return, `=>`, or a block, landing the value
+  it refuses the same way any other quest does.
 */
 
 const ping = (cond: boolean, log: (x: string) => void) => {
@@ -17,6 +19,11 @@ const ping = (cond: boolean, log: (x: string) => void) => {
 const sign = (cond: boolean) => {
   cond ?! return 'unset';
   return 'set';
+};
+
+const deny = (cond: boolean) => {
+  cond ?! err 'unset';
+  ok 'set';
 };
 
 void test('trigger an effect when false', () => {
@@ -30,4 +37,9 @@ void test('trigger an effect when false', () => {
 void test('leave early when false, and fall through when not', () => {
   assert.equal(sign(true), 'set');
   assert.equal(sign(false), 'unset');
+});
+
+void test('land the refusal it carries when false', () => {
+  assert.equal(deny(true).branch, 'ok');
+  assert.equal(deny(false).value, 'unset');
 });
