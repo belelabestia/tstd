@@ -62,6 +62,7 @@ the transpiler is a lexer, so it refuses unknown words line by line. every refus
 - the `async` modifier is refused; an `await` in the body infers it, and `async x` states the rest of the story.
 - `Promise.reject` is refused; a rejection is a throw on a later tick, so resolve with a `Result`.
 - typescript's own `try { } catch { }` is refused; use `call.sync`, `call.async`, or the tz `try`.
+- an assignment used as an expression is refused; an assignment is a statement, so a chain of two is bound first and reassigned one at a time.
 
 naming the rejection is the point: each refusal is a rule you would otherwise keep in your head, and head-kept rules are the first a team forgets.
 
@@ -602,7 +603,7 @@ void call => save(x);   // drops the whole result, failure and all
 void try call => save(x);   // propagates the err, drops the ok
 ```
 
-the deeper rule is type-level and belongs to the lsp, not the emitter: any expression statement whose value is a `Result` or a promise needs the `void`, whatever produced it. the emitter only catches the constructs that announce their product themselves, `call`, `scope` and `try`; whether some other dropped value, a plain call or an unwrapped `x.value`, hides a result is a question of types, and the lsp is where it gets asked.
+the deeper rule is type-level and belongs to the lsp, not the emitter: any expression statement whose value carries something (it is not `void`, `undefined` or `null`) needs the `void`, whatever produced it. the emitter only catches the constructs that announce their product themselves, `call`, `scope` and `try`; whether some other dropped value, a plain call, an unwrapped `x.value` or a test promise, hides a result is a question of types, and the lsp is where it gets asked. an assignment is a statement, so its value is incidental and needs no `void`, which is exactly why an assignment cannot be used as an expression.
 
 ## make: the constructor that does not throw
 
