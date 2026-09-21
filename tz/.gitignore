@@ -1,2 +1,3 @@
-scratch/*.ts
+examples/*.ts
+constructs/*.ts
 .tzd/

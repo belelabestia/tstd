@@ -51,7 +51,7 @@ const trigger = `export const f = (cond: boolean, log: (x: string) => void) => {
 };`;
 
 const s = session();
-s.open('scratch/chains.tz', read('scratch/chains.tz'));
+s.open('examples/chains.tz', read('examples/chains.tz'));
 s.open('drop.tz', drop);
 s.open('wrong.tz', wrong);
 s.open('err.tz', err);
@@ -69,9 +69,9 @@ test('refuse what tz refuses, on tz lines', () => {
 });
 
 test('typecheck the virtual typescript on tz lines', () => {
-  // scratch is clean under tzc, so the session shows nothing there either
+  // examples are clean under tzc, so the session shows nothing there either
 
-  assert.deepEqual(notes('scratch/chains.tz'), []);
+  assert.deepEqual(notes('examples/chains.tz'), []);
 });
 
 test('move a type error back onto its tz line', () => {

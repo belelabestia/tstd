@@ -14,7 +14,7 @@
     "prebuild": "npm --prefix .. run build",
     "build": "tsc -p tsconfig.build.json",
     "pretest": "npm --prefix .. run build",
-    "test": "tsc --noEmit && tsx --test src/**/*.spec.ts && tsc -p tsconfig.build.json && node dist/tzx.js --test scratch/**/*.spec.tz"
+    "test": "tsc --noEmit && tsx --test src/**/*.spec.ts && tsc -p tsconfig.build.json && node dist/tzx.js --test constructs/**/*.spec.tz examples/**/*.spec.tz"
   },
   "dependencies": {
     "@belelabestia/tstd": "file:.."

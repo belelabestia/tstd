@@ -8,7 +8,7 @@ import { highlight } from './highlight.js';
   a `?` is never a ternary here and a `{` after a quest is never an object
   literal, but typescript reads both that way and never recovers: from the
   first `? {` on, `export const` degrades to plain variables, and a `?:err`
-  capture block swallows `console.log` whole. this spec tokenizes the scratch
+  capture block swallows `console.log` whole. this spec tokenizes the example
   files the way vs code does, words injected, so a regression fails the build
   instead of showing up as a wrong color.
 */
@@ -43,45 +43,45 @@ test('a :tag builds the same whatever precedes it', () => {
   // `= :idle` has a gap the old branch rule refused, so only the glued
   // `:inner` colored as a tag while the rest took typescript's reading
 
-  has('scratch/branches.tz', 5, 'idle', 'entity.name.tag.tz');
-  has('scratch/branches.tz', 7, 'failed', 'entity.name.tag.tz');
-  has('scratch/branches.tz', 9, 'outer', 'entity.name.tag.tz');
-  has('scratch/branches.tz', 9, 'inner', 'entity.name.tag.tz');
+  has('examples/branches.tz', 5, 'idle', 'entity.name.tag.tz');
+  has('examples/branches.tz', 7, 'failed', 'entity.name.tag.tz');
+  has('examples/branches.tz', 9, 'outer', 'entity.name.tag.tz');
+  has('examples/branches.tz', 9, 'inner', 'entity.name.tag.tz');
 });
 
 test('a ? {} block does not corrupt what follows it', () => {
   // typescript read `out ? {` as a ternary with an object literal and never
   // closed the stack, so every `export const` below degraded to variables
 
-  has('scratch/chains.tz', 47, 'export', 'keyword.control.export.ts');
-  has('scratch/chains.tz', 47, 'const', 'storage.type.ts');
-  has('scratch/chains.tz', 47, 'grade', 'variable.other.constant.ts');
-  has('scratch/chains.tz', 43, 'ok', 'keyword.control.flow.tz');
+  has('examples/chains.tz', 47, 'export', 'keyword.control.export.ts');
+  has('examples/chains.tz', 47, 'const', 'storage.type.ts');
+  has('examples/chains.tz', 47, 'grade', 'variable.other.constant.ts');
+  has('examples/chains.tz', 43, 'ok', 'keyword.control.flow.tz');
 });
 
 test('a quest capture block stays a block', () => {
   // `?:err (e) {` opened an object literal, so `console.log(e);` carried no
   // scope at all and read as plain white
 
-  has('scratch/fallback.tz', 41, 'found', 'variable.other.constant.ts');
-  has('scratch/fallback.tz', 42, 'log', 'entity.name.function.ts');
-  lacks('scratch/fallback.tz', 42, 'log', 'meta.objectliteral.ts');
+  has('examples/fallback.tz', 41, 'found', 'variable.other.constant.ts');
+  has('examples/fallback.tz', 42, 'log', 'entity.name.function.ts');
+  lacks('examples/fallback.tz', 42, 'log', 'meta.objectliteral.ts');
 });
 
 test('a == arm names its comparison', () => {
   // the arm lookahead only allowed `(`, `=>`, `,` or `;` after the head, so a
   // value operand like `== 200` matched nothing
 
-  has('scratch/chains.tz', 32, '==', 'keyword.operator.comparison.tz');
-  has('scratch/chains.tz', 33, '>', 'keyword.operator.comparison.tz');
+  has('examples/chains.tz', 32, '==', 'keyword.operator.comparison.tz');
+  has('examples/chains.tz', 33, '>', 'keyword.operator.comparison.tz');
 });
 
 test('a keyword is not what a value namespace spells', () => {
   // `form.model` read as the keyword, so the value and the declaration
   // colored alike; the rule now stops at the dot
 
-  has('scratch/forms.tz', 4, 'form', 'keyword.control.form.tz');
-  lacks('scratch/forms.tz', 21, 'form', 'keyword.control.form.tz');
+  has('examples/forms.tz', 4, 'form', 'keyword.control.form.tz');
+  lacks('examples/forms.tz', 21, 'form', 'keyword.control.form.tz');
 });
 
 test('an arrow-assigned name is a function only when it is one', () => {
@@ -89,9 +89,9 @@ test('an arrow-assigned name is a function only when it is one', () => {
   // typescript reads `call =>` as an arrow; the example names the closure
   // instead, so the value binds under a value color
 
-  has('scratch/calls.tz', 26, 'parse', 'entity.name.function.ts');
-  has('scratch/calls.tz', 27, 'body', 'variable.other.constant.ts');
-  lacks('scratch/calls.tz', 27, 'body', 'entity.name.function.ts');
+  has('examples/calls.tz', 26, 'parse', 'entity.name.function.ts');
+  has('examples/calls.tz', 27, 'body', 'variable.other.constant.ts');
+  lacks('examples/calls.tz', 27, 'body', 'entity.name.function.ts');
 });
 
 test('a bare ? block with statements takes an else tail', () => {
