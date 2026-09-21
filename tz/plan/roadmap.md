@@ -73,6 +73,9 @@ sessions run in order. 08 is blocked by 07, and 12 and 13 are blocked by 11. eve
 - **q7, the `?!` tail.** `cond ?! err 'x'` emits an unreWritten `err`, while `cond ? err` and `cond ?== false err` rewrite it. found in session 05; the deck avoids it. a defect session before phase 1's docs work.
 - **q8, the form line.** some of `form` is emitted, some is written by hand, and the author charges that the line is arbitrary. where does it belong? session 14, with a `protocol` note if the audit finds an adjacent inconsistency.
 - **q9, the in-file test.** a `test` keyword like zig's, in the file it tests, reaching module internals. feasible, and under what house-rule amendment? session 15.
+- **q10, the deck `declare`.** `declare` inside a deck produces a false `TZL0002`, while `const` does not; found in session 05 while writing the `?literal` deck, which used `const` instead. a checker false positive over a legitimate declaration. unassigned.
+- **q11, the tail comment.** a doc comment inside a `?` tail (`x ? //c\n log(x);`) loses the comment and emits a semicolon; found while drafting `not.spec.tz` and avoided. an emit defect. unassigned.
+- **q12, the protocol note.** reserved for a `protocol` inconsistency if session 14's audit uncovers one adjacent to the `form` line.
 
 ## dependencies outside our control
 
