@@ -20,9 +20,9 @@ commands run and what came back. exit codes, not impressions. a type claim is ch
 
 - `npm test` (root):
 - `npm test` (tz):
-- `tzc scratch`:
+- `tzc examples constructs`:
 - `tzx` spec:
-- `tzd scratch`:
+- `tzd examples constructs`:
 
 ## open
 

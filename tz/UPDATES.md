@@ -6,7 +6,26 @@ a journal of decisions. the spec lives in `tz/TUTORIAL.md`; the design notes liv
 
 the boolean and exhaustive checks ship; the `void` check now reads types too, so the next item is the editor affordances on the same surface (completions, hover, goto, rename) and a keystroke loop that stops shelling out. the coherence spec runs in `npm test`.
 
-the 2026-09-16 defect is fixed, and the session that fixed it closed the custom quest: `?(cond)` and `?!(cond)` are side quests whose condition is a third party predicate, a side quest is postfix in syntax and first in execution, and a value `else` is the inverted form. session 05 remains in phase 0.
+the showcase is now irreducible: every construct in the `roles` list has a deck under `constructs/`, and the whole programs live under `examples/`. phase 0 is closeable. the `?!` tail defect, `cond ?! err 'x'` emitting an unreWritten `err`, is the one item filed out of session 05 and would be the first defect session of phase 1.
+
+three notes the author raised at the close of session 05 are now scheduled. the comment channel is a living protocol, not a phase: comments carrying forward work are part of the no-debt approach, and session 06 writes the protocol rather than deleting the notes. `form` gets an audit (q8, session 14) because its emit is inconsistent, some code written and some emitted along an arbitrary line. a `test` keyword like zig's, in the file it tests and reaching module internals, is explored in session 15 (q9).
+
+## 2026-09-21: a deck for every construct
+
+session 05 was scoped to repair the showcase. the claim it audited, `../README.md:61`, was false twice: the `remote` fixture failed, and six constructs in the `roles` list were never reached at runtime.
+
+the fixture was not the `data:` url the roadmap suspected. node 24 fetch answers all three data urls with 200; what failed was the o8 trap. `remote` emitted `call.async(res.text)`, a `Response` method torn off its `this`, so the call threw and `remote` answered `err`. the fix restores the closure around the method, and an extra `.value` reads the boxed survivor of the coloned refusal.
+
+the author ruled the reorganization. `scratch/` is renamed to `examples/`, holding the whole programs with `examples/signup.spec.tz` as their spec. a sibling `constructs/` holds one deck per construct: a `.spec.tz` of small use cases with walkthrough comments, in the voice of a tstd spec. keeping "real problems" apart from "use cases for one construct" was the point, so they are separate folders, not a merged one.
+
+all 22 decks land: `=>`, `?none`, `?some`, `?:tag`, `?literal`, `?!`, `?(cond)`, `?!(cond)`, `? {}`, `branch`, `try`, `scope`, `call`, `make`, `form`, `protocol`, `return`, `ok`, `err`, `async`, `break`, `continue`. each role in `emit.ts` now names its deck, and two coherence checks require the deck to exist and to contain the construct, so a deleted deck or a dropped construct fails the build, the same way a doc drift already did.
+
+what changed: `git mv scratch examples`, `constructs/*.spec.tz` (22 files), the `deck` field and the two coherence checks, the `remote` closure in `examples/calls.tz`, the example paths in `highlight.spec.ts`, `lsp.spec.ts` and the `test` script, `.gitignore` for both folders' emitted `.ts`, and the README's structure, construct list (`make` was missing) and showcase claim.
+
+what verified: `npm test` in `tz/` is exit 0, 65 src plus 53 scratch (22 decks, 13 examples, the coherence checks); `npm test` at the root is green at 43; `tzc examples constructs` and `tzd examples constructs` both exit 0. the source-face check (emit.spec, DESIGN.md) is untouched.
+
+one defect found and filed rather than fixed: `cond ?! err 'x'` emits `if (cond === false) err 'x';`, an unreWritten `err`, while `cond ? err` and `cond ?== false err` rewrite correctly. the `not` deck uses `?!`'s working forms (a bare trigger and `cond ?! return`) and the defect wants its own session with an emit spec.
+
 
 ## 2026-09-21: the checker tells the truth
 

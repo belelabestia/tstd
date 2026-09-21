@@ -13,10 +13,11 @@ npm test
 then, from this directory:
 
 ```
-node dist/tzc.js scratch                        # emit the .ts beside each .tz, then typecheck it
-node dist/tzx.js --test scratch/signup.spec.tz  # run a spec
-node dist/tzx.js scratch/main.tz                # run a program
-node dist/tzd.js scratch                        # the editor checks, headless: tzc parity plus the unranked warnings
+node dist/tzc.js examples constructs             # emit the .ts beside each .tz, then typecheck both
+node dist/tzx.js --test constructs/arrow.spec.tz # run a construct deck
+node dist/tzx.js --test examples/signup.spec.tz  # run the example spec
+node dist/tzx.js examples/main.tz                # run a program
+node dist/tzd.js examples constructs             # the editor checks, headless: tzc parity plus the unranked warnings
 ```
 
 `tzc` mirrors `tsc`: it emits, runs `tsc` on the emit, and moves every diagnostic back onto the `.tz` line and column it came from. `--out <dir>` mirrors the tree somewhere else and `--no-check` stops after the emit.
@@ -49,6 +50,7 @@ two residues, both wontfix and cosmetic. typescript's grammar reads a `? {}` arm
 - `:tag` construction, the literal notation for a branch, with or without its value
 - `ok`, `err`, `async`, `return`, `break`, `continue`: the exit family, with the one discipline per body they buy
 - `try`, and `call` for the foreign boundary it isolates
+- `make`, the constructor that does not throw, so `new` stays off the table
 - `form`, declaring the wire shape and the domain shape once
 - `scope`, which holds resources and hands them back in reverse
 - `protocol`, a union or a machine in one block, with `export` and generics
@@ -58,7 +60,7 @@ two residues, both wontfix and cosmetic. typescript's grammar reads a `? {}` arm
 - `tzc`, `tzx`, and diagnostics that land on the source
 - a coherence spec that walks the docs against the code, so drift fails the build
 
-`scratch/` shows every one of them and both commands run over it.
+`constructs/` holds one deck per construct: a `spec.tz` of small use cases with walkthrough comments, so the construct can be read and run on its own. `examples/` holds the modules that solve whole problems, with `examples/signup.spec.tz` as their spec. `npm test` runs both, `tzc` and `tzd` emit and check both, so a construct that drifts out of the showcase fails the build.
 
 ## what is not
 
