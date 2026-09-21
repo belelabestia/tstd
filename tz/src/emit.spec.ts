@@ -943,6 +943,24 @@ test('refuse the lie the discipline check exists for', () => {
   assert.match(refused('const f = (x: number) => {\n  x ?> 0 err \'no\';\n  return x;\n};'), /mixes them/);
 });
 
+test('refuse an assignment used as an expression', () => {
+  // an assignment is a statement, so two in one or one read as a value is refused
+
+  assert.match(refused('const f = () => {\n  let a = 0;\n  let b = 0;\n  a = b = 2;\n  return a + b;\n};'), /an assignment is a statement/);
+  assert.match(refused('const f = (n: number) => {\n  let a = 0;\n  if (a = n) return a;\n  return n;\n};'), /an assignment is a statement/);
+
+  // the bare form is the statement itself, and a for header owns its own
+
+  assert.equal(
+    out('const f = (n: number) => {\n  let a = 0;\n  a = n;\n  return a;\n};'),
+    'const f = (n: number) => {\n  let a = 0;\n  a = n;\n  return a;\n};'
+  );
+  assert.equal(
+    out('const f = (n: number) => {\n  const out: number[] = [];\n  for (let i = 0; i < n; i++) void out.push(i);\n  return out;\n};'),
+    'const f = (n: number) => {\n  const out: number[] = [];\n  for (let i = 0; i < n; i++) void out.push(i);\n  return out;\n};'
+  );
+});
+
 test('hold resources in a scope, one line for one line', () => {
   // sync is the case with no await; the binding keeps its name and the close gains );
   assert.equal(

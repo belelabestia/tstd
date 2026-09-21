@@ -1,6 +1,6 @@
 import { result } from '@belelabestia/tstd';
 import { Token } from './lex.js';
-import { Scan, keyword, modifier, comparisons } from './scan.js';
+import { Scan, assigns, keyword, modifier, comparisons } from './scan.js';
 import { refusal } from './refusal.js';
 
 const instead: Record<string, string> = {
@@ -34,6 +34,52 @@ export const absent: readonly string[] = ['null', 'undefined'];
 
 const optional = [',', ')', ']'];
 
+/** the declaration heads that own every assignment inside them */
+const owners = ['const', 'let', 'type', 'import', 'export', 'protocol', 'form'];
+
+/** whether an assignment at one token is used as an expression rather than a statement */
+const expressed = (tokens: Token[], scanned: Scan, i: number) => {
+  const { starts, before, after, twin } = scanned;
+
+  let s = i;
+  while (s > 0 && !starts[s]) s = before[s];
+  if (s < 0) return false;
+
+  const head = tokens[s];
+  if (head.kind === 'word' && keyword(tokens, before, s) && owners.includes(head.text)) return false;
+  if (head.kind === 'word' && keyword(tokens, before, s) && (head.text === 'return' || head.text === 'ok' || head.text === 'err')) return true;
+
+  const open: number[] = [];
+  let seen = false;
+
+  for (let j = s; j <= i; j++) {
+    const t = tokens[j];
+    if (t.kind === 'comment') continue;
+    if (t.text === '(' || t.text === '[' || t.text === '{') open.push(j);
+    else if (t.text === ')' || t.text === ']' || t.text === '}') open.pop();
+    else if (j < i && assigns(t.text)) seen = true;
+  }
+
+  if (seen) return true;
+
+  if (open.length > 0) {
+    const o = open[open.length - 1];
+    if (tokens[o].text !== '(') return true;
+
+    const owner = before[o];
+    if (owner >= 0 && tokens[owner].kind === 'word' && keyword(tokens, before, owner) && tokens[owner].text === 'for') return false;
+
+    const close = twin[o];
+    if (close >= 0 && after[close] >= 0 && tokens[after[close]].text === '=>') return false;
+
+    return true;
+  }
+
+  for (let j = s; j < i; j++) if (tokens[j].text === '=>') return true;
+
+  return false;
+};
+
 /** refuses the first line of source that is not typezig */
 export const ban = (tokens: Token[], scanned: Scan) => {
   const { frames, owner, twin, starts, before, after, matcher, tagged } = scanned;
@@ -65,6 +111,10 @@ export const ban = (tokens: Token[], scanned: Scan) => {
         const r = after[i] >= 0 && absent.includes(tokens[after[i]].text);
 
         if (l || r) return no('comparing against null or undefined is refused; is.some and is.none say presence');
+      }
+
+      if (assigns(t.text) && expressed(tokens, scanned, i)) {
+        return no('an assignment is a statement; it cannot be an expression');
       }
 
       if (t.text === '?' && typing < 0 && matcher[i] === i) {
