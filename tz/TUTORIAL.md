@@ -131,7 +131,7 @@ x ?> 0 err 'not positive';
 const speed = val ?>= 100 => 1.0 else 0.5;
 ```
 
-`==` is mandatory on every test, even where the old spelling glued a value straight onto the `?`: `x ?5`, `x ?'hi'` and `x ?=y` are refused, and read `x ?== 5`, `x ?== 'hi'`, `x ?== y`. `?true` and `?false` retire the same way, and a bare `?` means `?== true` while `?!` means `?== false` (never `?!= true`, so a truthy non-boolean misses it), so a boolean subject just reads `cond ?` or `cond ?!`. arithmetic and bitwise quests go with them: there is no `?%`, and a modulo case spells `x ?(x % 2 == 0)` or moves the computation left, `x % 2 ?== 0`.
+`==` is mandatory on every test, even where the old spelling glued a value straight onto the `?`: `x ?5`, `x ?'hi'` and `x ?=y` are refused, and read `x ?== 5`, `x ?== 'hi'`, `x ?== y`. `?true` and `?false` retire the same way, and a bare `?` means `?== true` while `?!` means `?== false` (never `?!= true`, so a truthy non-boolean misses it), so a boolean subject just reads `cond ?` or `cond ?!`. a `?!` heads the same tail family as `?`, so a landing exit rewrites the same way: `cond ?! err 'x'` emits the error `cond ? err` does. arithmetic and bitwise quests go with them: there is no `?%`, and a modulo case spells `x ?(x % 2 == 0)` or moves the computation left, `x % 2 ?== 0`.
 
 when the right side has more than one half, one combinator glues on plus parens joins them: `&` means every half holds, `|` means any half holds:
 
