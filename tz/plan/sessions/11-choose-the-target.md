@@ -1,4 +1,4 @@
-# 10 choose the target
+# 11 choose the target
 
 phase: battle
 status: planned
@@ -24,7 +24,7 @@ the target should be small enough to finish a first version, and real enough tha
 
 - a ruling from the author.
 - a one-page brief: what the program does, who it is for, and which tz constructs it stresses.
-- the acceptance criteria from session 09 mapped onto the program.
+- the acceptance criteria from session 10 mapped onto the program.
 
 ## in scope
 
@@ -32,17 +32,17 @@ the target should be small enough to finish a first version, and real enough tha
 
 ## out of scope
 
-- building it (session 11).
+- building it (session 12).
 
 ## inputs
 
-- the standard from session 09.
+- the standard from session 10.
 - `../README.md:45`, what the language says it already does.
 - the author's goal: web development and scripting.
 
 ## steps
 
-1. put the candidates beside the session 09 criteria and show which surface each misses.
+1. put the candidates beside the session 10 criteria and show which surface each misses.
 2. help the author choose.
 3. write the brief.
 
@@ -50,12 +50,12 @@ the target should be small enough to finish a first version, and real enough tha
 
 - the author owns the choice.
 - the brief names the constructs under test and the definition of a first version.
-- every session 09 criterion is either exercised or explicitly not covered.
+- every session 10 criterion is either exercised or explicitly not covered.
 
 ## starting prompt
 
-> read `../AGENTS.md` and `../STYLE-KB.md` first, then the roadmap, the session 09 standard, and this file. copy `session-context-template.md` to `context/10-choose-the-target.md`. help the author choose the first real program to build in tz, weigh the candidates (web service, cli, scripting task) against the robustness criteria and the surfaces they leave untested, and write a one-page brief with the constructs under test and the definition of a first version. do not commit until the author reviews.
+> read `../AGENTS.md` and `../STYLE-KB.md` first, then the roadmap, the session 10 standard, and this file. copy `session-context-template.md` to `context/11-choose-the-target.md`. help the author choose the first real program to build in tz, weigh the candidates (web service, cli, scripting task) against the robustness criteria and the surfaces they leave untested, and write a one-page brief with the constructs under test and the definition of a first version. do not commit until the author reviews.
 
 ## context
 
-copy `../session-context-template.md` to `../context/10-choose-the-target.md` before starting.
+copy `../session-context-template.md` to `../context/11-choose-the-target.md` before starting.

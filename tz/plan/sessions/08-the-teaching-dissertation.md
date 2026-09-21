@@ -1,4 +1,4 @@
-# 07 the teaching dissertation
+# 08 the teaching dissertation
 
 phase: ownership
 status: planned
@@ -20,7 +20,7 @@ a written design, short and concrete, covering:
 - **the entry points.** where a reader starts, and the shortest path to a first running program.
 - **the file structure.** whether the tutorial stays one file or splits, and the new-line budget.
 
-this is a discussion session. it ends with a design the author approves, not with edited docs. session 08 executes it.
+this is a discussion session. it ends with a design the author approves, not with edited docs. session 09 executes it.
 
 ## in scope
 
@@ -29,8 +29,8 @@ this is a discussion session. it ends with a design the author approves, not wit
 
 ## out of scope
 
-- the rewrite itself (session 08).
-- the parked prompts, which session 06 removes.
+- the rewrite itself (session 09).
+- the parked prompts, which session 07 removes.
 
 ## inputs
 
@@ -55,8 +55,8 @@ this is a discussion session. it ends with a design the author approves, not wit
 
 ## starting prompt
 
-> read `../AGENTS.md` and `../STYLE-KB.md` first, then the roadmap and this file. copy `session-context-template.md` to `context/07-the-teaching-dissertation.md`. the tutorial teaches tstd before tz, and the author questions that order. this is a discussion session: propose two or three organizations for the teaching docs, covering audience, order, separation of tutorial and design and reference, entry points, and file structure, then help the author settle one. produce a design, not edits. do not commit until the author reviews.
+> read `../AGENTS.md` and `../STYLE-KB.md` first, then the roadmap and this file. copy `session-context-template.md` to `context/08-the-teaching-dissertation.md`. the tutorial teaches tstd before tz, and the author questions that order. this is a discussion session: propose two or three organizations for the teaching docs, covering audience, order, separation of tutorial and design and reference, entry points, and file structure, then help the author settle one. produce a design, not edits. do not commit until the author reviews.
 
 ## context
 
-copy `../session-context-template.md` to `../context/07-the-teaching-dissertation.md` before starting.
+copy `../session-context-template.md` to `../context/08-the-teaching-dissertation.md` before starting.

@@ -1,4 +1,4 @@
-# 06 the comment protocol
+# 07 the comment protocol
 
 phase: ownership
 status: planned
@@ -27,7 +27,7 @@ the author's ruling: this is not a phase to resolve and delete. the author will 
 
 ## out of scope
 
-- the actual tutorial reorganization and voice rewrite (sessions 07 and 08). this session routes the prompts to their sessions; it does not answer them.
+- the actual tutorial reorganization and voice rewrite (sessions 08 and 09). this session routes the prompts to their sessions; it does not answer them.
 - new source-comment syntax. the source ban stands; the protocol works within it.
 
 ## inputs
@@ -56,8 +56,8 @@ the author's ruling: this is not a phase to resolve and delete. the author will 
 
 ## starting prompt
 
-> read `../AGENTS.md` and `../STYLE-KB.md` first, then the roadmap and this file. copy `session-context-template.md` to `context/06-the-comment-protocol.md`. this is not a cleanup: the author rules that comments carrying forward work are a living channel, part of the no-debt approach. write the protocol for them (markers, allowed channels, sweep cadence, how the coherence walk ignores a parked note on purpose), route the three parked prompts by it, apply the postfix guard correction, and review the coherence blanking walk. do not commit until the author reviews.
+> read `../AGENTS.md` and `../STYLE-KB.md` first, then the roadmap and this file. copy `session-context-template.md` to `context/07-the-comment-protocol.md`. this is not a cleanup: the author rules that comments carrying forward work are a living channel, part of the no-debt approach. write the protocol for them (markers, allowed channels, sweep cadence, how the coherence walk ignores a parked note on purpose), route the three parked prompts by it, apply the postfix guard correction, and review the coherence blanking walk. do not commit until the author reviews.
 
 ## context
 
-copy `../session-context-template.md` to `../context/06-the-comment-protocol.md` before starting.
+copy `../session-context-template.md` to `../context/07-the-comment-protocol.md` before starting.

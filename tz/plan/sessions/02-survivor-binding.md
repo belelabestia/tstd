@@ -34,7 +34,7 @@ after `const rows = x ?|(:idle, :loading, :failed) return;`, what does a later `
 ## out of scope
 
 - the expression-subject chain defect (session 03).
-- rewriting the tutorial (sessions 07 and 08).
+- rewriting the tutorial (sessions 08 and 09).
 
 ## inputs
 

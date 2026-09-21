@@ -6,9 +6,19 @@ a journal of decisions. the spec lives in `tz/TUTORIAL.md`; the design notes liv
 
 the boolean and exhaustive checks ship; the `void` check now reads types too, so the next item is the editor affordances on the same surface (completions, hover, goto, rename) and a keystroke loop that stops shelling out. the coherence spec runs in `npm test`.
 
-the showcase is now irreducible: every construct in the `roles` list has a deck under `constructs/`, and the whole programs live under `examples/`. phase 0 is closeable. the `?!` tail defect, `cond ?! err 'x'` emitting an unreWritten `err`, is the one item filed out of session 05 and would be the first defect session of phase 1.
+the showcase is now irreducible: every construct in the `roles` list has a deck under `constructs/`, and the whole programs live under `examples/`. phase 0 is one session from closed: the `?!` tail defect, `cond ?! err 'x'` emitting an unreWritten `err`, is now session 06, the last truth defect, and the docs work that follows shifts to 07 through 09.
 
-three notes the author raised at the close of session 05 are now scheduled. the comment channel is a living protocol, not a phase: comments carrying forward work are part of the no-debt approach, and session 06 writes the protocol rather than deleting the notes. `form` gets an audit (q8, session 14) because its emit is inconsistent, some code written and some emitted along an arbitrary line. a `test` keyword like zig's, in the file it tests and reaching module internals, is explored in session 15 (q9).
+three notes the author raised at the close of session 05 are now scheduled. the comment channel is a living protocol, not a phase: comments carrying forward work are part of the no-debt approach, and session 07 writes the protocol rather than deleting the notes. `form` gets an audit (q8, session 15) because its emit is inconsistent, some code written and some emitted along an arbitrary line. a `test` keyword like zig's, in the file it tests and reaching module internals, is explored in session 16 (q9).
+
+## 2026-09-22: a truth session before the docs
+
+the plan stopped at the phase boundary for a look. phase 0's four conditions are met and both suites are green (43 root, 65 src plus 53 scratch), so the only work left in truth is the one defect session 05 filed. the roadmap had already called it q7 and pointed it at phase 1, but the sessions table jumped from 05 straight to the comment protocol, so the defect that closes phase 0 had no slot.
+
+the author ruled the shape: q7 becomes session 06, phase truth, and the rest of the table shifts up one. the comment protocol is now 07, the dissertation 08, the rewrite 09, and the battle and onboarding sessions follow through 16. the dependencies moved with them: 09 waits on 08, and both onboarding sessions wait on 12, the first build.
+
+two more findings from session 05's open list were living only in its context file, so they are now in the ledger. q10 is a false `TZL0002` when `declare` appears in a deck (`const` is clean); q11 is a doc comment inside a `?` tail being swallowed into a semicolon. q12 is reserved for a `protocol` note if the form audit finds one, which fixes a collision where the form session had pointed a hypothetical finding at q9, already the in-file test.
+
+what changed: `git mv` on sessions 06 through 15, the new `06-the-not-tail.md`, the shifted cross-references in every session file, the roadmap table and ledger, and this agenda.
 
 ## 2026-09-21: a deck for every construct
 

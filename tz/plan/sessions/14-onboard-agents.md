@@ -1,9 +1,9 @@
-# 13 onboard agents
+# 14 onboard agents
 
 phase: onboarding
 status: planned
 resolves: the agent contract
-blocked by: 11
+blocked by: 12
 
 ## why
 
@@ -24,15 +24,15 @@ the work is to say what an agent needs, and only that: the contract, the loop, t
 
 ## out of scope
 
-- people onboarding (session 12).
+- people onboarding (session 13).
 - any change to the language.
 
 ## inputs
 
 - `../../AGENTS.md`, the working-rules pattern this repo already uses.
 - `../src/ban.ts`, `../src/emit.ts` (the roles list), `../src/scan.ts` (the vocabulary).
-- `../TUTORIAL.md` after session 08.
-- the session 11 friction journal, for the mistakes an agent made or would make.
+- `../TUTORIAL.md` after session 09.
+- the session 12 friction journal, for the mistakes an agent made or would make.
 
 ## steps
 
@@ -49,8 +49,8 @@ the work is to say what an agent needs, and only that: the contract, the loop, t
 
 ## starting prompt
 
-> read `../AGENTS.md` and `../STYLE-KB.md` first, then the roadmap, the session 08 docs, and this file. copy `session-context-template.md` to `context/13-onboard-agents.md`. write the agent-facing guide: the language contract, the toolchain loop, the refusals, and where to look when unsure. choose the format (document, a tz/AGENTS.md for downstream repos, or both) and point the guide at the ban list and roles list as the truth rather than copying them. test it by pointing an agent at the guide cold. do not commit until the author reviews.
+> read `../AGENTS.md` and `../STYLE-KB.md` first, then the roadmap, the session 09 docs, and this file. copy `session-context-template.md` to `context/14-onboard-agents.md`. write the agent-facing guide: the language contract, the toolchain loop, the refusals, and where to look when unsure. choose the format (document, a tz/AGENTS.md for downstream repos, or both) and point the guide at the ban list and roles list as the truth rather than copying them. test it by pointing an agent at the guide cold. do not commit until the author reviews.
 
 ## context
 
-copy `../session-context-template.md` to `../context/13-onboard-agents.md` before starting.
+copy `../session-context-template.md` to `../context/14-onboard-agents.md` before starting.

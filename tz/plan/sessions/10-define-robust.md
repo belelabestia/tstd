@@ -1,4 +1,4 @@
-# 09 define robust
+# 10 define robust
 
 phase: battle
 status: planned
@@ -32,8 +32,8 @@ it also answers q5: the measurable meaning of "stable enough to split".
 
 ## out of scope
 
-- choosing the program (session 10).
-- building it (session 11).
+- choosing the program (session 11).
+- building it (session 12).
 
 ## inputs
 
@@ -56,8 +56,8 @@ it also answers q5: the measurable meaning of "stable enough to split".
 
 ## starting prompt
 
-> read `../AGENTS.md` and `../STYLE-KB.md` first, then the roadmap and this file. copy `session-context-template.md` to `context/09-define-robust.md`. robust and reliable have no testable meaning yet, and the same question hides behind "stable enough to move tz to its own repo". draft acceptance criteria, each checkable, mark what is already met and what the battle test must meet, and settle them with the author. do not commit until the author reviews.
+> read `../AGENTS.md` and `../STYLE-KB.md` first, then the roadmap and this file. copy `session-context-template.md` to `context/10-define-robust.md`. robust and reliable have no testable meaning yet, and the same question hides behind "stable enough to move tz to its own repo". draft acceptance criteria, each checkable, mark what is already met and what the battle test must meet, and settle them with the author. do not commit until the author reviews.
 
 ## context
 
-copy `../session-context-template.md` to `../context/09-define-robust.md` before starting.
+copy `../session-context-template.md` to `../context/10-define-robust.md` before starting.
