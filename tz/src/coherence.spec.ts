@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import * as assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { keywords } from './scan.js';
 import { banned, absent } from './ban.js';
 import { roles } from './emit.js';
@@ -55,7 +55,7 @@ test('every backticked identifier in the docs is a known construct', () => {
     'g', 'get', 'git', 'hold', 'id', 'import', 'init', 'invalid', 'is', 'iso', 'JSON', 'leaked',
     'let', 'Loader', 'main', 'map', 'matcher', 'n', 'name', 'no', 'on', 'open',
     'outcome', 'panic', 'pay', 'postfix', 'Promise', 'raw', 'read', 'refuse', 'result', 'row',
-    'rows', 'scratch', 'seen', 'serve', 'set', 'side', 'source', 'src', 'string', 'table',
+    'rows', 'constructs', 'decks', 'examples', 'seen', 'serve', 'set', 'side', 'source', 'spec', 'src', 'string', 'table',
     'task', 'tmp', 'to', 'ts', 'tsc', 'tstd', 'tsx', 'type', 'typescript', 'tz', 'tzc', 'tzx', 'tzd',
     'Union', 'unknown', 'unwrap', 'User', 'UserForm', 'val', 'void', 'x', 'AGENTS', 'LanguageService',
     'DateTime', 'Payment', 'A', '_', 'Result', 'Branch', 'loader', 'roles', 'npm', 'emit',
@@ -113,6 +113,24 @@ test('every construct has a spec entry', () => {
     .map((r) => `${r.name} has no spec`);
 
   assert.deepEqual(orphans, []);
+});
+
+test('every construct has a deck', () => {
+  const decks = readdirSync(new URL('../constructs', import.meta.url));
+
+  const orphans = roles
+    .filter((r) => !decks.includes(`${r.deck}.spec.tz`))
+    .map((r) => `${r.name} has no deck`);
+
+  assert.deepEqual(orphans, []);
+});
+
+test('every deck shows the construct it names', () => {
+  const misses = roles
+    .filter((r) => !read(`constructs/${r.deck}.spec.tz`).includes(r.match))
+    .map((r) => `${r.deck}.spec.tz does not show ${r.name}`);
+
+  assert.deepEqual(misses, []);
 });
 
 test('every construct is mentioned in DESIGN.md', () => {
