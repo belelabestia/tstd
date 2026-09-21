@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import * as assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { checkVoid, session } from './lsp.js';
+import { session } from './lsp.js';
 
 /*
   the editor path without an editor
@@ -11,11 +11,13 @@ import { checkVoid, session } from './lsp.js';
   moves every diagnostic back onto the tz line it came from. you open a buffer
   on every keystroke and diagnose the whole session with one tsc run.
 
-  the void check needs no types: any expression statement whose head is not a
-  tz trigger, block, exit or declaration must carry an explicit void prefix.
-  without a checker there is nothing to rank the message with, so every drop
-  is a warning. triggers stay bare by ruling: the ? head already marks the
-  effect, so void is only for naked statements with no tz head.
+  the void check reads the dropped expression's type: an expression statement
+  whose head is not a tz trigger, block, exit or declaration must carry an
+  explicit void unless its value is none. a dropped Result, promise, boolean or
+  string warns; a void call, an assertion and a bare assignment are left. a type
+  the checker cannot resolve stays silent rather than guessing. triggers stay
+  bare by ruling: the ? head already marks the effect, so void is only for naked
+  statements with no tz head.
 */
 
 const read = (file: string) => readFileSync(new URL(`../${file}`, import.meta.url), 'utf8');
@@ -81,7 +83,7 @@ test('move a type error back onto its tz line', () => {
 });
 
 test('flag a dropped Result without void', () => {
-  // unranked without types, so the drop lands as a warning on its own line
+  // result.ok is a Result, so the drop lands as a warning on its own line
 
   assert.deepEqual(notes('drop.tz'), [
     { line: 3, column: 3, level: 'warning', code: 'TZL0003', message: 'a dropped value needs void' }
@@ -92,38 +94,4 @@ test('keep quest triggers bare', () => {
   // triggers stay bare by ruling, so no side of any trigger shape is a drop
 
   assert.deepEqual(notes('trigger.tz'), []);
-});
-
-test('flag a dropped call and spare the rest', () => {
-  // the pure check, no tsc involved: naked drops warn, tz heads do not
-
-  const dropped = `export const f = (x: string, save: (x: string) => void) => {
-  save(x);
-  ok 'done';
-};`;
-  assert.deepEqual(checkVoid(dropped).map((note) => [note.line, note.code]), [[2, 'TZL0003']]);
-
-  const kept = `export const f = (x: string, save: (x: string) => void) => {
-  void save(x);
-  ok 'done';
-};`;
-  assert.deepEqual(checkVoid(kept), []);
-
-  const quest = `export const f = (cond: boolean, save: (x: string) => void) => {
-  cond ? save('up');
-  cond ?! save('down');
-  return cond;
-};`;
-  assert.deepEqual(checkVoid(quest), []);
-
-  const plain = `export const f = (c: boolean, save: () => void) => {
-  if (c) save();
-  return c;
-};`;
-  assert.deepEqual(checkVoid(plain).map((note) => [note.line, note.code]), [[2, 'TZL0003']]);
-
-  const made = `export const o = {
-  run: () => 1
-};`;
-  assert.deepEqual(checkVoid(made), []);
 });

@@ -1,7 +1,8 @@
 import { API, SignatureKind, type Checker, type Type } from 'typescript/unstable/sync';
 import { call, is } from '@belelabestia/tstd';
 import { lex, Token } from './lex.js';
-import { keyword, scan } from './scan.js';
+import { assigns, keyword, scan } from './scan.js';
+import { tailing } from './emit.js';
 
 /** a diagnostic on a tz line, shaped the way lsp notes are */
 type Note = { line: number, column: number, level: 'warning', code: string, message: string; };
@@ -36,12 +37,12 @@ const hits = (code: string, text: string) => {
 };
 
 /** the checker behind one run, with the files it may read */
-const behind = (mirrored: string[]) => {
+const behind = (mirrored: string[], config?: string) => {
   const made = call.sync(() => new API());
   if (made.branch === 'err') return null;
 
   const api = made.value;
-  const shot = call.sync(() => api.updateSnapshot({ openFiles: mirrored }));
+  const shot = call.sync(() => api.updateSnapshot({ openFiles: mirrored, openProjects: is.none(config) ? [] : [config] }));
   if (shot.branch === 'err') {
     api.close();
 
@@ -96,6 +97,22 @@ const behind = (mirrored: string[]) => {
     return returned.value;
   };
 
+  /** whether a type carries no value: void, undefined, null, or never */
+  const bare = (type: Type) => {
+    if (type.isIntrinsicType()) {
+      const name = type.intrinsicName;
+
+      return name === 'void' || name === 'undefined' || name === 'null' || name === 'never';
+    }
+    if (type.isUnionType()) {
+      for (const member of type.getTypes()) if (!bare(member)) return false;
+
+      return true;
+    }
+
+    return false;
+  };
+
   /** whether a guard condition reads boolean, sparing any, params and the error type */
   const ranks = (type: Type | undefined) => {
     if (is.none(type)) return true;
@@ -142,7 +159,7 @@ const behind = (mirrored: string[]) => {
     return said.branch === 'err' ? 'unknown' : said.value;
   };
 
-  return { at, reader, facing, ranks, missing, shown, close };
+  return { at, reader, facing, bare, ranks, missing, shown, close };
 };
 
 /** the { a ? head opens, same line or next, with the line it shuts on */
@@ -529,9 +546,202 @@ const unwrapped = (expr: string) => {
   return { text: inner.trim(), skip };
 };
 
-/** the checker-backed half of a session: boolean guards and exhaustive ladders */
-export const openCheck = (mirrored: string[]) => {
-  const api = behind(mirrored);
+/** the words that head a statement, so a drop never starts with one */
+const heads = [
+  'const', 'let', 'import', 'export', 'return', 'ok', 'err', 'try', 'void',
+  'scope', 'protocol', 'form', 'call', 'make', 'async', 'if', 'for', 'while',
+  'else', 'do', 'type', 'break', 'continue', 'satisfies', 'as'
+];
+
+/** one naked expression statement: where it is, and the expression to ask about */
+type Naked = { line: number, column: number, probe: string, call: boolean };
+
+/** every naked expression statement with no void, no tz head and no assignment */
+const naked = (text: string): Naked[] => {
+  const out: Naked[] = [];
+  const lexed = lex(text);
+  if (lexed.branch === 'err') return out;
+
+  const tokens = lexed.value;
+  const read = scan(tokens);
+  const { twin, starts, before, after, matcher, frames, owner } = read;
+
+  const end = (from: number) => {
+    let j = from;
+    while (j < tokens.length) {
+      const t = tokens[j];
+      if (t.kind === 'comment') { j++; continue; }
+      if (t.text === '(' || t.text === '[' || t.text === '{') {
+        const shut = twin[j];
+        if (shut < 0) return j;
+        j = shut + 1;
+        continue;
+      }
+      if (t.text === ';') return j;
+      if (t.text === '}') return before[j] < 0 ? j : before[j];
+      j++;
+    }
+
+    return tokens.length - 1;
+  };
+
+  const decls: { from: number, to: number }[] = [];
+
+  for (let i = 0; i < tokens.length; i++) {
+    if (tokens[i].kind === 'comment' || !starts[i]) continue;
+    if (tokens[i].kind !== 'word' || !keyword(tokens, before, i)) continue;
+    if (tokens[i].text !== 'import' && tokens[i].text !== 'export' && tokens[i].text !== 'protocol' && tokens[i].text !== 'form') continue;
+
+    const last = end(i);
+    const head = tokens[i].text;
+    if (head === 'protocol' || head === 'form') {
+      const next = after[i];
+      if (next < 0 || (tokens[next].kind !== 'word' && tokens[next].text !== '<')) continue;
+      decls.push({ from: i, to: last });
+      continue;
+    }
+
+    let bound = false;
+    for (let j = i; j >= 0 && j <= last; j++) {
+      if (tokens[j].kind === 'comment') continue;
+      if (tokens[j].text === '(' || tokens[j].text === '[' || tokens[j].text === '{') {
+        const shut = twin[j];
+        if (shut < 0) break;
+        j = shut;
+        continue;
+      }
+      if (tokens[j].text === '=') { bound = true; break; }
+    }
+    if (!bound) decls.push({ from: i, to: last });
+  }
+
+  const blocks: { from: number, to: number }[] = [];
+
+  for (let i = 0; i < tokens.length; i++) {
+    if (tokens[i].kind !== 'punct' || tokens[i].text !== '{') continue;
+
+    const shut = twin[i];
+    if (shut < 0) continue;
+
+    let p = before[i];
+    if (p >= 0 && (tokens[p].text === '>' || tokens[p].text === '>>' || tokens[p].text === '>>>')) {
+      let depth = 0;
+      while (p >= 0) {
+        const t = tokens[p].text;
+        if (t === '>' || t === '>>' || t === '>>>') depth += t.length;
+        if (t === '<' || t === '<<') depth -= t.length;
+        if (depth <= 0) { p = before[p]; break; }
+        p = before[p];
+      }
+    }
+
+    if (p >= 0 && tokens[p].kind === 'word' && keyword(tokens, before, p)) {
+      if (tokens[p].text === 'protocol' || tokens[p].text === 'form' || tokens[p].text === 'import' || tokens[p].text === 'export') {
+        blocks.push({ from: i, to: shut });
+        continue;
+      }
+
+      const q = before[p];
+      if (q >= 0 && tokens[q].kind === 'word' && (tokens[q].text === 'protocol' || tokens[q].text === 'form') && keyword(tokens, before, q)) {
+        blocks.push({ from: i, to: shut });
+      }
+    }
+  }
+
+  const miss = (from: number) => {
+    let p = before[from];
+    while (p >= 0) {
+      const t = tokens[p];
+      if (t.kind === 'comment') { p = before[p]; continue; }
+      if (t.kind === 'word' && t.text === 'else' && keyword(tokens, before, p)) return true;
+      if (t.text === ';') return false;
+      if (t.text === '}') { p = before[p]; continue; }
+      if (t.text === ')') {
+        const open = twin[p];
+        p = open >= 0 ? before[open] : before[p];
+        continue;
+      }
+      if (t.text === '{') {
+        const head = before[p];
+        if (head >= 0 && tokens[head].kind === 'word' && tokens[head].text === 'else' && keyword(tokens, before, head)) { p = head; continue; }
+
+        return false;
+      }
+      if (t.text === '(') return false;
+      p = before[p];
+    }
+
+    return false;
+  };
+
+  /** whether the statement writes rather than reads, so its value is incidental */
+  const writes = (i: number, last: number) => {
+    let depth = 0;
+    for (let j = i; j >= 0 && j <= last; j++) {
+      const t = tokens[j];
+      if (t.kind === 'comment') continue;
+      if (t.text === '(' || t.text === '[' || t.text === '{') depth++;
+      else if (t.text === ')' || t.text === ']' || t.text === '}') depth--;
+      else if (depth === 0 && assigns(t.text)) return true;
+    }
+
+    return false;
+  };
+
+  /** the callee before the first top-level group, or the whole expression */
+  const probe = (i: number, last: number) => {
+    let depth = 0;
+    for (let j = i; j >= 0 && j <= last; j++) {
+      const t = tokens[j];
+      if (t.kind === 'comment') continue;
+      if (t.text === '(') {
+        if (depth === 0) return { call: true, probe: text.slice(tokens[i].from, t.from).trim() };
+        depth++;
+        continue;
+      }
+      if (t.text === '[' || t.text === '{') { depth++; continue; }
+      if (t.text === ')' || t.text === ']' || t.text === '}') { depth--; continue; }
+    }
+
+    return { call: false, probe: text.slice(tokens[i].from, tokens[last].to).trim() };
+  };
+
+  for (let i = 0; i < tokens.length; i++) {
+    if (tokens[i].kind === 'comment' || !starts[i]) continue;
+    if (decls.some((d) => i > d.from && i <= d.to)) continue;
+    if (blocks.some((b) => i > b.from && i < b.to)) continue;
+    if (frames[owner[i]].kind === 'object') continue;
+    if (tokens[i].kind !== 'word') continue;
+    if (heads.includes(tokens[i].text) && keyword(tokens, before, i)) continue;
+    if (tailing(tokens, read, i)) continue;
+    if (miss(i)) continue;
+
+    const last = end(i);
+    if (writes(i, last)) continue;
+
+    let depth = 0;
+    let quest = false;
+    for (let j = i; j >= 0 && j <= last; j++) {
+      const t = tokens[j];
+      if (t.kind === 'comment') continue;
+      if (t.text === '(' || t.text === '[' || t.text === '{') { depth++; continue; }
+      if (t.text === ')' || t.text === ']' || t.text === '}') { depth--; continue; }
+      if (depth === 0 && matcher[j] >= 0) { quest = true; break; }
+    }
+    if (quest) continue;
+
+    const asked = probe(i, last);
+    if (asked.probe === '') continue;
+
+    out.push({ line: tokens[i].line, column: tokens[i].column, probe: asked.probe, call: asked.call });
+  }
+
+  return out;
+};
+
+/** the checker-backed half of a session: boolean guards, exhaustive ladders and drops */
+export const openCheck = (mirrored: string[], config?: string) => {
+  const api = behind(mirrored, config);
   if (is.none(api)) return null;
 
   /** every guard testing a non-boolean, one note per miss */
@@ -627,5 +837,34 @@ export const openCheck = (mirrored: string[]) => {
     return notes;
   };
 
-  return { booleans, ladders, close: api.close };
+  /** every naked expression statement whose value is not none, one note per miss */
+  const drops = (file: string, text: string, code: string) => {
+    const notes: Note[] = [];
+    const checker = api.reader(file);
+    if (is.none(checker)) return notes;
+
+    const starts: number[] = [0];
+    for (let i = 0; i < code.length; i++) if (code[i] === '\n') starts.push(i + 1);
+
+    for (const drop of naked(text)) {
+      const from = starts[drop.line];
+      if (is.none(from)) continue;
+
+      const found = code.indexOf(drop.probe, from);
+      if (found < 0) continue;
+      if (!drop.probe.includes('\n') && found >= (starts[drop.line + 1] ?? code.length)) continue;
+
+      const pos = found + drop.probe.length - 1;
+      const type = drop.call ? api.facing(checker, file, pos, true) : api.at(checker, file, pos);
+      if (is.none(type)) continue;
+      if (type.isErrorType()) continue;
+      if (api.bare(type)) continue;
+
+      notes.push({ line: drop.line + 1, column: drop.column + 1, level: 'warning', code: 'TZL0003', message: 'a dropped value needs void' });
+    }
+
+    return notes;
+  };
+
+  return { booleans, ladders, drops, close: api.close };
 };

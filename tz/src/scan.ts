@@ -46,6 +46,13 @@ export const literals = ['true', 'false'];
 /** the binary operators a `?` quest can glue onto */
 export const comparisons = ['==', '!=', '<=', '>=', '<', '>'];
 
+/** whether a token spells an assignment, plain or compound */
+export const assigns = (text: string) =>
+  text === '=' ||
+  text === '+=' || text === '-=' || text === '*=' || text === '/=' || text === '%=' ||
+  text === '&=' || text === '|=' || text === '^=' || text === '**=' ||
+  text === '<<=' || text === '>>=' || text === '>>>=' || text === '&&=' || text === '||=';
+
 /** what can follow a bare `?` and still leave it a quest */
 const bareAfter = ['return', 'ok', 'err', 'async', 'break', 'continue', '=>', '{', ';', ',', ')', ']', '}'];
 

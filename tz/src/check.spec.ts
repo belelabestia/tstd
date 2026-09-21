@@ -102,12 +102,27 @@ if (written.branch === 'err') throw new Error(`the fixture never emits: ${writte
 const mirror = join(dir, 'typed.ts');
 writeFileSync(mirror, written.value.code);
 
-const checking = openCheck([mirror]);
+const values = `export const toss = (n: number, log: (x: string) => void) => {
+  n.toString();
+  void n.toString();
+  log('kept');
+  let a = 0;
+  a = n;
+  return a;
+};`;
+
+const spilled = emit(values);
+if (spilled.branch === 'err') throw new Error(`the fixture never emits: ${spilled.value.message}`);
+const spilledMirror = join(dir, 'values.ts');
+writeFileSync(spilledMirror, spilled.value.code);
+
+const checking = openCheck([mirror, spilledMirror]);
 if (checking === null) throw new Error('the checker never starts');
 after(() => checking.close());
 
 const booleanNotes = checking.booleans(mirror, typed, written.value.code);
 const ladderNotes = checking.ladders(mirror, typed, written.value.code);
+const dropNotes = checking.drops(spilledMirror, values, spilled.value.code);
 
 test('flag a string guard and spare the boolean ones', () => {
   assert.equal(booleanNotes.length, 6);
@@ -150,4 +165,11 @@ test('stay silent on an empty buffer and an unknown file', () => {
   assert.deepEqual(checking.booleans(mirror, '', ''), []);
   assert.deepEqual(checking.ladders(mirror, '', ''), []);
   assert.deepEqual(checking.booleans(join(dir, 'missing.ts'), 'a ? b;', ''), []);
+});
+
+test('flag a dropped value and spare void, voided and written ones', () => {
+  // a string is a value, so dropping it needs void; a void call, an explicit
+  // void and a bare assignment carry nothing worth looking at, so they are left
+
+  assert.deepEqual(dropNotes.map((note) => [note.line, note.code]), [[2, 'TZL0003']]);
 });
