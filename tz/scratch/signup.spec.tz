@@ -10,25 +10,25 @@ import { forget, get, pair, parse, read, remote } from './calls.js';
 import { greet, team, user } from './forms.js';
 import { failed, idle, nested } from './branches.js';
 
-test('refuse a payload that is not a signup', () => {
+void test('refuse a payload that is not a signup', () => {
   const out = signup({ email: 'a@b.c' });
 
   out.branch ?!= 'err' assert.fail();
   assert.equal(out.value, 'malformed body');
 });
 
-test('accept one that is, and carry it narrowed', () => {
+void test('accept one that is, and carry it narrowed', () => {
   const out = signup({ email: 'a@b.c', age: 19 });
 
   out.branch ?!= 'ok' assert.fail();
   assert.equal(out.value.age, 19);
 });
 
-test('walk a list with a refusal per turn', () => {
+void test('walk a list with a refusal per turn', () => {
   assert.deepEqual(active(['a', '', 'b']), ['a', 'b']);
 });
 
-test('guard an actor with a predicate of your own', () => {
+void test('guard an actor with a predicate of your own', () => {
   // the condition is a third party test, and the expression on its left is the
   // value the quest yields: it runs only on the miss, after the test
   assert.equal(guard('ada', 'admin').branch, 'ok');
@@ -36,14 +36,14 @@ test('guard an actor with a predicate of your own', () => {
   assert.equal(guard('ada', 'guest').branch, 'err');
 });
 
-test('choose between two sides, and answer without refusing', () => {
+void test('choose between two sides, and answer without refusing', () => {
   assert.equal(label(-1), 'below');
   assert.equal(label(0), 'nothing');
   assert.equal(clamp(400), 100);
   assert.equal(say(400), 'bad request');
 });
 
-test('propagate a failure without naming it twice', () => {
+void test('propagate a failure without naming it twice', () => {
   const found = name('1');
 
   found.branch ?!= 'ok' assert.fail();
@@ -55,17 +55,17 @@ test('propagate a failure without naming it twice', () => {
   assert.equal(missing.value, 'no row 2');
 });
 
-test('refuse what is already there', () => {
+void test('refuse what is already there', () => {
   assert.equal(claim('x').branch, 'ok');
   assert.equal(claim('x').branch, 'err');
 });
 
-test('substitute a value rather than refusing one', () => {
+void test('substitute a value rather than refusing one', () => {
   assert.equal(quiet(() => result.err('down')), 'localhost');
   assert.equal(zone({}), 'utc');
 });
 
-test('reach one branch by refusing the others', () => {
+void test('reach one branch by refusing the others', () => {
   // a branch infers its value from every member at once, so bind it before you hand it over
   const done = branch('done', 'rows');
   const idle = branch('idle');
@@ -76,7 +76,7 @@ test('reach one branch by refusing the others', () => {
   assert.equal(describe(failed), 'failed: down');
 });
 
-test('answer with else, nested or not', () => {
+void test('answer with else, nested or not', () => {
   assert.equal(port({}), '8080');
   assert.equal(port({ PORT: '1' }), '1');
   assert.equal(level(-1), 'below');
@@ -84,12 +84,12 @@ test('answer with else, nested or not', () => {
   assert.equal(level(1), 'above');
 
   const heard: string[] = [];
-  ping(true, (x) => void heard.push(x));
+  void ping(true, (x) => void heard.push(x));
   react(false, (x) => void heard.push(x));
   assert.deepEqual(heard, ['up', 'no']);
 });
 
-test('isolate what throws, in one line or a block', () => {
+void test('isolate what throws, in one line or a block', () => {
   assert.deepEqual(parse('{"a":1}').value, { a: 1 });
   assert.equal(parse('{oops').branch, 'err');
   assert.deepEqual(read({ read: () => '{"a":1}' }).value, { a: 1 });
@@ -115,7 +115,7 @@ test('isolate what throws, in one line or a block', () => {
   assert.deepEqual(kept, ['hi', 'hi']);
 });
 
-test('declare the two forms once, and read them twice', () => {
+void test('declare the two forms once, and read them twice', () => {
   const raw: unknown = JSON.parse('{"id":"a","created_at":1704164645006}');
 
   // the renamed key carries the domain type on the memory side
@@ -133,7 +133,7 @@ test('declare the two forms once, and read them twice', () => {
   assert.equal(form.decode(boss, team).lead.createdAt, '1970-01-01T00:00:00.000Z');
 });
 
-test('build branches with a colon', () => {
+void test('build branches with a colon', () => {
   assert.deepEqual(idle, branch('idle'));
   assert.deepEqual(failed('down'), branch('failed', 'down'));
   assert.deepEqual(nested, branch('outer', branch('inner', 1)));
