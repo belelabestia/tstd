@@ -4,9 +4,21 @@ a journal of decisions. the spec lives in `tz/TUTORIAL.md`; the design notes liv
 
 ## agenda
 
-the boolean and exhaustive checks ship; the next item is the editor affordances on the same surface (completions, hover, goto, rename) and a keystroke loop that stops shelling out. the coherence spec runs in `npm test`.
+the boolean and exhaustive checks ship; the `void` check now reads types too, so the next item is the editor affordances on the same surface (completions, hover, goto, rename) and a keystroke loop that stops shelling out. the coherence spec runs in `npm test`.
 
-the 2026-09-16 defect is fixed, and the session that fixed it closed the custom quest: `?(cond)` and `?!(cond)` are side quests whose condition is a third party predicate, a side quest is postfix in syntax and first in execution, and a value `else` is the inverted form. sessions 04 and 05 remain in phase 0.
+the 2026-09-16 defect is fixed, and the session that fixed it closed the custom quest: `?(cond)` and `?!(cond)` are side quests whose condition is a third party predicate, a side quest is postfix in syntax and first in execution, and a value `else` is the inverted form. session 05 remains in phase 0.
+
+## 2026-09-21: the checker tells the truth
+
+q2 is ruled: type the dropped-value check now, not withdraw it. `tzd scratch` was emitting 65 `TZL0003` warnings and every one was false: 56 on `assert.*` and `test(...)`, five on `console.log`, one on an assignment, one on `out.push`. the check shipped at its untyped fallback, where any naked expression statement with no tz head read as a drop, so it cried wolf on every assertion.
+
+the rule is now the author's: every dropped value that carries something must be bound or explicitly discarded, because a branched result must never be lost silently. `TZL0003` resolves the dropped expression through the interim checker and warns unless the value is none: `void`, `undefined`, `null` or `never`. a dropped `Result`, promise, boolean or string warns; an assertion, `console.log`, a declared `void` and a bare assignment are quiet; a type the checker cannot resolve stays silent rather than guessing. to see a `test(...)` promise the mirror now opens a widened project, `.tzd/tsconfig.json` extending the workspace config, so the `node:` types resolve for the spec files.
+
+an assignment is a statement, so its value is incidental and it needs no `void`; that ruling makes an assignment unspellable as an expression, so `ban` now refuses one: `a = b = 2`, `if (a = n)` and `f(a = n)` are refused with `an assignment is a statement; it cannot be an expression`, while `a = n`, `o.x = 1` and `for (let i = 0; ...)` pass.
+
+what changed: the dropped-value detection moved from `lsp.ts` into `check.ts` behind `openCheck.drops`; `checkVoid` is gone; `assigns` moved into `scan.ts`; `expressed` and the assignment refusal in `ban.ts`; a mirror project in `lsp.ts`; the `TZL0003` case in `check.spec.ts` and the assignment cases in `emit.spec.ts`; the `void` and assignment rules in `TUTORIAL.md` and `DESIGN.md`. the showcase voided its fifteen true positives: thirteen `test(...)`, one `ping(...)`, one `out.push(...)`.
+
+what verified: `tzd scratch` exits 0 with no note; `tzc scratch` exits 0; `npm test` in `tz/` is 63 src green plus 13 scratch with 12 pass and the one pre-existing remote fixture at `scratch/signup.spec.tz` (session 05); `npm test` at the root is green at 43.
 
 ## 2026-09-20: a condition is a custom side quest
 
