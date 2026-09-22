@@ -8,24 +8,9 @@ a walk through the language: where it comes from, the typescript it keeps and th
 
 typescript keeps every door open: classes, interfaces, enums, namespaces, decorators, generics, `any`, overloads, `switch`, `try`/`catch`, `this`, `new`. nothing is taken away. the overlap is the problem: when two features do the same job, a team picks one and argues about it, and the type system cannot tell you whether you picked well.
 
-<!-- # marco to agent: repetition; either quote directly or indirectly, not both -->
-the claim here is not that typescript is bad. it is that most of it can be ignored, without suffering the lack at all. from the `tstd` readme: "javascript has many overlapping syntax constructs and language features; most of them can be completely ignored without suffering the lack at all". and: "typescript doesn't really make a good job in becoming scala, haskell or gleam, but it can do an excellent job in becoming go or zig, if you completely omit the topics of performance or memory management."
+the claim here is not that typescript is bad. from the `tstd` readme: "javascript has many overlapping syntax constructs and language features; most of them can be completely ignored without suffering the lack at all". and: "typescript doesn't really make a good job in becoming scala, haskell or gleam, but it can do an excellent job in becoming go or zig, if you completely omit the topics of performance or memory management."
 
 so the project starts with a question: what is the smallest consistent subset of typescript, and what does code written in that subset look like?
-
-<!--
-  # marco to agent
-
-  i was the one to first say "let's make a tutorial, and start from where we come from, and do all the journey". but i'm starting to wander: is it nice to explain the library when one wants to see the language?
-
-  this sections goes on to explain all the patterns, but before showing the tz snippets, it kinda pretrains the reader on tstd code. i think showcasing all the tstd-based design patterns is one thing, and instead teaching the basics of tz is a different thing.
-
-  ok, here's what i want:
-
-  write a dissertation on how we should organize tutorials. how a tutorial is effective, what it shows and in what order etc. i want to discuss this assessment with an agent and envision a whole revamp of the teaching docs in this repo.
-
-  a language exists if people use it. i truly believe that this language is amazingly smart, and i am very proud to be its designer. i want people to feel the same about this language as i feel.
- -->
 
 ### tstd
 

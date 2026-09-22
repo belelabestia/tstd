@@ -7,28 +7,13 @@ const shape = {
 
 /** the signup a payload describes, or why it is not one */
 export const signup = (body: unknown) => {
-  // #marco to agent: this should be "is.model(..) ?! err 'malformed body';
-  // by the way, we need to discuss more in depth the emitted of ?!.
-  // i'm not sure whether it should mean "not true" or "strictly false".
-  // the implications of this choice shouldn't go unnoted, whatever they are.
-  is.model(body, shape) ?== false err 'malformed body';
+  is.model(body, shape) ?! err 'malformed body';
   body.age ?< 18 err 'under age';
   ok body;
 };
 
 /** the actor a request is allowed for, refused when the role is not theirs */
 export const guard = (actor: string, role: string) => {
-  // #marco to agent: this code could simply be replaced with
-  // "=> { ok actor ?!(role == "admin") err 'not authorized'; }"
-  // which showcases even better the point of using this construct.
-  // the alternative would be
-  // "=> { role ?!= 'admin' err 'not authorized'; ok actor; }
-  // exactly the same code: two statements, or their inverted expression or exit form
-  // it would be nice to have a strict, structural definition for something
-  // that might be a resolved type (from an expression) or an exit instruction.
-  // basically you exclude "effect" from a union "effect | exit | value"
-  // what do we have about that? does the architecture of our transpiler and
-  // language design have this principle? should they? could they?
   const actor2 = actor ?!(role == 'admin') err 'not authorized';
   ok actor2;
 };

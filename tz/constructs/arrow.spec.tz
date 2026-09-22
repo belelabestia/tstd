@@ -14,8 +14,6 @@ import { is } from '@belelabestia/tstd';
   argument list, or as the answer of another arrow.
 */
 
-// #marco to agent: showcase all uses of arrow capture. even after call and in other constructs
-
 const port = (env: Record<string, string | undefined>) => env.PORT ?none => '8080';
 
 const label = (n: number) =>

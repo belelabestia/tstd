@@ -7,9 +7,11 @@ blocked by: 08
 
 ## why
 
-the prompt at `../DESIGN.md:186` asks for the docs to be training material rather than regulation, and for the author's taste to be legible: the path from c++ and c# through typescript and rxjs to f# and haskell, the love of zig's comptime and its `orelse`, `catch` and `try`, and the way this language could have been many other languages and was chosen to be this one.
+the prompt once parked at `../DESIGN.md:186` asks for the docs to be training material rather than regulation, and for the author's taste to be legible: the path from c++ and c# through typescript and rxjs to f# and haskell, the love of zig's comptime and its `orelse`, `catch` and `try`, and the way this language could have been many other languages and was chosen to be this one.
 
 the current docs describe the rules correctly and communicate none of that. they read like a spec because they are one. a reader should feel why the choices were made, not only what they cost.
+
+and the stake behind the rewrite: a language exists if people use it. the author is proud of this design and wants a reader to feel the same pull toward it, not merely to follow its rules.
 
 ## what this session must produce
 

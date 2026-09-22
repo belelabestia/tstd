@@ -6,7 +6,7 @@ resolves: tutorial organization
 
 ## why
 
-the prompt at `../TUTORIAL.md:16` is a real question, not a chore. the tutorial starts from "where we come from" and explains the `tstd` library and its patterns before showing any tz. the author now wonders whether that pretrains the reader on the library when they came to see the language. teaching `tstd` and teaching `tz` are different jobs, and the tutorial currently braids them.
+the question once parked at `../TUTORIAL.md:16` is a real one, not a chore. the tutorial starts from "where we come from" and explains the `tstd` library and its patterns before showing any tz. the author now wonders whether that pretrains the reader on the library when they came to see the language. teaching `tstd` and teaching `tz` are different jobs, and the tutorial currently braids them.
 
 the author wants a discussion, not a rewrite: a dissertation on how the teaching docs should be organized, what they show, and in what order.
 

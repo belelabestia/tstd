@@ -19,7 +19,6 @@ const say = (code: number) => code ? {
   else => 'something else'
 };
 
-// #marco to agent: out should be Branch<..>
 const describe = (out: Result<string, string>) => out ? {
   :ok (value) => `ok: ${value}`,
   :err (why) => `err: ${why}`

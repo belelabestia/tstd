@@ -11,12 +11,9 @@ import { result } from '@belelabestia/tstd';
   non-name expression. `?(` matches when the condition holds.
 */
 
-// #marco to agent: this case doesn't make sense and should be forbidden
-// the starting n acts as a useless subject because you have both a hit and a miss
 const even = (n: number) => n ?(n % 2 == 0) => 'even' else => 'odd';
 
 const positive = (n: number) => {
-  // same here
   n ?(n <= 0) err `not positive: ${n}`;
   ok n;
 };
