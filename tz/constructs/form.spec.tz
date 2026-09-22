@@ -23,7 +23,7 @@ export form user {
 }
 
 const greet = (raw: unknown) => {
-  form.model(raw, user) ?== false err 'malformed wire format';
+  form.model(raw, user) ?! err 'malformed wire format';
   const u = form.decode(raw, user);
   ok `hello ${u.id}, seen ${u.createdAt}`;
 };

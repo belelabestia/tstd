@@ -43,7 +43,7 @@ the transpiler is a lexer, so it refuses unknown words line by line. every refus
 - `===` and `!==` are refused; you write `==` and `!=`, and they emit the strict ones. one spelling of equality, guarded by the transpiler instead of by habit.
 - `??` is refused; `?none` says which half it is doing. `?:` is refused; use `? => ... else ...` instead.
 - comparing against `null` or `undefined` is refused; `is.some` and `is.none` say presence.
-- a bare `return` is refused; every `return` is an exit, so it has to be a side quest (`cond ?== false return`, `val ?none return`).
+- a bare `return` is refused; every `return` is an exit, so it has to be a side quest (`cond ?! return`, `val ?none return`).
 - the `async` modifier is refused; an `await` in the body infers it, and `async x` states the rest of the story.
 - `Promise.reject` is refused; a rejection is a throw on a later tick, so resolve with a `Result`.
 - typescript's own `try { } catch { }` is refused; use `call.sync`, `call.async`, or the tz `try`.
@@ -104,10 +104,10 @@ all the side quests are postfix, all under `?`:
 | `?\|(...)` | any listed comparison holds | `x ?|(< 0, > 100) { print('out'); }` |
 | `?(cond)` | a self contained boolean expression | `x ?(x % 2 == 0) => 'even'` |
 | `?!(cond)` | the negation of a self contained boolean | `x ?!(is.valid(x)) err 'invalid'` |
-| `?` | true, shorthand for `?== true` | `cond ? log('up')` |
-| `?!` | false, shorthand for `?== false` | `cond ?! log('down')` |
+| `?` | a boolean is true | `cond ? log('up')` |
+| `?!` | a boolean is false | `cond ?! log('down')` |
 
-a bare `?`, a `?!` and a trigger test a boolean; anything wider warns in the editor, so a string condition spells its comparison out.
+a bare `?`, a `?!` and a trigger test a boolean, and a boolean is always spelled `?` or `?!`; the long `?== true` and `?== false` are not written for one. anything wider warns in the editor, so a string condition spells its comparison out.
 
 place a `?` in the middle of a comparison and it captures the expression on its left and tests it against what follows on its right. the operator glues onto the `?`: `x ?== 2`, `x ?!= 3`, `x ?> 0`. the operators are exactly the boolean binaries: `==`, `!=`, `>`, `<`, `>=`, `<=`. `==` and `!=` emit the strict ones, the way they do everywhere else in tz:
 
@@ -116,7 +116,7 @@ x ?> 0 err 'not positive';
 const speed = val ?>= 100 => 1.0 else 0.5;
 ```
 
-`==` is mandatory on every test, even where the old spelling glued a value straight onto the `?`: `x ?5`, `x ?'hi'` and `x ?=y` are refused, and read `x ?== 5`, `x ?== 'hi'`, `x ?== y`. `?true` and `?false` retire the same way, and a bare `?` means `?== true` while `?!` means `?== false` (never `?!= true`, so a truthy non-boolean misses it), so a boolean subject just reads `cond ?` or `cond ?!`. a `?!` heads the same tail family as `?`, so a landing exit rewrites the same way: `cond ?! err 'x'` emits the error `cond ? err` does. arithmetic and bitwise quests go with them: there is no `?%`, and a modulo case spells `x ?(x % 2 == 0)` or moves the computation left, `x % 2 ?== 0`.
+`==` is mandatory on every comparison against a value, even where the old spelling glued a value straight onto the `?`: `x ?5`, `x ?'hi'` and `x ?=y` are refused, and read `x ?== 5`, `x ?== 'hi'`, `x ?== y`. `?true` and `?false` retire the same way, and a bare `?` means `?== true` while `?!` means `?== false` (never `?!= true`, so a truthy non-boolean misses it), so a boolean subject just reads `cond ?` or `cond ?!`. a `?!` heads the same tail family as `?`, so a landing exit rewrites the same way: `cond ?! err 'x'` emits the error `cond ? err` does. arithmetic and bitwise quests go with them: there is no `?%`, and a modulo case spells `x ?(x % 2 == 0)` or moves the computation left, `x % 2 ?== 0`.
 
 when the right side has more than one half, one combinator glues on plus parens joins them: `&` means every half holds, `|` means any half holds:
 
@@ -299,7 +299,7 @@ export const word = (code: number) => code ? {
 export const name = (id: string) => {
   const raw = try row(id);
   const parsed = try call => JSON.parse(raw);
-  is.model(parsed, rowShape) ?== false err 'not a row';
+  is.model(parsed, rowShape) ?! err 'not a row';
   ok parsed.name;
 };
 ```
@@ -360,8 +360,8 @@ the flip side of the ladder, in one place. an expression captures with `=>` and 
 
 | construct | syntax | role | replaces |
 | --- | --- | --- | --- |
-| postfix exit | `val ?none err 'msg'`, `cond ?== false return` | early exit from scope on failure | an early `return`, an `if (!cond) return` clause |
-| postfix arrow capture | `val ?none => dflt`, `cond ?== false => 'guest'` | inline value substitution, with an exit allowed on the miss side | `??` |
+| postfix exit | `val ?none err 'msg'`, `cond ?! return` | early exit from scope on failure | an early `return`, an `if (!cond) return` clause |
+| postfix arrow capture | `val ?none => dflt`, `cond ?! => 'guest'` | inline value substitution, with an exit allowed on the miss side | `??` |
 | arrow capture chain | `cond ? => a else => b` | capture one of two values | ternary `?:` |
 | inline exit | `a ? { log(); return; }` | effects plus an exit, inline | `if` with effects and an early exit |
 | side-effect trigger | `cond ? log('ok')`, `cond ? { ... }` | run on match, keep going | single-branch `if` |
@@ -487,7 +487,7 @@ export type User = form.Decoded<typeof user>;
 
 ```tz
 const processPayload = (raw: unknown) => {
-  form.model(raw, user) ?== false err 'malformed wire format';
+  form.model(raw, user) ?! err 'malformed wire format';
   const u = form.decode(raw, user);
   log(`created at: ${u.createdAt}`);
   const payload = form.encode(u, user);
@@ -635,7 +635,7 @@ const loadConfig = (filePath: string) => scope (hold) => {
 
   const raw = try call => JSON.parse(file.readToString());
 
-  form.model(raw, configForm) ?== false err `invalid configuration structure in ${filePath}`;
+  form.model(raw, configForm) ?! err `invalid configuration structure in ${filePath}`;
 
   const config = form.decode(raw, configForm);
 
