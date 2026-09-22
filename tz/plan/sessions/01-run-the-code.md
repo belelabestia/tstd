@@ -12,7 +12,7 @@ this session builds the harness that removes the contradiction. it does not fix 
 
 ## what this session must produce
 
-a test path in which a failing scratch assertion exits non-zero. the shape is open: a `node:test` spec that drives `tzx` over the scratch spec, or a script the test chain runs. it must not add a framework (see `../AGENTS.md`), and it must keep the existing `tsc --noEmit` gate.
+a test path in which a failing scratch assertion exits non-zero. the shape is open: a `node:test` spec that drives `tzx` over the scratch spec, or a script the test chain runs. it must not add a framework (see `../../AGENTS.md`), and it must keep the existing `tsc --noEmit` gate.
 
 ## in scope
 
@@ -47,7 +47,7 @@ a test path in which a failing scratch assertion exits non-zero. the shape is op
 
 ## starting prompt
 
-> read `../AGENTS.md` and `../STYLE-KB.md` first, then the roadmap and this file. copy `session-context-template.md` to `context/01-run-the-code.md`. the suite typechecks the emit but never runs it, so `tzx scratch/signup.spec.tz` is broken while `npm test` is green. design and land the smallest run step that makes a failing showcase fail the build. do not fix the failures; make them visible. verify by running the chain and reporting exit codes. do not commit until the author reviews.
+> read `../../AGENTS.md` and `../../STYLE-KB.md` first, then the roadmap and this file. copy `session-context-template.md` to `context/01-run-the-code.md`. the suite typechecks the emit but never runs it, so `tzx scratch/signup.spec.tz` is broken while `npm test` is green. design and land the smallest run step that makes a failing showcase fail the build. do not fix the failures; make them visible. verify by running the chain and reporting exit codes. do not commit until the author reviews.
 
 ## context
 

@@ -49,7 +49,7 @@ the showcase is the language's proof. it should be exhaustive and it should run.
 
 ## starting prompt
 
-> read `../AGENTS.md` and `../STYLE-KB.md` first, then the roadmap and this file. copy `session-context-template.md` to `context/05-scratch-the-showcase.md`. the remote fixture in `scratch/signup.spec.tz` depends on a `data:` fetch that does not hold, and the showcase may not exercise every construct at runtime. repair the fixture, build the coverage map against the roles list, close the gaps, and correct the README's claim about scratch. do not commit until the author reviews.
+> read `../../AGENTS.md` and `../../STYLE-KB.md` first, then the roadmap and this file. copy `session-context-template.md` to `context/05-scratch-the-showcase.md`. the remote fixture in `scratch/signup.spec.tz` depends on a `data:` fetch that does not hold, and the showcase may not exercise every construct at runtime. repair the fixture, build the coverage map against the roles list, close the gaps, and correct the README's claim about scratch. do not commit until the author reviews.
 
 ## context
 

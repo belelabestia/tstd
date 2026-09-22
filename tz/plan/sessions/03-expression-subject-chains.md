@@ -47,7 +47,7 @@ resolves: the 2026-09-16 defect
 
 ## starting prompt
 
-> read `../AGENTS.md` and `../STYLE-KB.md` first, then the roadmap and this file. copy `session-context-template.md` to `context/03-expression-subject-chains.md`. reproduce the documented defect, where an arrow-body chain over an expression subject duplicates the subject around the temp, fix the emit, and pin the fixed output with a spec. keep one line in and one line out, and keep the locked-subject rule. do not commit until the author reviews.
+> read `../../AGENTS.md` and `../../STYLE-KB.md` first, then the roadmap and this file. copy `session-context-template.md` to `context/03-expression-subject-chains.md`. reproduce the documented defect, where an arrow-body chain over an expression subject duplicates the subject around the temp, fix the emit, and pin the fixed output with a spec. keep one line in and one line out, and keep the locked-subject rule. do not commit until the author reviews.
 
 ## context
 

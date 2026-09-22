@@ -53,7 +53,7 @@ and the stake behind the rewrite: a language exists if people use it. the author
 
 ## starting prompt
 
-> read `../AGENTS.md` and `../STYLE-KB.md` first, then the roadmap, session 08's design, and this file. copy `session-context-template.md` to `context/09-the-educational-rewrite.md`. rewrite the teaching docs to the organization from session 08, in an educational, journalistic voice that carries the author's taste: the languages he passed through, the love of zig's comptime and its orelse, catch and try, and why this subset over the other subsets it could have been. change no rule and no behavior. keep the coherence spec green and the line budget met. do not commit until the author reviews.
+> read `../../AGENTS.md` and `../../STYLE-KB.md` first, then the roadmap, session 08's design, and this file. copy `session-context-template.md` to `context/09-the-educational-rewrite.md`. rewrite the teaching docs to the organization from session 08, in an educational, journalistic voice that carries the author's taste: the languages he passed through, the love of zig's comptime and its orelse, catch and try, and why this subset over the other subsets it could have been. change no rule and no behavior. keep the coherence spec green and the line budget met. do not commit until the author reviews.
 
 ## context
 

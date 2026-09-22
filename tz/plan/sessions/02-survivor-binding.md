@@ -59,7 +59,7 @@ after `const rows = x ?|(:idle, :loading, :failed) return;`, what does a later `
 
 ## starting prompt
 
-> read `../AGENTS.md` and `../STYLE-KB.md` first, then the roadmap and this file. copy `session-context-template.md` to `context/02-survivor-binding.md`. the showcase source and spec disagree about what a name binds after `x ?|(:idle, :loading, :failed) return;`. establish the current behavior empirically, present the candidate rulings and their costs to the author, then implement the ruling. pin it with an emit spec. do not commit until the author reviews.
+> read `../../AGENTS.md` and `../../STYLE-KB.md` first, then the roadmap and this file. copy `session-context-template.md` to `context/02-survivor-binding.md`. the showcase source and spec disagree about what a name binds after `x ?|(:idle, :loading, :failed) return;`. establish the current behavior empirically, present the candidate rulings and their costs to the author, then implement the ruling. pin it with an emit spec. do not commit until the author reviews.
 
 ## context
 

@@ -56,7 +56,7 @@ is the hole the `?!` tail only, or the whole tail path? the fix must keep `?!` r
 
 ## starting prompt
 
-> read `../AGENTS.md` and `../STYLE-KB.md` first, then the roadmap and this file. copy `session-context-template.md` to `context/06-the-not-tail.md`. `cond ?! err 'x'` emits an undeclared `err`, while `cond ? err` and `cond ?== false err` rewrite through `wraps`. reproduce every `?!` tail form, find where the tail skips the rewrite, fix it without touching the working forms, and pin the emitted output with an emit case. extend the `not` deck to cover the tail. do not commit until the author reviews.
+> read `../../AGENTS.md` and `../../STYLE-KB.md` first, then the roadmap and this file. copy `session-context-template.md` to `context/06-the-not-tail.md`. `cond ?! err 'x'` emits an undeclared `err`, while `cond ? err` and `cond ?== false err` rewrite through `wraps`. reproduce every `?!` tail form, find where the tail skips the rewrite, fix it without touching the working forms, and pin the emitted output with an emit case. extend the `not` deck to cover the tail. do not commit until the author reviews.
 
 ## context
 

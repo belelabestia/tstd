@@ -56,7 +56,7 @@ the author's ruling: this is not a phase to resolve and delete. the author will 
 
 ## starting prompt
 
-> read `../AGENTS.md` and `../STYLE-KB.md` first, then the roadmap and this file. copy `session-context-template.md` to `context/07-the-comment-protocol.md`. this is not a cleanup: the author rules that comments carrying forward work are a living channel, part of the no-debt approach. write the protocol for them (markers, allowed channels, sweep cadence, how the coherence walk ignores a parked note on purpose), route the three parked prompts by it, apply the postfix guard correction, and review the coherence blanking walk. do not commit until the author reviews.
+> read `../../AGENTS.md` and `../../STYLE-KB.md` first, then the roadmap and this file. copy `session-context-template.md` to `context/07-the-comment-protocol.md`. this is not a cleanup: the author rules that comments carrying forward work are a living channel, part of the no-debt approach. write the protocol for them (markers, allowed channels, sweep cadence, how the coherence walk ignores a parked note on purpose), route the three parked prompts by it, apply the postfix guard correction, and review the coherence blanking walk. do not commit until the author reviews.
 
 ## context
 

@@ -53,7 +53,7 @@ type the dropped-value check against the interim checker now, or withdraw `TZL00
 
 ## starting prompt
 
-> read `../AGENTS.md` and `../STYLE-KB.md` first, then the roadmap and this file. copy `session-context-template.md` to `context/04-the-checkers-honesty.md`. `tzd scratch` emits dozens of false `TZL0003` warnings on void calls. measure the false-positive rate, present the choice between typing the check now and withdrawing it until the stable surface, then implement the author's ruling and make `tzd scratch` honest. do not commit until the author reviews.
+> read `../../AGENTS.md` and `../../STYLE-KB.md` first, then the roadmap and this file. copy `session-context-template.md` to `context/04-the-checkers-honesty.md`. `tzd scratch` emits dozens of false `TZL0003` warnings on void calls. measure the false-positive rate, present the choice between typing the check now and withdrawing it until the stable surface, then implement the author's ruling and make `tzd scratch` honest. do not commit until the author reviews.
 
 ## context
 

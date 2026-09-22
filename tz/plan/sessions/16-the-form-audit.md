@@ -1,4 +1,4 @@
-# 15 the form audit
+# 16 the form audit
 
 phase: battle
 status: planned
@@ -64,8 +64,8 @@ where is the line between what `form` emits and what the caller writes, and is t
 
 ## starting prompt
 
-> read `../AGENTS.md` and `../STYLE-KB.md` first, then the roadmap and this file. copy `session-context-template.md` to `context/15-the-form-audit.md`. the author's charge is that `form` is inconsistent: some code is emitted, some is written by hand, and the line is arbitrary. inventory every field spelling and every emitted piece, propose candidate rules for where the line belongs, take the author's ruling, then implement it or write the session that does. note any `protocol` finding separately. do not commit until the author reviews.
+> read `../../AGENTS.md` and `../../STYLE-KB.md` first, then the roadmap and this file. copy `session-context-template.md` to `context/16-the-form-audit.md`. the author's charge is that `form` is inconsistent: some code is emitted, some is written by hand, and the line is arbitrary. inventory every field spelling and every emitted piece, propose candidate rules for where the line belongs, take the author's ruling, then implement it or write the session that does. note any `protocol` finding separately. do not commit until the author reviews.
 
 ## context
 
-copy `../session-context-template.md` to `../context/15-the-form-audit.md` before starting.
+copy `../session-context-template.md` to `../context/16-the-form-audit.md` before starting.

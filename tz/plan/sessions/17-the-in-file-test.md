@@ -1,4 +1,4 @@
-# 16 the in-file test
+# 17 the in-file test
 
 phase: battle
 status: planned
@@ -62,8 +62,8 @@ open ground to survey:
 
 ## starting prompt
 
-> read `../AGENTS.md` and `../STYLE-KB.md` first, then the roadmap and this file. copy `session-context-template.md` to `context/16-the-in-file-test.md`. the author wants a `test` keyword like zig's, living in the file it tests and reaching module internals, and is unsure it is feasible. probe whether the emit can put a `test(...)` call in module scope that sees unexported locals, name the runner and the syntax if it can, and write the house-rule amendment that permits it (the ban is on a second framework, not the one already in use). if it cannot, write why. do not commit until the author reviews.
+> read `../../AGENTS.md` and `../../STYLE-KB.md` first, then the roadmap and this file. copy `session-context-template.md` to `context/17-the-in-file-test.md`. the author wants a `test` keyword like zig's, living in the file it tests and reaching module internals, and is unsure it is feasible. probe whether the emit can put a `test(...)` call in module scope that sees unexported locals, name the runner and the syntax if it can, and write the house-rule amendment that permits it (the ban is on a second framework, not the one already in use). if it cannot, write why. do not commit until the author reviews.
 
 ## context
 
-copy `../session-context-template.md` to `../context/16-the-in-file-test.md` before starting.
+copy `../session-context-template.md` to `../context/17-the-in-file-test.md` before starting.
