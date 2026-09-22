@@ -49,21 +49,22 @@ material that onboards people and agents. derived from the battle test, not inve
 | 06 | the not tail | truth | done | q7 |
 | 07 | the comment protocol | ownership | done | q3 |
 | 08 | the teaching dissertation | ownership | done | tutorial organization |
-| 09 | the educational rewrite | ownership | planned | author voice |
-| 10 | define robust | battle | planned | q5 |
-| 11 | choose the target | battle | planned | q4 |
-| 12 | the first build | battle | planned | the dev experience |
-| 13 | onboard people | onboarding | planned | q6 |
-| 14 | onboard agents | onboarding | planned | the agent contract |
-| 15 | the form audit | battle | planned | q8 |
-| 16 | the in-file test | battle | planned | q9 |
-| 17 | the `if` ban | truth | planned | the `if` overlap |
+| 09 | the educational rewrite | ownership | done | author voice |
+| 10 | the core subset | ownership | planned | the base dialect |
+| 11 | define robust | battle | planned | q5 |
+| 12 | choose the target | battle | planned | q4 |
+| 13 | the first build | battle | planned | the dev experience |
+| 14 | onboard people | onboarding | planned | q6 |
+| 15 | onboard agents | onboarding | planned | the agent contract |
+| 16 | the form audit | battle | planned | q8 |
+| 17 | the in-file test | battle | planned | q9 |
+| 18 | the `if` ban | truth | planned | the `if` overlap |
 
-sessions run in order. 09 is blocked by 08, and 13 and 14 are blocked by 12. everything else is unblocked once 01 lands, because a session that fixes a defect needs the harness that catches the defect.
+sessions run in order. 09 is blocked by 08, and 14 and 15 are blocked by 13. everything else is unblocked once 01 lands, because a session that fixes a defect needs the harness that catches the defect.
 
-15 and 16 join the construct work of phase 2: 15 audits `form` because the author's charge is that its emit is inconsistent, and 16 explores a `test` keyword written in the file it tests. both are audits first, implementations second, so they may split.
+16 and 17 join the construct work of phase 2: 16 audits `form` because the author's charge is that its emit is inconsistent, and 17 explores a `test` keyword written in the file it tests. both are audits first, implementations second, so they may split.
 
-17 is the `if` overlap, ruled in session 08: `switch` is already banned, `if` is not, and every `if` is replaceable by a side quest. it lands a ban-list change, an emit spec, and the sweep of the decks and examples that still write `if` (the clamp funnels, the spec guard clauses).
+18 is the `if` overlap, ruled in session 08: `switch` is already banned, `if` is not, and every `if` is replaceable by a side quest. it lands a ban-list change, an emit spec, and the sweep of the decks and examples that still write `if` (the clamp funnels, the spec guard clauses).
 
 ## the ledger
 
@@ -72,15 +73,15 @@ where a swept note lands. a question is q-numbered; a routed task is t-numbered.
 - **q1, survivor binding.** after `x ?|(:idle, :loading, :failed) return;`, does a later `x` name the box or the payload? the docs say a coloned test keeps the box; the showcase spec expects the payload. session 02.
 - **q2, `TZL0003`.** type the dropped-value check now, or withdraw it until the stable typescript surface lands? session 04.
 - **q3, forward-work home.** where does planned work live? resolved in session 07: this file is the home, and the comment protocol feeds it. every parked note is a capture that a sweep routes here.
-- **q4, the target.** what is the first honest program tz must carry? session 11.
-- **q5, stable enough to split.** `../DESIGN.md` says tz moves to its own repo with a `git mv` once the prototype is stable. what does stable mean, in measurable terms? session 10.
-- **q6, publishing.** `@belelabestia/tz` is private at `0.0.0`. when and how does it become a package someone can install? session 13.
+- **q4, the target.** what is the first honest program tz must carry? session 12.
+- **q5, stable enough to split.** `../DESIGN.md` says tz moves to its own repo with a `git mv` once the prototype is stable. what does stable mean, in measurable terms? session 11.
+- **q6, publishing.** `@belelabestia/tz` is private at `0.0.0`. when and how does it become a package someone can install? session 14.
 - **q7, the `?!` tail.** `cond ?! err 'x'` emitted an unreWritten `err`, while `cond ? err` and `cond ?== false err` rewrote it. found in session 05. resolved in session 06: the tail rewrite was never the hole; the glued `!` of a bare `?!` ate the statement start in `scan.ts`, so the exit pass that rewrites the tail never saw it. making the `!` transparent to the start fixes it, and the working forms stay byte-identical.
-- **q8, the form line.** some of `form` is emitted, some is written by hand, and the author charges that the line is arbitrary. where does it belong? session 15, with a `protocol` note if the audit finds an adjacent inconsistency (that would be q12).
-- **q9, the in-file test.** a `test` keyword like zig's, in the file it tests, reaching module internals. feasible, and under what house-rule amendment? session 16.
+- **q8, the form line.** some of `form` is emitted, some is written by hand, and the author charges that the line is arbitrary. where does it belong? session 16, with a `protocol` note if the audit finds an adjacent inconsistency (that would be q12).
+- **q9, the in-file test.** a `test` keyword like zig's, in the file it tests, reaching module internals. feasible, and under what house-rule amendment? session 17.
 - **q10, the deck `declare`.** `declare` inside a deck produces a false `TZL0002`, while `const` does not; found in session 05 while writing the `?literal` deck, which used `const` instead. a checker false positive over a legitimate declaration. unassigned.
 - **q11, the tail comment.** a doc comment inside a `?` tail (`x ? //c\n log(x);`) loses the comment and emits a semicolon; found while drafting `not.spec.tz` and avoided. an emit defect. unassigned.
-- **q12, the protocol note.** reserved for a `protocol` inconsistency if session 15's audit uncovers one adjacent to the `form` line.
+- **q12, the protocol note.** reserved for a `protocol` inconsistency if session 16's audit uncovers one adjacent to the `form` line.
 - **q13, the useless subject.** in `constructs/cond.spec.tz`, `n ?(n % 2 == 0) => 'even' else => 'odd'` answers both sides, so the subject `n` is never yielded and does nothing. the author wants the shape refused. a proposed refusal, not a construct. unassigned.
 - **q14, effect against exit and value.** in `examples/signup.tz`, the guard note asks for a strict structural definition that excludes an effect from a union of effect, exit and value, and whether the transpiler and language already hold that principle, should hold it, or could hold it. a design question. unassigned.
 - **q15, the `? {}` subject type.** in `constructs/block.spec.tz`, the note says the matched subject of a `? {}` over a `Result` should read as a `Branch<...>`. whether the emit and the editor should name it so. a typing question about the emit. unassigned.
@@ -97,7 +98,7 @@ where a swept note lands. a question is q-numbered; a routed task is t-numbered.
 
 these are settled as out of scope until the author raises them:
 
-- new language constructs. the battle test produces candidates; it does not spend them here. this does not cover the two the author raised and scheduled: `test` (q9, session 16) and the `form` audit (q8, session 15).
+- new language constructs. the battle test produces candidates; it does not spend them here. this does not cover the two the author raised and scheduled: `test` (q9, session 17) and the `form` audit (q8, session 16).
 - a linter, a formatter, a bundler, another test framework.
 - the editor affordance set above, beyond what already ships in `tzd`.
 
@@ -130,7 +131,7 @@ a parked note is not documentation: it names words the language does not own, an
 ## how a session runs
 
 1. **open.** copy `session-context-template.md` to `context/<session>.md` and state the intent in one paragraph.
-2. **read.** the session file's inputs, plus `../AGENTS.md` and `../STYLE-KB.md` before writing anything.
+2. **read.** the session file's inputs, plus `../../AGENTS.md` and `../../STYLE-KB.md` before writing anything.
 3. **rule.** any genuine design question goes to the author. the ruling is recorded in the context file with its reasoning, and the rejected alternatives.
 4. **work.** implement, then verify: `npm test` in the repo root and in `tz/`, `tzc examples constructs`, `tzd examples constructs`, and the `tzx` spec. a type claim is checked by compiling it, not by reading it.
 5. **sweep.** grep `#todo`, `#fixme` and `#prompt` and route each note by the comment protocol, so nothing is left parked when the session closes.
