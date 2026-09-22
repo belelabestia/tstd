@@ -12,8 +12,7 @@ make tz a compelling option for web development and scripting. that is not a fea
 
 - **fix before new.** debt first. a green build that runs nothing is worse than a red one, because it lies.
 - **green means it runs.** the suite must execute the emitted code, not only typecheck it.
-- **the author owns the docs.** no agent prompts parked in artifacts. forward work lives in this plan, and decisions are made by the author, not inferred from a comment.
-<!-- #marco to agent: this point doesn't mean anything. translate it into something a human can understand -->
+- **the docs are the product, not a workbench.** a reader opens `README.md` or `TUTORIAL.md` to learn the language, not to find a note-to-self left mid-sentence. the author decides what planned work becomes; the plan records it, and a parked note is only a capture on its way there.
 - **robust is evidence.** a milestone is a program, not a construct. the next language feature is whatever a real build forces.
 
 ## the phases
@@ -28,7 +27,7 @@ the showcase is now `examples/` (the whole programs) plus `constructs/` (one use
 
 ### phase 1, docs you own
 
-three `# marco to agent` prompts live inside `../TUTORIAL.md` and `../DESIGN.md`. the coherence spec blanks them on purpose so they do not fail the walk. that is a conversation parked in the product. this phase removes the channel, answers or relocates the prompts, decides how the teaching docs are organized, and rewrites them in the author's voice.
+the teaching docs carried prompts parked as comments: notes to an agent left mid-document, where a reader could meet them. that is a conversation parked in the product. session 07 keeps the channel and gives it a protocol (`#todo`, `#fixme`, `#prompt`, swept at every session close) instead of deleting it, then routes the parked notes. 08 and 09 follow: how the teaching docs are organized, then the rewrite in the author's voice.
 
 ### phase 2, define robust and battle-test
 
@@ -63,11 +62,13 @@ sessions run in order. 09 is blocked by 08, and 13 and 14 are blocked by 12. eve
 
 15 and 16 join the construct work of phase 2: 15 audits `form` because the author's charge is that its emit is inconsistent, and 16 explores a `test` keyword written in the file it tests. both are audits first, implementations second, so they may split.
 
-## the questions ledger
+## the ledger
+
+where a swept note lands. a question is q-numbered; a routed task is t-numbered.
 
 - **q1, survivor binding.** after `x ?|(:idle, :loading, :failed) return;`, does a later `x` name the box or the payload? the docs say a coloned test keeps the box; the showcase spec expects the payload. session 02.
 - **q2, `TZL0003`.** type the dropped-value check now, or withdraw it until the stable typescript surface lands? session 04.
-- **q3, forward-work home.** where does planned work live? this file is the answer; session 07 ratifies it and writes the comment protocol that feeds it.
+- **q3, forward-work home.** where does planned work live? resolved in session 07: this file is the home, and the comment protocol feeds it. every parked note is a capture that a sweep routes here.
 - **q4, the target.** what is the first honest program tz must carry? session 11.
 - **q5, stable enough to split.** `../DESIGN.md` says tz moves to its own repo with a `git mv` once the prototype is stable. what does stable mean, in measurable terms? session 10.
 - **q6, publishing.** `@belelabestia/tz` is private at `0.0.0`. when and how does it become a package someone can install? session 13.
@@ -77,6 +78,13 @@ sessions run in order. 09 is blocked by 08, and 13 and 14 are blocked by 12. eve
 - **q10, the deck `declare`.** `declare` inside a deck produces a false `TZL0002`, while `const` does not; found in session 05 while writing the `?literal` deck, which used `const` instead. a checker false positive over a legitimate declaration. unassigned.
 - **q11, the tail comment.** a doc comment inside a `?` tail (`x ? //c\n log(x);`) loses the comment and emits a semicolon; found while drafting `not.spec.tz` and avoided. an emit defect. unassigned.
 - **q12, the protocol note.** reserved for a `protocol` inconsistency if session 15's audit uncovers one adjacent to the `form` line.
+- **q13, the useless subject.** in `constructs/cond.spec.tz`, `n ?(n % 2 == 0) => 'even' else => 'odd'` answers both sides, so the subject `n` is never yielded and does nothing. the author wants the shape refused. a proposed refusal, not a construct. unassigned.
+- **q14, effect against exit and value.** in `examples/signup.tz`, the guard note asks for a strict structural definition that excludes an effect from a union of effect, exit and value, and whether the transpiler and language already hold that principle, should hold it, or could hold it. a design question. unassigned.
+- **q15, the `? {}` subject type.** in `constructs/block.spec.tz`, the note says the matched subject of a `? {}` over a `Result` should read as a `Branch<...>`. whether the emit and the editor should name it so. a typing question about the emit. unassigned.
+
+### tasks
+
+- **t1, the arrow deck coverage.** `constructs/arrow.spec.tz` shows the capture after an assignment, a chain and a block; the note wants every use, including after `call` and inside other constructs. a showcase task. unassigned.
 
 ## dependencies outside our control
 
@@ -92,11 +100,29 @@ these are settled as out of scope until the author raises them:
 
 ## the comment protocol
 
-comments that carry forward work are a living channel, not a phase to close. the author will always leave notes where the work lives and sweep through them periodically; that is the no-debt approach, and this file is where the swept work lands. session 07 writes the protocol in full (markers, allowed channels, sweep cadence, and how a coherence walk ignores a parked note on purpose); until then, the standing shape is:
+comments that carry forward work are a living channel, not a phase to close. the author leaves a note where the work lives and sweeps the notes on a schedule; that is the no-debt approach, and this file is where the swept work lands.
 
-- **a note parked in a doc or a spec is allowed.** source files keep the `//` ban from `../../AGENTS.md`; the channel is doc comments, spec essays, and the plan.
-- **sweeping is scheduled, not incidental.** a sweep routes each note: do it now, make it a session here, or file it in the ledger.
-- **the plan is the home.** a note is a capture, not a plan; once swept, the work lives in this file.
+### the markers
+
+three markers, lowercase, each with the hash sigil, greppable in one pass: `#todo`, `#fixme`, `#prompt`.
+
+- **`#todo`**: a small task. finish it, or route it.
+- **`#fixme`**: a defect. a wrong behavior or a false claim.
+- **`#prompt`**: a note worth a whole session. the seed of a plan, not a plan.
+
+the old `# marco to agent` spelling is retired; git carries its history.
+
+### the channels
+
+a note may sit in a doc comment (an html comment in the `.md` docs), in the `//` of a spec (`.spec.ts`, `.spec.tz`) or the plan. a `tz/src` module keeps the bare style of `../../AGENTS.md`: forward work there belongs in a spec or this plan, not in the module.
+
+### the sweep
+
+a sweep runs at every session close. it greps the three markers and routes each note one of three ways: do it now, make it a session in the table, or file it in the ledger. once routed, the note is removed from where it sat; the plan is the home, and git keeps the memory.
+
+### the coherence walk
+
+a parked note is not documentation: it names words the language does not own, and a reader should not meet it in a doc. the coherence walk blanks every html comment block in the docs on purpose, so a note can sit there without failing the walk. that blanking is the protocol's mechanism, not an accident to remove.
 
 ## how a session runs
 
@@ -104,7 +130,8 @@ comments that carry forward work are a living channel, not a phase to close. the
 2. **read.** the session file's inputs, plus `../AGENTS.md` and `../STYLE-KB.md` before writing anything.
 3. **rule.** any genuine design question goes to the author. the ruling is recorded in the context file with its reasoning, and the rejected alternatives.
 4. **work.** implement, then verify: `npm test` in the repo root and in `tz/`, `tzc examples constructs`, `tzd examples constructs`, and the `tzx` spec. a type claim is checked by compiling it, not by reading it.
-5. **close.** the author reviews. once it passes, commit with one decision per commit, add a dated entry to `../UPDATES.md`, flip the status in the table above, and commit the context file with the session. then push.
+5. **sweep.** grep `#todo`, `#fixme` and `#prompt` and route each note by the comment protocol, so nothing is left parked when the session closes.
+6. **close.** the author reviews. once it passes, commit with one decision per commit, add a dated entry to `../UPDATES.md`, flip the status in the table above, and commit the context file with the session. then push.
 
 ## what a green close looks like
 

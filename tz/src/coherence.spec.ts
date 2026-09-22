@@ -27,8 +27,9 @@ const doc = (name: string, text: string) => {
   const lines = text.split('\n');
   let inside = false;
 
-  // a prompt parked in a doc is a note to an agent, not documentation: it names words the
-  // language does not own, so the walk blanks the comment block and keeps the line numbers
+  // a parked note (`#todo`, `#fixme`, `#prompt`) is a capture for the plan, not documentation:
+  // it names words the language does not own, so the walk blanks the comment block on purpose,
+  // per the comment protocol in plan/roadmap.md, and keeps the line numbers
   for (let i = 0; i < lines.length; i++) {
     const opens = lines[i].includes('<!--');
     const closes = lines[i].includes('-->');
