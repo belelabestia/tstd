@@ -59,12 +59,15 @@ material that onboards people and agents. derived from the battle test, not inve
 | 16 | the form audit | battle | planned | q8 |
 | 17 | the in-file test | battle | planned | q9 |
 | 18 | the `if` ban | truth | planned | the `if` overlap |
+| 19 | the value declaration | truth | planned | the declaration shape |
 
 sessions run in order. 09 is blocked by 08, and 14 and 15 are blocked by 13. everything else is unblocked once 01 lands, because a session that fixes a defect needs the harness that catches the defect.
 
 16 and 17 join the construct work of phase 2: 16 audits `form` because the author's charge is that its emit is inconsistent, and 17 explores a `test` keyword written in the file it tests. both are audits first, implementations second, so they may split.
 
 18 is the `if` overlap, ruled in session 08: `switch` is already banned, `if` is not, and every `if` is replaceable by a side quest. it lands a ban-list change, an emit spec, and the sweep of the decks and examples that still write `if` (the clamp funnels, the spec guard clauses).
+
+19 is a discussion the author raised after session 09: `form` and `protocol` build values from object literals, so they should not sit where a keyword binds a name. `export form signup { ... }` should read `export const signup = form { ... }`, with no `=>`, and `protocol load { ... }` should follow. it decides the target spelling, the derived name and factory story, `export` and generics, and inventories the recognition cost. it plans no execution and owns the schedule of whatever it authorizes.
 
 ## the ledger
 
