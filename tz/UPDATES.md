@@ -6,9 +6,21 @@ a journal of decisions. the spec lives in `tz/TUTORIAL.md`; the design notes liv
 
 the boolean and exhaustive checks ship; the `void` check now reads types too, so the next item is the editor affordances on the same surface (completions, hover, goto, rename) and a keystroke loop that stops shelling out. the coherence spec runs in `npm test`.
 
-the showcase is now irreducible: every construct in the `roles` list has a deck under `constructs/`, and the whole programs live under `examples/`. phase 0 is closed: the `?!` tail defect, `cond ?! err 'x'` emitting an unreWritten `err`, landed in session 06, and the docs work that follows is 07 through 09.
+the showcase is now irreducible: every construct in the `roles` list has a deck under `constructs/`, and the whole programs live under `examples/`. phase 0 is closed: the `?!` tail defect, `cond ?! err 'x'` emitting an unreWritten `err`, landed in session 06, and the docs work that follows is 07 through 09, with 07 now done.
 
-three notes the author raised at the close of session 05 are now scheduled. the comment channel is a living protocol, not a phase: comments carrying forward work are part of the no-debt approach, and session 07 writes the protocol rather than deleting the notes. `form` gets an audit (q8, session 15) because its emit is inconsistent, some code written and some emitted along an arbitrary line. a `test` keyword like zig's, in the file it tests and reaching module internals, is explored in session 16 (q9).
+three notes the author raised at the close of session 05 are now scheduled. the comment channel is a living protocol, not a phase: comments carrying forward work are part of the no-debt approach, and session 07 wrote the protocol rather than deleting the notes. `form` gets an audit (q8, session 15) because its emit is inconsistent, some code written and some emitted along an arbitrary line. a `test` keyword like zig's, in the file it tests and reaching module internals, is explored in session 16 (q9).
+
+## 2026-09-22: the comment protocol
+
+q3 is ruled, and the note channel gets its protocol. comments that carry forward work stay: the author leaves a note where the work lives, and a sweep routes it to this plan, which is the no-debt approach. the `# marco to agent` formula retires for three markers, `#todo` (a small task), `#fixme` (a defect) and `#prompt` (a note worth a whole session). a note may sit in a doc comment, a spec `//` or the plan; a `tz/src` module keeps the bare style. a sweep runs at every session close, as a step of its own, and each note is removed once it lands, because the plan is the home and git keeps the memory.
+
+the coherence walk keeps blanking html comments, now on purpose: a parked note names words the language does not own, so the walk must ignore it or the doc walk fails. the spec comment says so and points at the protocol.
+
+the tree-wide sweep routed ten notes. applied now: the repetition in `TUTORIAL.md` (quote directly, drop the paraphrase), the postfix guard correction in `DESIGN.md` (`const row = table[id] ?none return;` replaces the shape, and the prose is simplified), the "docs are the product" principle, and the `?!` rewrite in `examples/signup.tz`. to their sessions: the tutorial dissertation (08) and the voice rewrite (09), removed from the docs because the sessions already carry them, and 09 now keeps the "a language exists if people use it" intent the note ended on. to the ledger: q13 the useless `?(cond)` subject, q14 the effect against exit and value question, q15 the `? {}` subject type, and t1 the arrow deck coverage.
+
+what changed: `plan/roadmap.md` (the protocol, the sweep step, the principle, the phase 1 blurb, the ledger rename and q3, q13 to q15 and t1), `plan/sessions/08-the-teaching-dissertation.md` and `09-the-educational-rewrite.md` (the prompts noted as swept, and the voice intent kept), `src/coherence.spec.ts` (the blanking comment), `TUTORIAL.md`, `DESIGN.md`, `constructs/arrow.spec.tz`, `constructs/block.spec.tz`, `constructs/cond.spec.tz`, `examples/signup.tz`. no html comment remains in the three docs.
+
+what verified: `npm test` in `tz/` is exit 0, 65 src plus 54 decks and examples; `npm test` at the root is exit 0 at 43; `tzc examples constructs` and `tzd examples constructs` both exit 0; the `tzx` spec at 54. the `?!` rewrite is the exact form session 06 made correct.
 
 ## 2026-09-22: the not tail lands its value
 

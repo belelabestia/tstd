@@ -47,7 +47,7 @@ material that onboards people and agents. derived from the battle test, not inve
 | 04 | the checker's honesty | truth | done | q2 |
 | 05 | scratch, the showcase | truth | done | the remote fixture |
 | 06 | the not tail | truth | done | q7 |
-| 07 | the comment protocol | ownership | planned | q3 |
+| 07 | the comment protocol | ownership | done | q3 |
 | 08 | the teaching dissertation | ownership | planned | tutorial organization |
 | 09 | the educational rewrite | ownership | planned | author voice |
 | 10 | define robust | battle | planned | q5 |
