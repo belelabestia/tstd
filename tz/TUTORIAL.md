@@ -1,40 +1,20 @@
 # the typezig tutorial
 
-a walk through the language: where it comes from, the typescript it keeps and the one it takes away, the constructs it adds, and the rest of the surface: scope, protocol, form and call. design notes are in `tz/DESIGN.md`; the journal of decisions is in `tz/UPDATES.md`.
+tz is a superset of a subset of typescript, with its own standard library, out of the box. `tstd` is the seed: the core library that carries every principle, and it works in plain typescript on its own. tz is the language built to optimize that usage to a point typescript alone could never reach, so read the two as one design in two halves. the constructs are language features, not sugar you have to think about.
 
-## where we come from
+the closest familiar shape is c#. a language and its library arrive together; `using` is `try`/`finally`, a LINQ query is the method chain. the difference is deprecation by default. c# ships the sugar and the old form as peers and blesses both; tz retires every construct it can replace. what the language owns is banned: `if`, `switch`, `?:`, `??`, the strict-equality spellings, the rest of the table below. what the library owns cannot be banned, because it is the standard library and interop needs it; it is warned by the editor instead. one spelling is the point.
 
-### typescript
+the shortest path is in `tz/README.md`: install, write one `.tz` file, run it with `tzx`, watch the output. this tutorial assumes you have, and teaches the language itself: the three names every line is built from, the spellings tz refuses, and the constructs one at a time. the why is in `tz/DESIGN.md`; the journal is in `tz/UPDATES.md`.
 
-typescript keeps every door open: classes, interfaces, enums, namespaces, decorators, generics, `any`, overloads, `switch`, `try`/`catch`, `this`, `new`. nothing is taken away. the overlap is the problem: when two features do the same job, a team picks one and argues about it, and the type system cannot tell you whether you picked well.
+## the vocabulary
 
-the claim here is not that typescript is bad. from the `tstd` readme: "javascript has many overlapping syntax constructs and language features; most of them can be completely ignored without suffering the lack at all". and: "typescript doesn't really make a good job in becoming scala, haskell or gleam, but it can do an excellent job in becoming go or zig, if you completely omit the topics of performance or memory management."
+three constructs, three names; this is the whole shape of the language.
 
-so the project starts with a question: what is the smallest consistent subset of typescript, and what does code written in that subset look like?
+- **exit**: leaving the scope. `return`, `err`, `ok`, `break`, `continue` all count. `return`, `err` and `ok` carry a value when one is named; `break` and `continue` only leave.
+- **arrow capture**: the `=>` form. it captures whatever is returned and stays in scope. an arrow capture is the spell for "produce a value without leaving".
+- **side quest**: the `?` family. a side quest tests a value at the position where it stands and decides between an exit and an arrow capture based on what follows. the `?` is the "quest" of "side quest".
 
-### tstd
-
-`tstd` (type-standard) answers with code instead of an essay: a tiny library of a handful of modules, compressed into five principles, each of which becomes a hard rule:
-
-- **master short-circuiting.** guards, early exiting, negative-space programming; handle the exceptional cases first and fall back on the general ones in a funnel. this is closely related to narrowing.
-- **dry the syntax, not the code.** a static class is a module; a dynamic one is a closure with an `init`; inheritance becomes composition; hierarchies and enums become algebraic types.
-- **treat features as such.** narrowing replaces validation libraries; proving a shape and mapping it are separate concerns.
-- **maximize type inference.** a function that changes its return type should not break its signature; the callers should adjust. so return types are never declared, except in a type guard.
-- **distrust what the types cannot say.** a signature is the whole contract, so anything carrying an invisible requirement is confined, not discouraged. a method's `this` requirement is invisible to its type, so a torn-off method typechecks and throws; a throw is invisible the same way. both get converted into a `Result` at exactly two boundaries: `make` and `call`.
-
-the style that falls out is procedural, fallible-where-it-must-be, branch-shaped. tagged unions via `branch` and `Union`, type guards via `is`, results via `result`, resources via `scope`, wire shapes via `form`, state machines via `protocol`, time via `iso`.
-
-### the transpiler idea
-
-once the style rules are that strict, the language itself can enforce them. that is the tz idea, as the prototype readme puts it: "typescript with most of typescript taken away, plus a few constructs, transpiled back to typescript that imports `tstd`".
-
-`tz` is a sugar transpiler: how to run it (`tzc`, `tzx`) and what to import (the emitter never writes one; a type-only import says `type`) lives in `tz/README.md`, and why it is shaped this way lives in `tz/DESIGN.md`.
-
-the promise for the rest of this tutorial: everything tz does is sugar. every construct lowers to a hand-writable `tstd` pattern. tz writes it consistently, refuses the spellings that break the discipline, and both halves typecheck through the same `tsc`, so the sugar and the plain code never drift.
-
-## how things are in typescript
-
-before any tz, know the `tstd` patterns by heart: the funnel and narrowing, presence and absence, named branches, failure as a value, resources handed back in reverse, schemas without codecs, and machines as data. they live where they are owned: the principles in `../README.md` and the demonstrations in the `../src/` specs. tz is what those patterns look like when a transpiler writes them.
+the three forms cover every construct tz adds. anything that is none of them is plain typescript, left as-is.
 
 ## what tz takes away
 
@@ -51,19 +31,9 @@ the transpiler is a lexer, so it refuses unknown words line by line. every refus
 
 naming the rejection is the point: each refusal is a rule you would otherwise keep in your head, and head-kept rules are the first a team forgets.
 
-## the vocabulary
+## the exits: one discipline per body
 
-three constructs, three names; this is the whole shape of the language.
-
-- **exit**: leaving the scope. `return`, `err`, `ok`, `break`, `continue` all count. an exit carries a value when one is named.
-- **arrow capture**: the `=>` form. it captures whatever is returned and stays in scope. an arrow capture is the spell for "produce a value without leaving".
-- **side quest**: the `?` family. a side quest tests a value at the position where it stands and decides between an exit and an arrow capture based on what follows. the `?` is the "quest" of "side quest".
-
-the three forms partition every line of tz. if a construct isn't an exit, isn't an arrow capture, and isn't a side quest, it isn't in the language.
-
-## ok, err, async: one discipline per body
-
-a body exits with exactly one of `return`, `ok`, `err` or `async`; the transpiler refuses a mix. a fallible body gets the implied `ok` at its end:
+the exits are the `return`, `ok`, `err`, `async`, `break`, `continue` family, and they replace the throw as the way a body says what it produced. a body exits with exactly one of `return`, `ok`, `err` or `async`; the transpiler refuses a mix. a fallible body gets the implied `ok` at its end:
 
 ```tz
 const row = (id: string) => {
@@ -72,7 +42,7 @@ const row = (id: string) => {
 };
 ```
 
-an `await` in the body makes it a promise body; inference cannot say a promise that never suspends, so `async x;` states it, emitting `return Promise.resolve(x);`:
+an `await` in the body makes it a promise body; inference cannot say a promise that never suspends, so `async x;` states it, resolving the body with `x`:
 
 ```tz
 export const ready = (x: string) => {
@@ -80,9 +50,9 @@ export const ready = (x: string) => {
 };
 ```
 
-## arrow capture: produces a value without leaving
+## arrow capture: a value without leaving
 
-arrow capture is the spell for "produce a value, stay in scope". the `=>` form names it. an arrow capture sits where a value is expected: after an assignment, an `ok`, a `return`, a comma, a paren, or another arrow.
+arrow capture is the spell for "produce a value, stay in scope". the `=>` form names it and replaces `??`. an arrow capture sits where a value is expected: after an assignment, an `ok`, a `return`, a comma, a paren, or another arrow.
 
 ```tz
 const port = process.env.PORT ?none => 8080;
@@ -92,7 +62,7 @@ an arrow capture is the only way a `=>` appears; there is no block that just lis
 
 ## side quests: the `?` family
 
-all the side quests are postfix, all under `?`:
+the side quest is the language's decision maker, and it replaces the leaders of a funnel: the early-return `if`, the two-branch `if`/`else`, the ternary `?:`, and the `switch`. all the side quests are postfix, all under `?`:
 
 | side quest | what it tests | example |
 | --- | --- | --- |
@@ -291,19 +261,6 @@ export const word = (code: number) => code ? {
 };
 ```
 
-### try: propagate without naming
-
-`try` propagates a failure without naming it, and binds the unwrapped value. it is the prefix for anything that hands back a `Result`: a plain call, a `call` at the foreign boundary, a `hold` inside a scope. spelled out, `try x` is `x ?err (e) err e`: on the err branch, exit with the payload it carried.
-
-```tz
-export const name = (id: string) => {
-  const raw = try row(id);
-  const parsed = try call => JSON.parse(raw);
-  is.model(parsed, rowShape) ?! err 'not a row';
-  ok parsed.name;
-};
-```
-
 ### bindings: name it or drop it
 
 the branch tests carry what they found: `?ok` and `?err` hand the payload back unwrapped, `?:tag` hands the whole subject boxed, `?some` the found value. they bind one in parens, and the name reaches everywhere the tail reaches, template holes included:
@@ -356,22 +313,22 @@ the single-branch `if (cond) { ... }` from typescript, kept because it reads for
 
 the flip side of the ladder, in one place. an expression captures with `=>` and must always be captured, so `=>` as a statement is refused and a bare value after a side quest in an arrow capture is refused; a statement runs an expression or a block, with `else` between its two sides and a bare `?` block listing every arm of a longer match; a side quest after a consumed tail belongs to no subject, so chain with `else` or start a new statement; side quests do not nest, so bind the inner value first; one `else` per arrow capture; exits never hide in arrow bodies, `=>` blocks or `? {}` arms, and `try` never shares a statement with a side quest; bindings name values, not keywords, and the miss branch cannot borrow them. binary quests add their own: glued values (`?5`, `?'hi'`, `?=y`), `?true` and `?false`, arithmetic tails, single-item groups, groups mixing `:tag` with comparisons, bare arm values, and `_` arms are all refused; a gap between `?` and its operator is refused too, and so is a missing one between the operator and its operand, so `? == 5` reads `?== 5` and `?==5` reads `?== 5`. the `!` glues onto the `?` the same way, so `? !` reads `?!` and `?!` takes only an exit, `=>`, or a block, since it means `?== false`. each refusal points at the line that needs restructuring, and `tsc` never sees the confusion.
 
-### summary of the construct matrix
+## try: propagate without naming
 
-| construct | syntax | role | replaces |
-| --- | --- | --- | --- |
-| postfix exit | `val ?none err 'msg'`, `cond ?! return` | early exit from scope on failure | an early `return`, an `if (!cond) return` clause |
-| postfix arrow capture | `val ?none => dflt`, `cond ?! => 'guest'` | inline value substitution, with an exit allowed on the miss side | `??` |
-| arrow capture chain | `cond ? => a else => b` | capture one of two values | ternary `?:` |
-| inline exit | `a ? { log(); return; }` | effects plus an exit, inline | `if` with effects and an early exit |
-| side-effect trigger | `cond ? log('ok')`, `cond ? { ... }` | run on match, keep going | single-branch `if` |
-| two-sided statement | `cond ? a else b` | run one of two sides | two-branch `if`/`else` |
-| exhaustive statement | `cond ? { == true a; == false b; }` | run one of many sides, chaining with `else if` under conditions | `if`/`else` chains |
-| exhaustive arrow capture | `x ? { == 200 => a, (x > 500) => b, else => c }` | total coverage over values, branches, and conditions | `switch`, `if/else` chains |
+`try` propagates a failure without naming it, and binds the unwrapped value. it replaces the `try`/`catch` you would otherwise write at every fallible call, and it is the prefix for anything that hands back a `Result`: a plain call, a `call` at the foreign boundary, a `hold` inside a scope. spelled out, `try x` is `x ?err (e) err e`: on the err branch, exit with the payload it carried.
+
+```tz
+export const name = (id: string) => {
+  const raw = try row(id);
+  const parsed = try call => JSON.parse(raw);
+  is.model(parsed, rowShape) ?! err 'not a row';
+  ok parsed.name;
+};
+```
 
 ## scope
 
-`scope` is sugar over `scope.sync` / `scope.async`: the resource body with the reverse-order release.
+`scope` holds resources and hands them back in reverse, whatever happened to the work; it replaces the `try`/`finally` cleanup you would otherwise hand-thread through every exit. `scope` is the deepest closed-to-open step so far, so its bond is marked: this is the language form of `scope.sync` / `scope.async` in `tstd`.
 
 ```tz
 export const both = (first: string, second: string) => scope (hold) => {
@@ -381,9 +338,7 @@ export const both = (first: string, second: string) => scope (hold) => {
 };
 ```
 
-the opening line loses the parens around the binding and gains `scope.sync(`, the closing line gains a `);`, and everything between is untouched, so the line count holds.
-
-the `=>` is not decoration. that block is a function body: `try` exits from it, `ok` and `err` are its exits, and the emit is an arrow. writing the `=>` says so, and it keeps the discipline check to one sentence, since a function body stays exactly a `{` preceded by `=>` with no second case for `scope`. it also settles the recognition: `scope(x) => {}` is not valid javascript, so a call to somebody else's `scope` can never be read as the construct.
+the `=>` is not decoration. that block is a function body: `try` exits from it, `ok` and `err` are its exits. writing the `=>` says so, and it keeps the discipline check to one sentence, since a function body stays exactly a `{` preceded by `=>` with no second case for `scope`. it also settles the recognition: `scope(x) => {}` is not valid javascript, so a call to somebody else's `scope` can never be read as the construct.
 
 an async body picks `scope.async` and an async callback, and the count that decides it is the same one that decides everything else, an `await` in the body.
 
@@ -410,7 +365,7 @@ scope (session) => {
 
 ## protocol
 
-a `protocol` declaration is the machine-and-union device as a literal instead of a call, with the derived things drawn in one place:
+a `protocol` declaration is the machine-and-union device as a literal instead of a call, with the derived things drawn in one place. it replaces the hand-written union and the enums and hierarchies that say the same thing twice. its bond: the declaration is the language form of `protocol.init` and `Union` in `tstd`.
 
 ```tz
 protocol load {
@@ -427,15 +382,7 @@ a parameter says what a branch carries. a transition list says where it may go. 
 
 there are two shapes, one construct. a block inlines into `protocol.init`, because only an inline object literal gets its transition arrays typed as tuples: a hand-written `$loader` const would infer `string[]` and fail init's constraint. a generic block gets the shape function, because its parameters have to bind somewhere, and a shape with no transitions compiles the way `src/result.ts` already proves. the data type reads the factory record either way, and `Union<protocol.Model<typeof loader>>` is the line `protocol.spec.ts` already writes.
 
-for a generic block there are three, and the first is scaffolding:
-
-| name | what it is | who writes it |
-| --- | --- | --- |
-| `$result` | the shape function, only to bind the generics | the emitter, hidden |
-| `Result` | the union, as data | the emitter, from the name |
-| `result` | the factories | the emitter, from the name |
-
-a plain block has two, because there is no shape to hide: the literal sits in the init call, and the type reads the factory record it produces.
+a block derives two names beside its own: the union as data, `Loader`-style, and the factories to call. a generic block needs a third, a shape function that only binds the generics; it is scaffolding, hidden and never exported.
 
 the capitalisation is not a convention the language invented. `AGENTS.md` already says: the same word, case-distinguished, for a type and its factory. `Branch`/`branch`, `Result`/`result`, `Loader`/`loader`. so the block needs one name and the emit derives the other two.
 
@@ -443,13 +390,13 @@ the capitalisation is not a convention the language invented. `AGENTS.md` alread
 
 `export protocol` exports the type and the value. where there is a shape function it is never exported: it is scaffolding and it never escapes the file, which is the same rule `make` follows for instances.
 
-`protocol`, a name, optional `<S, E>`, then `{`. inside, each entry is a name, a payload in angle brackets, an optional `=> a | b`, and a comma. a branch with nothing to carry spells nothing. the payload's type is copied verbatim through a depth count, so `c<Array<string>>` reads the `>>` as two closes and emits `c: (value: Array<string>)`: only the last character of the run becomes the factory's `)`.
+`protocol`, a name, optional `<S, E>`, then `{`. inside, each entry is a name, a payload in angle brackets, an optional `=> a | b`, and a comma. a branch with nothing to carry spells nothing.
 
 the import is yours. the emit says `protocol.init`, `Union`, `result.ok`. none of those arrive by magic: the emitter never writes an import. a tz file that says `ok` imports `result`, one that declares a `protocol` imports `protocol` and `Union`, and one that forgets gets told by `tsc` in the usual way.
 
 ## form: declare the two forms once
 
-the `form` construct is the frontend for `form.ts`: one block instead of a wire type, a domain type, a guard, a decoder and an encoder. each field is either a guard, a triple, or a triple renamed with `as`:
+the `form` construct is the frontend for `form.ts` and replaces the four things a codec fuses: a wire type, a domain type, a guard, a decoder and an encoder. it is the deepest leak, because the pairing it declares is a `tstd` module's; the bond is `form.ts`, and the fields are its field triple. each field is either a guard, a triple, or a triple renamed with `as`:
 
 ```tz
 export form user {
@@ -466,24 +413,7 @@ export form user {
 
 no `as`, no rename: `id` and `roles` are plain fields when the value is a guard, identical on both sides, wrapped in `form.plain(...)`. a triple is already a field, so it passes through untouched; `as` carries the memory key the way `form.as` does underneath. fields separate with a comma or a semicolon, the way an object literal accepts both. the conversions borrow their signatures straight from the library, no lambdas and no annotations; a hand-written lambda annotates its parameters the way any signature does. the `=>` spelling is retired: the guard and the type it implied are both inferable, so only the rename is declared.
 
-the derived forms come out on the closing line, named after the declaration:
-
-```ts
-export const user = {
-  id: form.plain(is.string),
-  created_at: form.as({
-    is: iso.timestamp,
-    decode: iso.fromTimestamp,
-    encode: iso.toTimestamp
-  }, 'createdAt'),
-  roles: form.plain(is.array),
-  address: form.nest(addressForm)
-};
-export type UserForm = form.Encoded<typeof user>;
-export type User = form.Decoded<typeof user>;
-```
-
-`UserForm` is what travels and gets stored, `User` what you carry in memory, from the same object, so the field names are written once. the decoding discipline is unchanged, only spelled with the side quest:
+the declaration produces two shapes: `UserForm`, what travels and gets stored, and `User`, what you carry in memory, from the same object, so the field names are written once. the decoding discipline is unchanged, only spelled with the side quest:
 
 ```tz
 const processPayload = (raw: unknown) => {
@@ -508,32 +438,18 @@ the emitter parses no typescript types here; field assignments and blocks are to
 
 ## call: the boundary that does not throw
 
-a throw is converted into a `Result` at two boundaries; this is the second one, promoted to a keyword. `call` isolates foreign or non-typezig code, sync or async, into an explicit, non-throwing `Result`:
+a throw is converted into a `Result` at two boundaries; this is the second one, promoted to a keyword, and it replaces the `try`/`catch` you would wrap around foreign code. `call` isolates foreign or non-typezig code, sync or async, into an explicit, non-throwing `Result`. its bond: `call.sync` and `call.async` in `tstd`.
 
-when the `Result` is the whole answer, exit with it directly: no `try`, no `ok`. an expression that is exactly one call passes the function and its arguments straight to the boundary — `call.sync(f, a)` — and any other expression is tucked into the closure the emit opens, which is the value the body carries:
+when the `Result` is the whole answer, exit with it directly: no `try`, no `ok`. an expression that is exactly one call passes the function and its arguments straight to the boundary, `call.sync(f, a)`, and any other expression is tucked into the closure the emit opens, which is the value the body carries:
 
 ```tz
 export const parse = (raw: string) => call => JSON.parse(raw);
-```
-
-which emits, one line in one line out:
-
-```ts
-export const parse = (raw: string) => call.sync(JSON.parse, raw);
 ```
 
 `try` is for when work continues after the boundary: it unwraps left, so `try call` takes `=>` the way a side quest does:
 
 ```tz
 const raw = try call => JSON.parse(file.readToString());
-```
-
-which emits, one line in one line out:
-
-```ts
-const $0 = call.sync(JSON.parse, file.readToString());
-if ($0.branch === 'err') return $0;
-const raw = $0.value;
 ```
 
 multi-line work takes the block form, and an async foreign call takes `await call`:
@@ -557,7 +473,7 @@ const response = try call => {
 };
 ```
 
-an arrow with no block cannot lift, so there `await` forwards the promise itself: `=> await call => fetch(url)` emits `=> call.async(fetch, url)`, the same `Promise` of `Result` the `async`/`await` variant carries, with nothing to suspend:
+an arrow with no block cannot lift, so there `await` forwards the promise itself: `=> await call => fetch(url)` carries the same `Promise` of `Result` the async block variant carries, with nothing to suspend:
 
 ```tz
 export const get = (url: string) => await call => fetch(url);
@@ -592,30 +508,16 @@ the deeper rule is type-level and belongs to the lsp, not the emitter: any expre
 
 ## make: the constructor that does not throw
 
-`new` is banned, and its replacement takes `=>` like `call` does, because a constructor is the other thing that panics: platform and library constructors throw. `make` names the constructor, keeps the args where they are, and the boundary becomes a `Result`:
+`new` is banned, and its replacement takes `=>` like `call` does, because a constructor is the other thing that panics: platform and library constructors throw. `make` names the constructor, keeps the args where they are, and the boundary becomes a `Result`. its bond: `make` in `tstd`, the one function that owns every instantiation.
 
 ```tz
 const url = make => URL(href);
-```
-
-which emits, one line in one line out:
-
-```ts
-const url = make(URL, href);
 ```
 
 `try make` unwraps left exactly like `try call`:
 
 ```tz
 const url = try make => URL(href);
-```
-
-which emits:
-
-```ts
-const $0 = make(URL, href);
-if ($0.branch === 'err') return $0;
-const url = $0.value;
 ```
 
 a constructor only syncs, so there is no async side of this boundary: an `await` in front of `make` is refused, and so is a make that dangles, the way a call dangles. `new` is gone, but the constructor itself is foreign the same way a throwing function is foreign: if your own code would have used `new`, `make` is the crossing, and `class` stays banned.
@@ -658,6 +560,19 @@ const serve = (filePath: string) => {
 
 trace each line: `scope` holds the file and gives it back whatever happens; `try hold` acquires it, one guard; `try call` runs foreign code and turns the panic into a `Result`; `form.model` proves the shape, which lets `form.decode` be infallible and carry the config unboxed. on the way out one side quest refuses the panic, `try` unwraps the work, and one more refuses an impossible port.
 
-## scope, honestly
+## the construct matrix
 
-what is missing lives in the other two docs: the lsp and the type-aware checks are next in `tz/DESIGN.md`, and the self containment that lets `tz` move with a `git mv` is in `tz/README.md`.
+every construct, the syntax it adds, and the spelling it replaces:
+
+| construct | syntax | role | replaces |
+| --- | --- | --- | --- |
+| postfix exit | `val ?none err 'msg'`, `cond ?! return` | early exit from scope on failure | an early `return`, an `if (!cond) return` clause |
+| postfix arrow capture | `val ?none => dflt`, `cond ?! => 'guest'` | inline value substitution, with an exit allowed on the miss side | `??` |
+| arrow capture chain | `cond ? => a else => b` | capture one of two values | ternary `?:` |
+| inline exit | `a ? { log(); return; }` | effects plus an exit, inline | `if` with effects and an early exit |
+| side-effect trigger | `cond ? log('ok')`, `cond ? { ... }` | run on match, keep going | single-branch `if` |
+| two-sided statement | `cond ? a else b` | run one of two sides | two-branch `if`/`else` |
+| exhaustive statement | `cond ? { == true a; == false b; }` | run one of many sides, chaining with `else if` under conditions | `if`/`else` chains |
+| exhaustive arrow capture | `x ? { == 200 => a, (x > 500) => b, else => c }` | total coverage over values, branches, and conditions | `switch`, `if/else` chains |
+
+what is missing lives in the other docs: the lsp and the type-aware checks are next in `tz/DESIGN.md`, and the self containment that lets `tz` move with a `git mv` is in `tz/README.md`.
