@@ -1,10 +1,20 @@
 # typezig design notes
 
-a sugar transpiler over typescript that imports `tstd`. the prototype lives in `tz/`. the spec lives in `tz/TUTORIAL.md`. the journal of decisions lives in `tz/UPDATES.md`. this file is why tz looks like this; if you only want to write tz, read the tutorial instead.
+a superset of a subset of typescript, with `tstd` as its own standard library, out of the box. `tstd` is the seed: the core library that carries every principle, usable in plain typescript on its own; tz is the language built to optimize that usage to a point typescript alone could never reach. the prototype lives in `tz/`. the spec lives in `tz/TUTORIAL.md`. the journal of decisions lives in `tz/UPDATES.md`. this file is why tz looks like this; if you only want to write tz, read the tutorial instead.
 
 ## hard constraints
 
-five rules bind the prototype, and every construct is shaped by them.
+typescript keeps every door open: classes, interfaces, enums, namespaces, decorators, generics, `any`, overloads, `switch`, `try`/`catch`, `this`, `new`. nothing is taken away, and the overlap is the problem: when two features do the same job, a team picks one and argues about it, and the type system cannot tell you whether you picked well. the claim here is not that typescript is bad; it is that a smaller consistent subset does the job, and `tstd` is the proof, answering with code instead of an essay: a handful of modules compressed into five principles, each of which becomes a hard rule.
+
+- **master short-circuiting.** guards, early exiting, negative-space programming; handle the exceptional cases first and fall back on the general ones in a funnel, which is narrowing by another name.
+- **dry the syntax, not the code.** a static class is a module; a dynamic one is a closure with an `init`; inheritance becomes composition; hierarchies and enums become algebraic types.
+- **treat features as such.** narrowing replaces validation libraries; proving a shape and mapping it are separate concerns.
+- **maximize type inference.** a function that changes its return type should not break its signature; the callers should adjust, so return types are never declared except in a type guard.
+- **distrust what the types cannot say.** a signature is the whole contract, so anything carrying an invisible requirement is confined, not discouraged. a method's `this` requirement is invisible to its type, so a torn-off method typechecks and throws; a throw is invisible the same way. both are converted into a `Result` at exactly two boundaries, `make` and `call`.
+
+the style that falls out is procedural, fallible where it must be, branch-shaped: tagged unions via `branch` and `Union`, guards via `is`, results via `result`, resources via `scope`, wire shapes via `form`, machines via `protocol`, time via `iso`. the `tstd` readme names the ambition well: typescript will not become scala, haskell or gleam, but it can become go or zig once performance and memory are set aside. those patterns are not tz's invention; they are the library's, and they work in plain typescript. what tz adds is enforcement: a superset of that subset, with the library built in and a few constructs on top, transpiled back to typescript. the transpiler is a lexer, so it refuses the spellings that break the discipline, and both halves typecheck through the same `tsc`. learn the patterns where they are owned, in `../README.md` and the `../src/` specs.
+
+five rules then bind the prototype, and every construct is shaped by them.
 
 1. **one line in, one line out.** every `.tz` line emits exactly one `.ts` line. line numbers are the source map; columns get a per-line shift table, or nothing at all.
 2. **never parse typescript.** lex it (strings, templates, comments, regex, braces); do not grammar it. the constructs are found at token positions and their spans are rewritten. everything else is copied.
@@ -14,9 +24,9 @@ five rules bind the prototype, and every construct is shaped by them.
 
 ## vocabulary
 
-three constructs, three names; every form in tz is one of them.
+three constructs, three names; every construct tz adds is one of them, and everything else is plain typescript.
 
-- **exit**: leaving the scope. `return`, `err`, `ok`, `break`, `continue` all count. an exit carries a value when one is named.
+- **exit**: leaving the scope. `return`, `err`, `ok`, `break`, `continue` all count. `return`, `err` and `ok` carry a value when one is named; `break` and `continue` only leave.
 - **arrow capture**: the `=>` form. it captures whatever is returned and stays in scope. an arrow capture is the spell for "produce a value without leaving".
 - **side quest**: the `?` family. a side quest tests a value at the position where it stands and decides between an exit and an arrow capture based on what follows. the `?` is the "quest" of "side quest".
 

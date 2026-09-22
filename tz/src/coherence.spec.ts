@@ -58,6 +58,7 @@ test('every backticked identifier in the docs is a known construct', () => {
     'outcome', 'panic', 'pay', 'postfix', 'Promise', 'raw', 'read', 'refuse', 'result', 'row',
     'rows', 'constructs', 'decks', 'examples', 'seen', 'serve', 'set', 'side', 'source', 'spec', 'src', 'string', 'table',
     'task', 'tmp', 'to', 'ts', 'tsc', 'tstd', 'tsx', 'type', 'typescript', 'tz', 'tzc', 'tzx', 'tzd',
+    'using',
     'Union', 'unknown', 'unwrap', 'User', 'UserForm', 'val', 'void', 'x', 'AGENTS', 'LanguageService',
     'DateTime', 'Payment', 'A', '_', 'Result', 'Branch', 'loader', 'roles', 'npm', 'emit',
     'pred', 'hit', 'miss'

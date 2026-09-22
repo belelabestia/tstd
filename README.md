@@ -48,7 +48,7 @@ the same goes if you feel like there are too many lacking features: feel free to
 
 ## typezig
 
-`tz/` holds a prototype that goes further: typescript with most of typescript taken away, plus a handful of constructs, transpiled back to typescript that imports `tstd`. the entry point is `tz/README.md`.
+`tz/` holds the prototype that goes further: a superset of a subset of typescript, with `tstd` as its own standard library and a handful of added constructs, transpiled back to typescript. the entry point is `tz/README.md`.
 
 ## installation
 

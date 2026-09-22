@@ -1,6 +1,32 @@
 # tz - the typezig prototype
 
-typescript with most of typescript taken away, plus a handful of constructs, transpiled back to typescript that imports `tstd`. the design notes are in `tz/DESIGN.md`; the spec is in `tz/TUTORIAL.md`; the journal of decisions is in `tz/UPDATES.md`; the plan of action is in `tz/plan/roadmap.md`. this file is the entry point: how to run it and where the rest lives.
+tz is a superset of a subset of typescript, with its own standard library, out of the box. `tstd` is the seed: the core library that carries every principle, and it works in plain typescript on its own. tz is the language built to optimize that usage to a point typescript alone could never reach. the design notes are in `tz/DESIGN.md`; the spec is in `tz/TUTORIAL.md`; the journal of decisions is in `tz/UPDATES.md`; the plan of action is in `tz/plan/roadmap.md`. this file is the entry point: how to run it and where the rest lives.
+
+## a taste
+
+one small program, and most of the language is in it: a `form` for the shape, a `scope` that holds the connection and gives it back, `try` to propagate without naming, `await call` at the foreign boundary, a side quest to refuse, and `ok` to answer.
+
+```tz
+import { call, form, is, result, scope } from '@belelabestia/tstd';
+
+export form signup {
+  email: is.string,
+  age: is.number
+}
+
+export const submit = (raw: unknown, save: (conn: Conn, user: Signup) => Promise<string>) => scope (hold) => {
+  const conn = try hold(connect());
+
+  form.model(raw, signup) ?! err 'malformed signup';
+
+  const user = form.decode(raw, signup);
+  user.age ?< 18 err 'under age';
+
+  const id = try await call => save(conn, user);
+
+  ok `created ${id}`;
+};
+```
 
 ## running it
 

@@ -5,9 +5,9 @@ import { emit } from './emit.js';
 /*
   what the emitter is
 
-  typezig is typescript with most of typescript taken away plus a few constructs, and this
-  turns the constructs back into typescript. it never parses typescript; it lexes it, finds
-  the constructs at token positions, and rewrites those spans.
+  typezig is a superset of a subset of typescript, with its own standard library and a few
+  constructs, and this turns the constructs back into typescript. it never parses typescript;
+  it lexes it, finds the constructs at token positions, and rewrites those spans.
 
   the one rule everything else obeys is that a line in makes a line out, so the line number
   is the whole source map and a tsc diagnostic already knows where it belongs.
