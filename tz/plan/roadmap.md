@@ -48,7 +48,7 @@ material that onboards people and agents. derived from the battle test, not inve
 | 05 | scratch, the showcase | truth | done | the remote fixture |
 | 06 | the not tail | truth | done | q7 |
 | 07 | the comment protocol | ownership | done | q3 |
-| 08 | the teaching dissertation | ownership | planned | tutorial organization |
+| 08 | the teaching dissertation | ownership | done | tutorial organization |
 | 09 | the educational rewrite | ownership | planned | author voice |
 | 10 | define robust | battle | planned | q5 |
 | 11 | choose the target | battle | planned | q4 |
@@ -57,10 +57,13 @@ material that onboards people and agents. derived from the battle test, not inve
 | 14 | onboard agents | onboarding | planned | the agent contract |
 | 15 | the form audit | battle | planned | q8 |
 | 16 | the in-file test | battle | planned | q9 |
+| 17 | the `if` ban | truth | planned | the `if` overlap |
 
 sessions run in order. 09 is blocked by 08, and 13 and 14 are blocked by 12. everything else is unblocked once 01 lands, because a session that fixes a defect needs the harness that catches the defect.
 
 15 and 16 join the construct work of phase 2: 15 audits `form` because the author's charge is that its emit is inconsistent, and 16 explores a `test` keyword written in the file it tests. both are audits first, implementations second, so they may split.
+
+17 is the `if` overlap, ruled in session 08: `switch` is already banned, `if` is not, and every `if` is replaceable by a side quest. it lands a ban-list change, an emit spec, and the sweep of the decks and examples that still write `if` (the clamp funnels, the spec guard clauses).
 
 ## the ledger
 

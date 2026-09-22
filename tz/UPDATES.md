@@ -6,9 +6,27 @@ a journal of decisions. the spec lives in `tz/TUTORIAL.md`; the design notes liv
 
 the boolean and exhaustive checks ship; the `void` check now reads types too, so the next item is the editor affordances on the same surface (completions, hover, goto, rename) and a keystroke loop that stops shelling out. the coherence spec runs in `npm test`.
 
-the showcase is now irreducible: every construct in the `roles` list has a deck under `constructs/`, and the whole programs live under `examples/`. phase 0 is closed: the `?!` tail defect, `cond ?! err 'x'` emitting an unreWritten `err`, landed in session 06, and the docs work that follows is 07 through 09, with 07 now done.
+the showcase is now irreducible: every construct in the `roles` list has a deck under `constructs/`, and the whole programs live under `examples/`. phase 0 is closed: the `?!` tail defect, `cond ?! err 'x'` emitting an unreWritten `err`, landed in session 06, and the docs work that follows is 07 through 09, with 07 and 08 now done; the tutorial rewrite (09) executes the design 08 settled.
 
-three notes the author raised at the close of session 05 are now scheduled. the comment channel is a living protocol, not a phase: comments carrying forward work are part of the no-debt approach, and session 07 wrote the protocol rather than deleting the notes. `form` gets an audit (q8, session 15) because its emit is inconsistent, some code written and some emitted along an arbitrary line. a `test` keyword like zig's, in the file it tests and reaching module internals, is explored in session 16 (q9).
+three notes the author raised at the close of session 05 are now scheduled. the comment channel is a living protocol, not a phase: comments carrying forward work are part of the no-debt approach, and session 07 wrote the protocol rather than deleting the notes. `form` gets an audit (q8, session 15) because its emit is inconsistent, some code written and some emitted along an arbitrary line. a `test` keyword like zig's, in the file it tests and reaching module internals, is explored in session 16 (q9). the `if` overlap is now session 17, ruled in the dissertation: `switch` is already banned, `if` is not, and every `if` is replaceable by a side quest.
+
+## 2026-09-22: the teaching dissertation
+
+the tutorial taught `tstd` before it taught tz: 33 lines of typescript critique, five library principles and a "know the tstd patterns by heart" section before the first construct. session 08 is a discussion, not a rewrite, and it settles the organization session 09 executes.
+
+the design: tz is taught 50 years from now, as a language with a standard library, not as sugar over typescript. the c# analogy is the model (`using` is `try`/`finally`, a LINQ query is the method chain): the sugar is a language feature and the library call is the same language written plainly. the lowered core (`ts` + `tstd`) never introduces a construct; it appears only as what a construct replaces, in the decks and `DESIGN.md`, and never as "x writes y under the hood".
+
+two rulings fall out. deprecation by default: the difference from c# is that tz deprecates every construct it can replace. what the language owns is banned (`if` joins `switch`, `?:`, `??`); what the library owns cannot be banned, so it is deprecated by the editor, a `tzd` smell warning (`protocol.init` -> `protocol`, `branch` -> `:tag`, `result.ok` -> `ok`, `scope.sync` -> `scope`, `call.sync` -> `call`, `make` -> `make =>`). and the leakiness axis: closed constructs (side quests, arrow capture, exits, `try`) are taught as pure language; leaky ones (`scope`, `protocol`, `form`, `call`, `make`) are taught as features with the `tstd` bond marked, `form` the deepest.
+
+both readmes are doors, each self-contained: `tz/README.md` gets the formula, one dense mixed example (`scope`, `hold`, `try`, `await call`, side quests, `ok`), the setup and the pathways; `../../README.md` stays the master path. the tutorial is one file, language-first, with the genesis moved to `DESIGN.md`.
+
+the `if` ban is scheduled as its own session, roadmap 17: `switch` is already banned, `if` is not, and every `if` is replaceable by a side quest.
+
+one defect fixed on the way: the docs modelled `?== false` on a boolean guard, while `?!` is the spelling. `TUTORIAL.md:119` said "`==` is mandatory on every test", which reads as "always spell `==`", and every example followed it. the rule now says "on every comparison against a value", the table calls `?`/`?!` a boolean's spellings rather than a shorthand for the long forms, and the examples were swept (`TUTORIAL.md:46`, `:302`, `:363`, `:364`, `:490`, `:638`, `examples/forms.tz`, `examples/load.tz`, `constructs/form.spec.tz`).
+
+what changed: `plan/context/08-the-teaching-dissertation.md` (the design and the decisions), `plan/roadmap.md` (session 17), `TUTORIAL.md`, `examples/forms.tz`, `examples/load.tz`, `constructs/form.spec.tz`.
+
+what verified: `npm test` in `tz/` is exit 0, 65 src plus 54 decks and examples; `tzc examples constructs` and `tzd examples constructs` both exit 0. no behavior changed, only docs and example spellings.
 
 ## 2026-09-22: the comment protocol
 
