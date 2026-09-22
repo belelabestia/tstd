@@ -98,11 +98,11 @@ one file, `../TUTORIAL.md`. the genesis leaves it; the leaky bonds and refactori
 
 ## evidence
 
-- `npm test` (root):
-- `npm test` (tz):
-- `tzc examples constructs`:
-- `tzx` spec:
-- `tzd examples constructs`:
+- `npm test` (root): exit 0, 43 pass.
+- `npm test` (tz): exit 0, 65 src pass plus 54 decks and examples pass (the `tzx` spec runs inside it).
+- `tzc examples constructs`: exit 0.
+- `tzx` spec: exit 0, 54 pass (inside the tz suite).
+- `tzd examples constructs`: exit 0.
 
 ## open
 
