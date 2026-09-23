@@ -2,35 +2,7 @@ import { result } from '@belelabestia/tstd';
 import { Token } from './lex.js';
 import { Scan, assigns, keyword, modifier, comparisons } from './scan.js';
 import { refusal } from './refusal.js';
-
-const instead: Record<string, string> = {
-  class: 'a module, or a closure with an init',
-  function: 'an arrow const',
-  this: 'an argument',
-  new: 'make',
-  interface: 'type',
-  enum: 'Union or protocol',
-  var: 'const, or let',
-  namespace: 'a file',
-  module: 'a file',
-  any: 'unknown',
-  instanceof: 'a branch test',
-  yield: 'a loop',
-  abstract: 'gone with class',
-  implements: 'gone with class',
-  private: 'gone with class',
-  protected: 'gone with class',
-  public: 'gone with class',
-  super: 'gone with class',
-  throw: 'err',
-  switch: '? {}',
-  catch: 'call.sync, call.async, or try',
-  finally: 'call.sync, call.async, or try'
-};
-
-/** the words the language refuses, and the words that are not spelled */
-export const banned = Object.keys(instead);
-export const absent: readonly string[] = ['null', 'undefined'];
+import { refused, absent } from './typecore.js';
 
 const optional = [',', ')', ']'];
 
@@ -234,8 +206,8 @@ export const ban = (tokens: Token[], scanned: Scan) => {
       }
     }
 
-    const banned = instead[t.text];
-    if (banned !== undefined) return no(`${t.text} is refused; use ${banned}`);
+    const replacement = refused[t.text];
+    if (replacement !== undefined) return no(`${t.text} is refused; use ${replacement}`);
 
     if (t.text === 'try' && after[i] >= 0 && tokens[after[i]].text === '{') {
       return no('the typescript try is refused; use call.sync, call.async, or the tz try');

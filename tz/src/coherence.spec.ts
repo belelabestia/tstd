@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import * as assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { keywords } from './scan.js';
-import { banned, absent } from './ban.js';
+import { banned, absent } from './typecore.js';
 import { roles } from './emit.js';
 import { puncts } from './lex.js';
 
@@ -57,7 +57,7 @@ test('every backticked identifier in the docs is a known construct', () => {
     'let', 'Loader', 'main', 'map', 'matcher', 'n', 'name', 'no', 'on', 'open',
     'outcome', 'panic', 'pay', 'postfix', 'Promise', 'raw', 'read', 'refuse', 'result', 'row',
     'rows', 'constructs', 'decks', 'examples', 'seen', 'serve', 'set', 'side', 'source', 'spec', 'src', 'string', 'table',
-    'task', 'tmp', 'to', 'ts', 'tsc', 'tstd', 'tsx', 'type', 'typescript', 'tz', 'tzc', 'tzx', 'tzd',
+    'task', 'tmp', 'to', 'ts', 'tsc', 'tstd', 'tsx', 'type', 'typecore', 'typescript', 'tz', 'tzc', 'tzx', 'tzd',
     'using',
     'Union', 'unknown', 'unwrap', 'User', 'UserForm', 'val', 'void', 'x', 'AGENTS', 'LanguageService',
     'DateTime', 'Payment', 'A', '_', 'Result', 'Branch', 'loader', 'roles', 'npm', 'emit',
