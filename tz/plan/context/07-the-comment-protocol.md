@@ -2,16 +2,16 @@
 
 ## intent
 
-comments that carry forward work are a living channel, not a cleanup. this session writes the protocol for them: the markers, the channels they may sit in, how a sweep is scheduled, and how the coherence walk ignores a parked note on purpose. it then routes every parked note by that protocol, applies the postfix guard correction the author left at `../DESIGN.md:164`, fixes the repetition note at `../TUTORIAL.md:11`, and names the roadmap as the forward-work home (q3).
+comments that carry forward work are a living channel, not a cleanup. this session writes the protocol for them: the markers, the channels they may sit in, how a sweep is scheduled, and how the coherence walk ignores a parked note on purpose. it then routes every parked note by that protocol, applies the postfix guard correction the author left at `../../DESIGN.md:164`, fixes the repetition note at `../../TUTORIAL.md:11`, and names the roadmap as the forward-work home (q3).
 
 ## inputs
 
-- `../TUTORIAL.md` (the two parked prompts at `:11` and `:17`).
-- `../DESIGN.md` (the postfix guard correction at `:164` and the voice prompt at `:187`).
-- `../src/coherence.spec.ts` (the html-comment blanking walk).
+- `../../TUTORIAL.md` (the two parked prompts at `:11` and `:17`).
+- `../../DESIGN.md` (the postfix guard correction at `:164` and the voice prompt at `:187`).
+- `../../src/coherence.spec.ts` (the html-comment blanking walk).
 - `roadmap.md` (the forward-work home it proposes; its own parked note at `:16`).
-- `../../AGENTS.md` and `../../STYLE-KB.md` (the comment rules the protocol lives inside).
-- the parked notes in `../constructs/*.spec.tz` and `../examples/*.tz`, found by walking the tree.
+- `../../../AGENTS.md` and `../../../STYLE-KB.md` (the comment rules the protocol lives inside).
+- the parked notes in `../../constructs/*.spec.tz` and `../../examples/*.tz`, found by walking the tree.
 
 ## decisions
 
@@ -48,5 +48,5 @@ nothing. q13, q14, q15 and t1 are routed and unassigned; q3 is resolved. the clo
   - `write the comment protocol` (roadmap protocol, sweep step, principle, phase 1 blurb, ledger rename and q3, q13 to q15 and t1; coherence comment)
   - `route the parked notes` (TUTORIAL, DESIGN both prompt removals and the postfix guard correction, constructs, examples, sessions 08 and 09 noted as swept, session 09 keeps the "a language exists if people use it" intent)
   - `close the comment protocol session` (UPDATES, this context, the roadmap status flip)
-- `../UPDATES.md` entry: `## 2026-09-22: the comment protocol`
+- `../../UPDATES.md` entry: `## 2026-09-22: the comment protocol`
 - roadmap: session 07 flipped to done; q3 resolved.

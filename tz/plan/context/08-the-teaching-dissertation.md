@@ -2,22 +2,22 @@
 
 ## intent
 
-the tutorial teaches `tstd` before it teaches tz: `../TUTORIAL.md:5-37` opens with "where we come from" (typescript's overlap, the five `tstd` principles, the transpiler idea) and a whole section, "how things are in typescript", that shows no tz at all. the author questions whether that pretrains the reader on the library when they came to see the language. this session is a discussion: mark every place the tutorial teaches `tstd`, propose two or three organizations for the teaching docs, and settle one the author endorses. it produces a written design, not edits; session 09 executes it.
+the tutorial teaches `tstd` before it teaches tz: `../../TUTORIAL.md:5-37` opens with "where we come from" (typescript's overlap, the five `tstd` principles, the transpiler idea) and a whole section, "how things are in typescript", that shows no tz at all. the author questions whether that pretrains the reader on the library when they came to see the language. this session is a discussion: mark every place the tutorial teaches `tstd`, propose two or three organizations for the teaching docs, and settle one the author endorses. it produces a written design, not edits; session 09 executes it.
 
 ## inputs
 
-- `../TUTORIAL.md` (read in full; 663 lines).
-- `../DESIGN.md` (what is already explained where).
-- `../README.md` (the entry point and what is here).
-- `../../README.md` and `../../STYLE-KB.md` (the `tstd` side).
-- `../../AGENTS.md` (the doc style rules).
+- `../../TUTORIAL.md` (read in full; 663 lines).
+- `../../DESIGN.md` (what is already explained where).
+- `../../README.md` (the entry point and what is here).
+- `../../../README.md` and `../../../STYLE-KB.md` (the `tstd` side).
+- `../../../AGENTS.md` (the doc style rules).
 - the author's stated taste: zig, comptime, `orelse`, `catch`, `try`.
 
 ## findings
 
 the tutorial's teaching, sorted by whose material it is:
 
-- **teaches `tstd`** (no tz construct): the whole of `where we come from` except the transpiler paragraph (`:5-25`), and the whole of `how things are in typescript` (`:35-37`), which only points at `../../README.md` and `../../src` specs.
+- **teaches `tstd`** (no tz construct): the whole of `where we come from` except the transpiler paragraph (`:5-25`), and the whole of `how things are in typescript` (`:35-37`), which only points at `../../../README.md` and `../../../src` specs.
 - **teaches tz by naming its `tstd` target**: `scope` is sugar over `scope.sync` (`:372-409`), `protocol` over `protocol.init` (`:411-448`), `form` over `form.ts` (`:450-507`), `call` over `call.sync` (`:509-591`), `make` (`:593-621`). the sugar is the product; the target is the justification.
 - **teaches tz alone**: `what tz takes away` (`:39-52`) onward, barring the tstd references above.
 - **teaches neither**: `scope, honestly` (`:661-663`) is a pointer to the other docs.
@@ -47,8 +47,8 @@ constructs split by how much `tstd` shows through, and the docs render each clas
 
 - **the ts developer tired of the overlap**, first. tz is the tidy-up, and the reader arrives already convinced, so the docs show rather than argue.
 - **the daily writer**, second; the matrix is the lookup.
-- **the agent**: `../../AGENTS.md`, `../DESIGN.md`, the ban list.
-- **the `tstd` reader**: `../../README.md` and the `../../src` specs.
+- **the agent**: `../../../AGENTS.md`, `../../DESIGN.md`, the ban list.
+- **the `tstd` reader**: `../../../README.md` and the `../../../src` specs.
 
 ### order
 
@@ -65,20 +65,20 @@ the genesis (`where we come from`, `:5-25`) and `how things are in typescript` (
 
 ### separation
 
-- **`../README.md`**: the formula, the dense example, the setup, the pathways. self-contained.
-- **`../../README.md`**: the master path, `tstd`'s principles and style; the hierarchy is stated in both.
-- **`../TUTORIAL.md`**: the language surface.
-- **`../DESIGN.md`**: the why: the frustration, the five principles, the constraints, the ban list, the lowered core, the refusals.
+- **`../../README.md`**: the formula, the dense example, the setup, the pathways. self-contained.
+- **`../../../README.md`**: the master path, `tstd`'s principles and style; the hierarchy is stated in both.
+- **`../../TUTORIAL.md`**: the language surface.
+- **`../../DESIGN.md`**: the why: the frustration, the five principles, the constraints, the ban list, the lowered core, the refusals.
 - **`constructs/` decks**: the equivalence and the lowering, opt-in close reading.
-- **`../UPDATES.md`**: the journal.
+- **`../../UPDATES.md`**: the journal.
 
 ### entry points
 
-`../README.md` is the door: the formula, one dense mixed example (`scope`, `hold`, `try`, `await call`, side quests, `ok`), the setup, and pathways. the tutorial assumes it. `../../README.md` is the second door, for the library.
+`../../README.md` is the door: the formula, one dense mixed example (`scope`, `hold`, `try`, `await call`, side quests, `ok`), the setup, and pathways. the tutorial assumes it. `../../../README.md` is the second door, for the library.
 
 ### file structure
 
-one file, `../TUTORIAL.md`. the genesis leaves it; the leaky bonds and refactoring tables enter, so the 550 to 580 target is revisited in 09.
+one file, `../../TUTORIAL.md`. the genesis leaves it; the leaky bonds and refactoring tables enter, so the 550 to 580 target is revisited in 09.
 
 ## decisions
 
@@ -113,5 +113,5 @@ the `if` ban is settled and scheduled as roadmap session 17, not executed here. 
 - commits:
   - `fix the boolean spelling in docs` (`TUTORIAL.md` rule, table, examples and matrix; `examples/forms.tz`, `examples/load.tz`, `constructs/form.spec.tz`)
   - `close the teaching dissertation` (`plan/context/08-the-teaching-dissertation.md`, `plan/roadmap.md` session 17 and the 08 status flip, `UPDATES.md`)
-- `../UPDATES.md` entry: `## 2026-09-22: the teaching dissertation`
+- `../../UPDATES.md` entry: `## 2026-09-22: the teaching dissertation`
 - roadmap: session 08 flipped to done; session 17 (the `if` ban) added.

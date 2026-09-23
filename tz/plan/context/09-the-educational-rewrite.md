@@ -6,13 +6,13 @@ the tutorial teaches rules capably and the author's taste not at all. this sessi
 
 ## inputs
 
-- `../plan/sessions/09-the-educational-rewrite.md` (the charge and the acceptance).
-- `../plan/context/08-the-teaching-dissertation.md` (the endorsed organization and the rulings).
-- `../TUTORIAL.md` and `../DESIGN.md` (the two files rewritten here).
-- `../README.md` (the door the tutorial assumes).
-- `../../README.md` and `../../STYLE-KB.md` (the `tstd` principles and the prose voice).
-- `../src/coherence.spec.ts` (the constraints the prose must satisfy).
-- `../UPDATES.md` (the journal; out of scope, keeps its voice).
+- `../sessions/09-the-educational-rewrite.md` (the charge and the acceptance).
+- `../context/08-the-teaching-dissertation.md` (the endorsed organization and the rulings).
+- `../../TUTORIAL.md` and `../../DESIGN.md` (the two files rewritten here).
+- `../../README.md` (the door the tutorial assumes).
+- `../../../README.md` and `../../../STYLE-KB.md` (the `tstd` principles and the prose voice).
+- `../../src/coherence.spec.ts` (the constraints the prose must satisfy).
+- `../../UPDATES.md` (the journal; out of scope, keeps its voice).
 
 ## decisions
 
@@ -57,5 +57,5 @@ the tutorial teaches rules capably and the author's taste not at all. this sessi
   - `move the why into the design notes` (`DESIGN.md`, `README.md`, `tz/README.md`, `src/emit.spec.ts`, `src/coherence.spec.ts`)
   - `plan the core subset` (`plan/sessions/` the new 10 and the 10 to 17 shift, the prompt path sweep, `plan/context/09-the-educational-rewrite.md`)
   - `close the educational rewrite` (`plan/roadmap.md` session 10 and the 09 status, `UPDATES.md`)
-- `../UPDATES.md` entry: `## 2026-09-23: the educational rewrite`
+- `../../UPDATES.md` entry: `## 2026-09-23: the educational rewrite`
 - roadmap: session 09 flipped to done; session 10 added; sessions 10 to 17 shifted to 11 to 18.

@@ -2,17 +2,17 @@
 
 ## intent
 
-make the showcase honest, then irreducible. `../README.md` claimed `scratch/` showed every construct and both commands ran over it; the claim was false twice. the `remote` fixture in the spec failed, and the cause was not the `data:` url the roadmap suspected but a torn-off method (`remote` emitted `call.async(res.text)`, so `this` was lost and the call threw); separately, six constructs in the `roles` list of `../src/emit.ts` were never reached by the running spec, and `make` was missing from the README's own list. the author ruled the reorganization: `scratch/` becomes `examples/` (whole programs, one spec), and a new sibling `constructs/` holds one deck per construct, a `spec.tz` of simple use cases with walkthrough comments, run by the same test chain. this session repairs the fixture, writes all 22 decks, wires a coherence check that requires a deck per role, and rewrites the README claim.
+make the showcase honest, then irreducible. `../../README.md` claimed `scratch/` showed every construct and both commands ran over it; the claim was false twice. the `remote` fixture in the spec failed, and the cause was not the `data:` url the roadmap suspected but a torn-off method (`remote` emitted `call.async(res.text)`, so `this` was lost and the call threw); separately, six constructs in the `roles` list of `../../src/emit.ts` were never reached by the running spec, and `make` was missing from the README's own list. the author ruled the reorganization: `scratch/` becomes `examples/` (whole programs, one spec), and a new sibling `constructs/` holds one deck per construct, a `spec.tz` of simple use cases with walkthrough comments, run by the same test chain. this session repairs the fixture, writes all 22 decks, wires a coherence check that requires a deck per role, and rewrites the README claim.
 
 ## inputs
 
-- `../scratch/<file>.tz` and the emitted `.ts`, renamed to `../examples/`, to see what ran and what the emitter produced.
-- `../src/emit.ts` roles list, the vocabulary the decks are measured against.
-- `../src/coherence.spec.ts`, which caught doc drift and construct-to-spec drift but never a missing deck.
-- `../README.md:61`, the false claim, and the construct list at lines 47 to 59.
-- `../TUTORIAL.md`, for the exact shape of every construct, since each deck must be faithful.
-- `../src/highlight.spec.ts` and `../src/lsp.spec.ts`, which name example files by path.
-- `../../AGENTS.md` and `../../STYLE-KB.md` before writing anything.
+- `../../scratch/<file>.tz` and the emitted `.ts`, renamed to `../../examples/`, to see what ran and what the emitter produced.
+- `../../src/emit.ts` roles list, the vocabulary the decks are measured against.
+- `../../src/coherence.spec.ts`, which caught doc drift and construct-to-spec drift but never a missing deck.
+- `../../README.md:61`, the false claim, and the construct list at lines 47 to 59.
+- `../../TUTORIAL.md`, for the exact shape of every construct, since each deck must be faithful.
+- `../../src/highlight.spec.ts` and `../../src/lsp.spec.ts`, which name example files by path.
+- `../../../AGENTS.md` and `../../../STYLE-KB.md` before writing anything.
 
 ## decisions
 
@@ -55,5 +55,5 @@ the author raised three things while reviewing this session, and each now has a 
 ## close
 
 - commit: `rename the showcase to examples`, `add a deck per construct`, `require a deck for every role`, `fix the fetched payload fixture`, `state the showcase in the readme` (one decision per commit).
-- `../UPDATES.md` entry: `## 2026-09-21: a deck for every construct`
+- `../../UPDATES.md` entry: `## 2026-09-21: a deck for every construct`
 - roadmap: session 05 flipped to done, the `?!` defect added to the ledger.

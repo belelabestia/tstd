@@ -6,12 +6,12 @@
 
 ## inputs
 
-- `../plan/roadmap.md` and `../plan/sessions/01-run-the-code.md`: the session's mandate and acceptance.
-- `../AGENTS.md` and `../../STYLE-KB.md`: the binding working rules, read before writing.
-- `../README.md`: what the toolchain claims, and the documented `tzx` invocation.
-- `../package.json`: the current test chain, where the run step lands.
-- `../src/register.ts`, `../src/hook.ts`, `../src/tzx.ts`: how a `.tz` file is made runnable, and why the loader needs `dist`.
-- `../src/tzd.ts`: how the headless session already walks a directory, precedent for a run step.
+- `../roadmap.md` and `../sessions/01-run-the-code.md`: the session's mandate and acceptance.
+- `../../../AGENTS.md` and `../../../STYLE-KB.md`: the binding working rules, read before writing.
+- `../../README.md`: what the toolchain claims, and the documented `tzx` invocation.
+- `../../package.json`: the current test chain, where the run step lands.
+- `../../src/register.ts`, `../../src/hook.ts`, `../../src/tzx.ts`: how a `.tz` file is made runnable, and why the loader needs `dist`.
+- `../../src/tzd.ts`: how the headless session already walks a directory, precedent for a run step.
 
 ## decisions
 
@@ -40,5 +40,5 @@
 ## close
 
 - commit: `run the showcase`
-- `../UPDATES.md`: `## 2026-09-20: the build runs the showcase`
+- `../../UPDATES.md`: `## 2026-09-20: the build runs the showcase`
 - roadmap: session 01 `planned` to `done`

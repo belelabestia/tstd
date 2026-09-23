@@ -6,12 +6,12 @@
 
 ## inputs
 
-- `../src/emit.ts`, the matcher and tail handlers, to trace where `?`/`?==` reach `wraps` and `?!` does not.
-- `../src/scan.ts`, the statement-start pass, since the tail token has to be a statement start for the exit pass to see it.
-- `../src/emit.spec.ts`, the existing quest cases, for the pinning shape.
-- `../constructs/not.spec.tz`, the deck that avoids the defect.
-- `../TUTORIAL.md` and `../DESIGN.md`, to check whether the shipped reading was already right.
-- `../../AGENTS.md` and `../../STYLE-KB.md` before writing anything.
+- `../../src/emit.ts`, the matcher and tail handlers, to trace where `?`/`?==` reach `wraps` and `?!` does not.
+- `../../src/scan.ts`, the statement-start pass, since the tail token has to be a statement start for the exit pass to see it.
+- `../../src/emit.spec.ts`, the existing quest cases, for the pinning shape.
+- `../../constructs/not.spec.tz`, the deck that avoids the defect.
+- `../../TUTORIAL.md` and `../../DESIGN.md`, to check whether the shipped reading was already right.
+- `../../../AGENTS.md` and `../../../STYLE-KB.md` before writing anything.
 
 ## decisions
 
@@ -46,5 +46,5 @@ nothing. the two other emit findings session 05 filed (q10 the deck `declare` fa
 ## close
 
 - commit: `fix the not tail` (scan.ts, emit.spec.ts, not.spec.tz), `note the not tail in the docs` (TUTORIAL.md, DESIGN.md). one decision per commit.
-- `../UPDATES.md` entry: `## 2026-09-22: the not tail lands its value`
+- `../../UPDATES.md` entry: `## 2026-09-22: the not tail lands its value`
 - roadmap: session 06 flipped to done; q7 resolved.

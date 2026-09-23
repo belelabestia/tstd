@@ -6,14 +6,14 @@ settle q1: after `x ?|(:idle, :loading, :failed) return;`, does a later `x` name
 
 ## inputs
 
-- `../scratch/machine.tz` and its emitted `../scratch/machine.ts`, the disagreeing pair.
-- `../scratch/signup.spec.tz:60`, the `finished` assertions.
-- `../src/emit.ts`, the `quest`, `grouped` and `kept` paths.
-- `../src/emit.spec.ts:33`, the existing decline spec that pins the current shape.
-- `../TUTORIAL.md`, the side quest table and the bindings section.
-- `../DESIGN.md`, the shapes section, especially the `.value` paragraph.
-- `../UPDATES.md`, the 2026-09-13 coloned entry and the 2026-09-16 chain entry.
-- `../../AGENTS.md` and `../../STYLE-KB.md` before writing anything.
+- `../../scratch/machine.tz` and its emitted `../../scratch/machine.ts`, the disagreeing pair.
+- `../../scratch/signup.spec.tz:60`, the `finished` assertions.
+- `../../src/emit.ts`, the `quest`, `grouped` and `kept` paths.
+- `../../src/emit.spec.ts:33`, the existing decline spec that pins the current shape.
+- `../../TUTORIAL.md`, the side quest table and the bindings section.
+- `../../DESIGN.md`, the shapes section, especially the `.value` paragraph.
+- `../../UPDATES.md`, the 2026-09-13 coloned entry and the 2026-09-16 chain entry.
+- `../../../AGENTS.md` and `../../../STYLE-KB.md` before writing anything.
 
 ## decisions
 
@@ -43,5 +43,5 @@ none for this session. the `:84` remote fixture belongs to session 05.
 ## close
 
 - commit: `keep the survivor boxed`
-- `../UPDATES.md` entry: `## 2026-09-20: a survivor keeps its box`
+- `../../UPDATES.md` entry: `## 2026-09-20: a survivor keeps its box`
 - roadmap: session 02 flipped to done.

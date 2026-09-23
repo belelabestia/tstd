@@ -6,12 +6,12 @@ settle the 2026-09-16 defect and the questions it opened. two things land here: 
 
 ## inputs
 
-- `../UPDATES.md:9`, the defect, and the 2026-09-16 entry that locked the subject.
-- `../scratch/chains.tz`, the showcase chains, all named subjects.
-- `../src/emit.ts`, `linkBody` (the arrow-body walk), `chain`/`linkOne`/`declining`/`lift` (the four subject sites), `quest`, and the temp and `else` paths.
-- `../src/scan.ts`, the `?` matcher tagging, specifically `?(` and `?!`.
-- `../src/emit.spec.ts`, the chain cases and the `?(...)` condition cases.
-- `../../AGENTS.md` and `../../STYLE-KB.md` before writing anything.
+- `../../UPDATES.md:9`, the defect, and the 2026-09-16 entry that locked the subject.
+- `../../scratch/chains.tz`, the showcase chains, all named subjects.
+- `../../src/emit.ts`, `linkBody` (the arrow-body walk), `chain`/`linkOne`/`declining`/`lift` (the four subject sites), `quest`, and the temp and `else` paths.
+- `../../src/scan.ts`, the `?` matcher tagging, specifically `?(` and `?!`.
+- `../../src/emit.spec.ts`, the chain cases and the `?(...)` condition cases.
+- `../../../AGENTS.md` and `../../../STYLE-KB.md` before writing anything.
 
 ## decisions
 
@@ -65,5 +65,5 @@ none for this session. the `:84` remote fixture belongs to session 05. the `? {}
 ## close
 
 - commit: `add the negated condition quest` and `fix expression-subject chains` (two decisions, two commits)
-- `../UPDATES.md` entry: `## 2026-09-20: a condition is a custom side quest`
+- `../../UPDATES.md` entry: `## 2026-09-20: a condition is a custom side quest`
 - roadmap: session 03 flipped to done.

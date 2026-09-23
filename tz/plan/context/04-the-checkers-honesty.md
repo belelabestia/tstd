@@ -2,17 +2,17 @@
 
 ## intent
 
-make `TZL0003` honest. `tzd scratch` was exiting 0 while emitting 65 warnings, and every one was false: the dropped-value check shipped at its untyped fallback, where any naked expression statement with no tz head read as a drop. this session measures that rate, takes the author's ruling (type the check now; warn on any non-none value), moves the dropped-value path behind the interim checker, and makes the code, `../DESIGN.md` and `../UPDATES.md` say the same thing.
+make `TZL0003` honest. `tzd scratch` was exiting 0 while emitting 65 warnings, and every one was false: the dropped-value check shipped at its untyped fallback, where any naked expression statement with no tz head read as a drop. this session measures that rate, takes the author's ruling (type the check now; warn on any non-none value), moves the dropped-value path behind the interim checker, and makes the code, `../../DESIGN.md` and `../../UPDATES.md` say the same thing.
 
 ## inputs
 
-- `../src/lsp.ts`, the dropped-value path at its untyped fallback (`checkVoid`), and the session that shells out to `tsc`.
-- `../src/check.ts`, the checker seam (`behind`, `openCheck`) and the two checks that already read types.
-- `../src/check.spec.ts` and `../src/lsp.spec.ts`, the checker and editor specs.
-- `../src/ban.ts`, `../src/scan.ts`, `../src/emit.spec.ts` for the assignment ruling.
-- `../scratch/*.tz` and the `.tzd` mirrors, to measure false positives and type the drops.
-- `../DESIGN.md` lsp section, `../UPDATES.md` 2026-09-14 checker entry.
-- `../../AGENTS.md` and `../../STYLE-KB.md` before writing anything.
+- `../../src/lsp.ts`, the dropped-value path at its untyped fallback (`checkVoid`), and the session that shells out to `tsc`.
+- `../../src/check.ts`, the checker seam (`behind`, `openCheck`) and the two checks that already read types.
+- `../../src/check.spec.ts` and `../../src/lsp.spec.ts`, the checker and editor specs.
+- `../../src/ban.ts`, `../../src/scan.ts`, `../../src/emit.spec.ts` for the assignment ruling.
+- `../../scratch/*.tz` and the `.tzd` mirrors, to measure false positives and type the drops.
+- `../../DESIGN.md` lsp section, `../../UPDATES.md` 2026-09-14 checker entry.
+- `../../../AGENTS.md` and `../../../STYLE-KB.md` before writing anything.
 
 ## decisions
 
@@ -44,5 +44,5 @@ make `TZL0003` honest. `tzd scratch` was exiting 0 while emitting 65 warnings, a
 ## close
 
 - commit: `type the dropped value check`, `refuse assignment expressions`, `void the showcase drops`, and the docs with them (one decision per commit).
-- `../UPDATES.md` entry: `## 2026-09-21: the checker tells the truth`
+- `../../UPDATES.md` entry: `## 2026-09-21: the checker tells the truth`
 - roadmap: session 04 flipped to done, q2 ruled.

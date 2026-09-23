@@ -6,12 +6,12 @@
 
 ## inputs
 
-- `../plan/sessions/10-the-core-subset.md` (the charge and the acceptance).
-- `../plan/context/09-the-educational-rewrite.md` (the formula, the naming ruling, the warning ruling).
-- `../plan/context/08-the-teaching-dissertation.md` (deprecation by default, the leakiness axis).
-- `../DESIGN.md`, `../TUTORIAL.md`, `../README.md`, `../../README.md` (the docs the framing lands on).
-- `../src/ban.ts` (the table), `../src/coherence.spec.ts` (the tie to the lexer), `../src/tzd.ts` and `../src/lsp.ts` (the warning join).
-- `../../README.md` (the promised eslint ruleset), `../../STYLE-KB.md` and `../../AGENTS.md` (voice and rules).
+- `../sessions/10-the-core-subset.md` (the charge and the acceptance).
+- `../context/09-the-educational-rewrite.md` (the formula, the naming ruling, the warning ruling).
+- `../context/08-the-teaching-dissertation.md` (deprecation by default, the leakiness axis).
+- `../../DESIGN.md`, `../../TUTORIAL.md`, `../../README.md`, `../../../README.md` (the docs the framing lands on).
+- `../../src/ban.ts` (the table), `../../src/coherence.spec.ts` (the tie to the lexer), `../../src/tzd.ts` and `../../src/lsp.ts` (the warning join).
+- `../../../README.md` (the promised eslint ruleset), `../../../STYLE-KB.md` and `../../../AGENTS.md` (voice and rules).
 
 ## decisions
 
@@ -29,7 +29,7 @@ all dated 2026-09-23, all ruled in review before any edit.
 
 - **a `.tz` file reads as tz, so the lowering comparisons go.** the author's follow-up ruling: since the files carry a `.tz` extension, the tautological lowering examples should not be there, because they are for a reader of the lowered output, not someone reading tz. the four files that carried a library spelling were migrated: `result.ok`/`result.err` became `:ok`/`:err`, `branch('x', ...)` became `:x(...)`, and the `assert.deepEqual(x, branch('x'))` comparisons became property reads (`.branch`, `.value`) that prove the shape without the library call. the `branch` role's coherence anchor moved from `branch(` to `:idle`, because `branch(` was exactly the library spelling the walk required the deck to contain; the new anchor names the tz form and still matches the input line in `emit.spec.ts`. `examples/branches.tz` keeps its coverage through the property reads. rejected: deleting `examples/branches.tz` (its coverage survives), and leaving the decks to warn (the author wants a `.tz` file to read as tz).
 
-- **the eslint ruleset is ruled and its ownership written, not built here.** building it would add eslint to this repo, which `../../AGENTS.md` forbids ("do not add tooling"). the ruleset ships to `tstd` consumers (plain typescript), so it is its own package and its first step is extracting the shared profile. this session records the owner and the drift guard in `DESIGN.md` and does not add the dependency. rejected: adding eslint here to build the ruleset now (breaks the no-tooling rule); leaving the promise unruled.
+- **the eslint ruleset is ruled and its ownership written, not built here.** building it would add eslint to this repo, which `../../../AGENTS.md` forbids ("do not add tooling"). the ruleset ships to `tstd` consumers (plain typescript), so it is its own package and its first step is extracting the shared profile. this session records the owner and the drift guard in `DESIGN.md` and does not add the dependency. rejected: adding eslint here to build the ruleset now (breaks the no-tooling rule); leaving the promise unruled.
 
 ## findings
 
@@ -61,5 +61,5 @@ all dated 2026-09-23, all ruled in review before any edit.
   - `warn the library spellings` (`tz/src/smell.ts`, `tz/src/smell.spec.ts`, `tz/src/lsp.ts`, `tz/src/lsp.spec.ts`, `tz/DESIGN.md` lsp and staging notes)
   - `drop the lowering comparisons` (`tz/src/emit.ts` the role anchor, `tz/constructs/block.spec.tz`, `tz/constructs/branch.spec.tz`, `tz/constructs/tag.spec.tz`, `tz/examples/signup.spec.tz`)
   - `close the core subset` (`tz/plan/roadmap.md`, `tz/plan/context/10-the-core-subset.md`, `tz/UPDATES.md`)
-- `../UPDATES.md` entry: `## 2026-09-23: the core subset`
+- `../../UPDATES.md` entry: `## 2026-09-23: the core subset`
 - roadmap: session 10 flipped to done.
