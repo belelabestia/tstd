@@ -1,6 +1,14 @@
 # typezig design notes
 
-a superset of a subset of typescript, with `tstd` as its own standard library, out of the box. `tstd` is the seed: the core library that carries every principle, usable in plain typescript on its own; tz is the language built to optimize that usage to a point typescript alone could never reach. the prototype lives in `tz/`. the spec lives in `tz/TUTORIAL.md`. the journal of decisions lives in `tz/UPDATES.md`. this file is why tz looks like this; if you only want to write tz, read the tutorial instead.
+a superset of `typecore`, the subset of typescript that omits the overlap, with `tstd` as its own standard library, out of the box. `tstd` is the seed: the core library that carries every principle, usable in typecore on its own; tz is the language built to optimize that usage to a point typescript alone could never reach. the prototype lives in `tz/`. the spec lives in `tz/TUTORIAL.md`. the journal of decisions lives in `tz/UPDATES.md`. this file is why tz looks like this; if you only want to write tz, read the tutorial instead.
+
+## typecore
+
+`tstd` and tz share a floor: **typecore**, the subset of typescript that omits the overlap. it is a conformance profile, not a file type, so files stay `.ts` and tz stays `.tz`; no extension is spent. the three things stay distinct: typecore is the base dialect, `tstd` is the standard library that works in it, and tz is the language that adds the constructs and enforces the profile.
+
+the profile has two gradients. a spelling the language owns is **banned**: the transpiler refuses it as a diagnostic, and there is no pragma, because a switch that turns a ban off makes the ban list negotiable. a spelling the library owns cannot be banned, because it is the standard library and interop needs it; the editor **warns** instead, naming the tz form. one spelling is the point, and the gradient is how a language and its standard library share a floor without pretending the library is gone.
+
+the profile is one table, `src/typecore.ts`. tz reads it twice, once in the ban pass and once in the editor warning, so the two engines cannot drift; the eslint ruleset that holds plain typescript to typecore reads the same table, because it is a consumer of the profile and not a second definition. shipping that ruleset is scheduled, and its first step is giving the table a home both can reach. the tz pass is then defensive: the profile decides, tz insists.
 
 ## hard constraints
 
@@ -12,7 +20,7 @@ typescript keeps every door open: classes, interfaces, enums, namespaces, decora
 - **maximize type inference.** a function that changes its return type should not break its signature; the callers should adjust, so return types are never declared except in a type guard.
 - **distrust what the types cannot say.** a signature is the whole contract, so anything carrying an invisible requirement is confined, not discouraged. a method's `this` requirement is invisible to its type, so a torn-off method typechecks and throws; a throw is invisible the same way. both are converted into a `Result` at exactly two boundaries, `make` and `call`.
 
-the style that falls out is procedural, fallible where it must be, branch-shaped: tagged unions via `branch` and `Union`, guards via `is`, results via `result`, resources via `scope`, wire shapes via `form`, machines via `protocol`, time via `iso`. the `tstd` readme names the ambition well: typescript will not become scala, haskell or gleam, but it can become go or zig once performance and memory are set aside. those patterns are not tz's invention; they are the library's, and they work in plain typescript. what tz adds is enforcement: a superset of that subset, with the library built in and a few constructs on top, transpiled back to typescript. the transpiler is a lexer, so it refuses the spellings that break the discipline, and both halves typecheck through the same `tsc`. learn the patterns where they are owned, in `../README.md` and the `../src/` specs.
+the style that falls out is procedural, fallible where it must be, branch-shaped: tagged unions via `branch` and `Union`, guards via `is`, results via `result`, resources via `scope`, wire shapes via `form`, machines via `protocol`, time via `iso`. the `tstd` readme names the ambition well: typescript will not become scala, haskell or gleam, but it can become go or zig once performance and memory are set aside. those patterns are not tz's invention; they are the library's, and they work in typecore. what tz adds is enforcement: a superset of typecore, with the library built in and a few constructs on top, transpiled back to typescript. the transpiler is a lexer, so it refuses the spellings that break the discipline, and both halves typecheck through the same `tsc`. learn the patterns where they are owned, in `../README.md` and the `../src/` specs.
 
 five rules then bind the prototype, and every construct is shaped by them.
 
@@ -24,7 +32,7 @@ five rules then bind the prototype, and every construct is shaped by them.
 
 ## vocabulary
 
-three constructs, three names; every construct tz adds is one of them, and everything else is plain typescript.
+three constructs, three names; every construct tz adds is one of them, and everything else is typecore.
 
 - **exit**: leaving the scope. `return`, `err`, `ok`, `break`, `continue` all count. `return`, `err` and `ok` carry a value when one is named; `break` and `continue` only leave.
 - **arrow capture**: the `=>` form. it captures whatever is returned and stays in scope. an arrow capture is the spell for "produce a value without leaving".
@@ -51,7 +59,7 @@ the constructs, in the order they were ruled:
 
 ## the ban list
 
-yes, and this is the part that makes tz a language instead of a preprocessor. a lexer that can find `function` can refuse `class`, the same walk in one table. the readme says "i might provide an eslint ruleset at some point"; this is that ruleset, delivered as a syntax error, at zero extra cost, with nothing to configure and no way to switch it off.
+yes, and this is the part that makes tz a language instead of a preprocessor. a lexer that can find `function` can refuse `class`, the same walk in one table. the table is typecore's, not tz's: the same profile holds plain typescript to the subset through an eslint ruleset, and tz's pass is its defensive half. in tz the refusal is delivered as a syntax error, at zero extra cost, with nothing to configure and no way to switch it off.
 
 | refused | because | replacement |
 | --- | --- | --- |

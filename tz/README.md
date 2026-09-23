@@ -1,6 +1,6 @@
 # tz - the typezig prototype
 
-tz is a superset of a subset of typescript, with its own standard library, out of the box. `tstd` is the seed: the core library that carries every principle, and it works in plain typescript on its own. tz is the language built to optimize that usage to a point typescript alone could never reach. the design notes are in `tz/DESIGN.md`; the spec is in `tz/TUTORIAL.md`; the journal of decisions is in `tz/UPDATES.md`; the plan of action is in `tz/plan/roadmap.md`. this file is the entry point: how to run it and where the rest lives.
+tz is a superset of `typecore`, the subset of typescript that omits the overlap, with its own standard library, out of the box. `tstd` is the seed: the core library that carries every principle, and it works in typecore on its own. tz is the language built to optimize that usage to a point typescript alone could never reach. the design notes are in `tz/DESIGN.md`; the spec is in `tz/TUTORIAL.md`; the journal of decisions is in `tz/UPDATES.md`; the plan of action is in `tz/plan/roadmap.md`. this file is the entry point: how to run it and where the rest lives.
 
 ## a taste
 
@@ -90,6 +90,6 @@ two residues, both wontfix and cosmetic. typescript's grammar reads a `? {}` arm
 
 ## what is not
 
-the lsp and the checks that need a type are next: conditions must be boolean, a `Result` statement must be `void` prefixed, and a `? {}` over a union must be exhaustive. none of them belong in the emitter and one of them cannot be there at all.
+the lsp affordances that need a live editor are next: completions, hover, goto and rename, and they wait on the stable typescript surface. the checks themselves already run headless in `tzd`: conditions must be boolean, a `Result` statement must be `void` prefixed, a `? {}` over a union must be exhaustive, and a library spelling is warned with its tz form. none of them belong in the emitter.
 
 `tz` is self contained on purpose, so it can move to its own repo with a `git mv`. it depends on `tstd` the way any consumer does, through the package name.

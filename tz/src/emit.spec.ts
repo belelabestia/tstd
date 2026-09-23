@@ -5,8 +5,9 @@ import { emit } from './emit.js';
 /*
   what the emitter is
 
-  typezig is a superset of a subset of typescript, with its own standard library and a few
-  constructs, and this turns the constructs back into typescript. it never parses typescript;
+  typezig is a superset of typecore, the subset of typescript that omits the overlap, with
+  its own standard library and a few constructs, and this turns the constructs back into
+  typescript. it never parses typescript;
   it lexes it, finds the constructs at token positions, and rewrites those spans.
 
   the one rule everything else obeys is that a line in makes a line out, so the line number

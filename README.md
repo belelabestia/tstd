@@ -1,6 +1,6 @@
 # type-standard (tstd) - a very minimal standard library for typescript
 
-`tstd` (type-standard) is a tiny library aiming at highlighting and easing the use of a particular set of language features, which can successfully manage 100% of what can be achieved by that language, while completely ignoring some others that at the end of the day are just different fancier names for specific use cases.
+`tstd` (type-standard) is a tiny library aiming at highlighting and easing the use of a particular set of language features, which can successfully manage 100% of what can be achieved by that language, while completely ignoring some others that at the end of the day are just different fancier names for specific use cases. that subset has a name: typecore, the profile of typescript `tstd` is written in and for, and the style rules below are it.
 
 ## principles
 
@@ -48,7 +48,7 @@ the same goes if you feel like there are too many lacking features: feel free to
 
 ## typezig
 
-`tz/` holds the prototype that goes further: a superset of a subset of typescript, with `tstd` as its own standard library and a handful of added constructs, transpiled back to typescript. the entry point is `tz/README.md`.
+`tz/` holds the prototype that goes further: a superset of typecore, the subset of typescript that omits the overlap, with `tstd` as its own standard library and a handful of added constructs, transpiled back to typescript. the entry point is `tz/README.md`.
 
 ## installation
 
@@ -70,7 +70,7 @@ github packages wants a token even for public ones, so you might need a `//npm.p
 
 ## style
 
-to get the most out of `tstd`, you should consider to learn to code with the following style rules; i might provide an eslint ruleset at some point.
+to get the most out of `tstd`, you should consider to learn to code with the following style rules: they are typecore, the subset of typescript `tstd` and tz share, and an eslint ruleset that holds plain typescript to it is planned.
 
 ### abstractions
 

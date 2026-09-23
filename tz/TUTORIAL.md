@@ -1,6 +1,6 @@
 # the typezig tutorial
 
-tz is a superset of a subset of typescript, with its own standard library, out of the box. `tstd` is the seed: the core library that carries every principle, and it works in plain typescript on its own. tz is the language built to optimize that usage to a point typescript alone could never reach, so read the two as one design in two halves. the constructs are language features, not sugar you have to think about.
+tz is a superset of `typecore`, the subset of typescript that omits the overlap, with its own standard library, out of the box. `tstd` is the seed: the core library that carries every principle, and it works in typecore on its own. tz is the language built to optimize that usage to a point typescript alone could never reach, so read the two as one design in two halves. the constructs are language features, not sugar you have to think about.
 
 the closest familiar shape is c#. a language and its library arrive together; `using` is `try`/`finally`, a LINQ query is the method chain. the difference is deprecation by default. c# ships the sugar and the old form as peers and blesses both; tz retires every construct it can replace. what the language owns is banned: `if`, `switch`, `?:`, `??`, the strict-equality spellings, the rest of the table below. what the library owns cannot be banned, because it is the standard library and interop needs it; it is warned by the editor instead. one spelling is the point.
 
@@ -14,7 +14,7 @@ three constructs, three names; this is the whole shape of the language.
 - **arrow capture**: the `=>` form. it captures whatever is returned and stays in scope. an arrow capture is the spell for "produce a value without leaving".
 - **side quest**: the `?` family. a side quest tests a value at the position where it stands and decides between an exit and an arrow capture based on what follows. the `?` is the "quest" of "side quest".
 
-the three forms cover every construct tz adds. anything that is none of them is plain typescript, left as-is.
+the three forms cover every construct tz adds. anything that is none of them is `typecore`, left as-is.
 
 ## what tz takes away
 
