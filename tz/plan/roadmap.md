@@ -50,7 +50,7 @@ material that onboards people and agents. derived from the battle test, not inve
 | 07 | the comment protocol | ownership | done | q3 |
 | 08 | the teaching dissertation | ownership | done | tutorial organization |
 | 09 | the educational rewrite | ownership | done | author voice |
-| 10 | the core subset | ownership | planned | the base dialect |
+| 10 | the core subset | ownership | done | the base dialect |
 | 11 | define robust | battle | planned | q5 |
 | 12 | choose the target | battle | planned | q4 |
 | 13 | the first build | battle | planned | the dev experience |
@@ -92,6 +92,7 @@ where a swept note lands. a question is q-numbered; a routed task is t-numbered.
 ### tasks
 
 - **t1, the arrow deck coverage.** `constructs/arrow.spec.tz` shows the capture after an assignment, a chain and a block; the note wants every use, including after `call` and inside other constructs. a showcase task. unassigned.
+- **t2, the eslint ruleset.** session 10 ruled that typecore ships as an eslint ruleset that holds plain typescript to the profile, reading the same `src/typecore.ts` table the tz ban pass and the smell warning read, so the two engines cannot drift. it is not built in this repo, because adding eslint here is against `AGENTS.md`, and it targets `tstd` consumers, so it is its own package. first step: give the profile a home both tz and the ruleset can reach, most likely the seed. unassigned.
 
 ## dependencies outside our control
 
