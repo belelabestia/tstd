@@ -60,14 +60,17 @@ material that onboards people and agents. derived from the battle test, not inve
 | 17 | the in-file test | battle | planned | q9 |
 | 18 | the `if` ban | truth | planned | the `if` overlap |
 | 19 | the value declaration | truth | planned | the declaration shape |
+| 20 | retire the plan | close | planned | the plan itself |
 
-sessions run in order. 09 is blocked by 08, and 14 and 15 are blocked by 13. everything else is unblocked once 01 lands, because a session that fixes a defect needs the harness that catches the defect.
+sessions run in order. 09 is blocked by 08, and 14 and 15 are blocked by 13. everything else is unblocked once 01 lands, because a session that fixes a defect needs the harness that catches the defect. 20 runs last, after every other session, because it deletes the table it sits in.
 
 16 and 17 join the construct work of phase 2: 16 audits `form` because the author's charge is that its emit is inconsistent, and 17 explores a `test` keyword written in the file it tests. both are audits first, implementations second, so they may split.
 
 18 is the `if` overlap, ruled in session 08: `switch` is already banned, `if` is not, and every `if` is replaceable by a side quest. it lands a ban-list change, an emit spec, and the sweep of the decks and examples that still write `if` (the clamp funnels, the spec guard clauses).
 
 19 is a discussion the author raised after session 09: `form` and `protocol` build values from object literals, so they should not sit where a keyword binds a name. `export form signup { ... }` should read `export const signup = form { ... }`, with no `=>`, and `protocol load { ... }` should follow. it decides the target spelling, the derived name and factory story, `export` and generics, and inventories the recognition cost. it plans no execution and owns the schedule of whatever it authorizes.
+
+20 closes the plan itself. once phase 3 lands, `plan/` has done its job: `UPDATES.md` is the durable journal and git keeps the history, so the roadmap, the sessions and the context files are a working aid whose work is finished. the session relocates what must outlive it, since the comment protocol is a living channel rather than a phase and moves into `AGENTS.md`, sweeps every remaining pointer at `plan/`, and then deletes `plan/roadmap.md`, `plan/sessions/`, `plan/context/` and `plan/session-context-template.md`. the plan records its own retirement, and then it is gone.
 
 ## the ledger
 
@@ -143,4 +146,4 @@ a parked note is not documentation: it names words the language does not own, an
 
 ## what a green close looks like
 
-at the end of phase 0, `npm test` runs the emitted code and a broken showcase fails the build. at the end of phase 1, no prompt is parked in a doc and the tutorial reads in one voice. at the end of phase 2, a real program runs on tz and the friction is written down. at the end of phase 3, a person and an agent can each start from a document and be productive.
+at the end of phase 0, `npm test` runs the emitted code and a broken showcase fails the build. at the end of phase 1, no prompt is parked in a doc and the tutorial reads in one voice. at the end of phase 2, a real program runs on tz and the friction is written down. at the end of phase 3, a person and an agent can each start from a document and be productive. and at the very end, the plan retires itself: session 20 moves the comment protocol into `AGENTS.md`, deletes the roadmap, the sessions and the context files, and leaves the code, the docs and the journal as the whole record.
