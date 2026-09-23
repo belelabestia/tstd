@@ -29,7 +29,7 @@ export const roles: { name: string, role: 'expression' | 'statement' | 'both', d
   { name: '?(cond)',  role: 'both',       deck: 'cond',     handler: 'matcherTail', match: '?(' },
   { name: '?!(cond)', role: 'both',       deck: 'unless',   handler: 'matcherTail', match: '?!(' },
   { name: '? {}',     role: 'both',       deck: 'block',    handler: 'questioning', match: '? {' },
-  { name: 'branch',   role: 'expression', deck: 'branch',   handler: 'construct',   match: 'branch(' },
+  { name: 'branch',   role: 'expression', deck: 'branch',   handler: 'construct',   match: ':idle' },
   { name: 'try',      role: 'statement',  deck: 'try',      handler: 'propagate',   match: 'try' },
   { name: 'scope',    role: 'statement',  deck: 'scope',    handler: 'scoping',     match: 'scope' },
   { name: 'call',     role: 'both',       deck: 'call',     handler: 'calling',     match: 'call' },

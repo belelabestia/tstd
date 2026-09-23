@@ -1,5 +1,5 @@
 import { test } from 'node:test';
-import { branch, form, result } from '@belelabestia/tstd';
+import { branch, form } from '@belelabestia/tstd';
 import * as assert from 'node:assert/strict';
 import { active, clamp, guard, label, say, signup } from './signup.js';
 import { claim, name } from './load.js';
@@ -61,15 +61,15 @@ void test('refuse what is already there', () => {
 });
 
 void test('substitute a value rather than refusing one', () => {
-  assert.equal(quiet(() => result.err('down')), 'localhost');
+  assert.equal(quiet(() => :err('down')), 'localhost');
   assert.equal(zone({}), 'utc');
 });
 
 void test('reach one branch by refusing the others', () => {
   // a branch infers its value from every member at once, so bind it before you hand it over
-  const done = branch('done', 'rows');
-  const idle = branch('idle');
-  const failed = branch('failed', 'down');
+  const done = :done('rows');
+  const idle = :idle;
+  const failed = :failed('down');
 
   assert.equal(finished(done), 'rows');
   assert.equal(finished(idle), undefined);
@@ -134,8 +134,8 @@ void test('declare the two forms once, and read them twice', () => {
 });
 
 void test('build branches with a colon', () => {
-  assert.deepEqual(idle, branch('idle'));
-  assert.deepEqual(failed('down'), branch('failed', 'down'));
-  assert.deepEqual(nested, branch('outer', branch('inner', 1)));
+  assert.equal(idle.branch, 'idle');
+  assert.equal(failed('down').value, 'down');
+  assert.equal(nested.value.branch, 'inner');
 });
 

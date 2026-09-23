@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import * as assert from 'node:assert/strict';
-import { result, type Result } from '@belelabestia/tstd';
+import { branch, type Result } from '@belelabestia/tstd';
 
 /*
   ? {} answers exhaustively
@@ -31,6 +31,9 @@ void test('answer over a value, the first hit winning', () => {
 });
 
 void test('answer over branches, binding what each carries', () => {
-  assert.equal(describe(result.ok('ada')), 'ok: ada');
-  assert.equal(describe(result.err('down')), 'err: down');
+  const ok = :ok('ada');
+  const err = :err('down');
+
+  assert.equal(describe(ok), 'ok: ada');
+  assert.equal(describe(err), 'err: down');
 });

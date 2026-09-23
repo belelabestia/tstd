@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import * as assert from 'node:assert/strict';
-import { result, type Result } from '@belelabestia/tstd';
+import { branch, type Result } from '@belelabestia/tstd';
 
 /*
   ?:tag reads any branch by name, the subject left boxed
@@ -19,10 +19,15 @@ const quote = (out: Result<string, string>) => {
 const keep = (out: Result<string, string>) => out ?:ok => out.value;
 
 void test('refuse a named branch and read the payload with value', () => {
-  assert.equal(quote(result.ok('ada')), 'ada');
-  assert.equal(quote(result.err('down')), undefined);
+  const ok = :ok('ada');
+  const err = :err('down');
+
+  assert.equal(quote(ok), 'ada');
+  assert.equal(quote(err), undefined);
 });
 
 void test('match the branch you want and keep it boxed', () => {
-  assert.equal(keep(result.ok('ada')), 'ada');
+  const ok = :ok('ada');
+
+  assert.equal(keep(ok), 'ada');
 });

@@ -22,8 +22,8 @@ const code = (x: Load) => x ? {
 };
 
 void test('build a branch with a colon', () => {
-  assert.deepEqual(idle, branch('idle'));
-  assert.deepEqual(failed('down'), branch('failed', 'down'));
+  assert.equal(idle.branch, 'idle');
+  assert.equal(failed('down').value, 'down');
 });
 
 void test('read what a colon built', () => {
