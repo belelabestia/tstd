@@ -83,10 +83,12 @@ test('move a type error back onto its tz line', () => {
 });
 
 test('flag a dropped Result without void', () => {
-  // result.ok is a Result, so the drop lands as a warning on its own line
+  // result.ok is a Result, so the drop lands as a warning on its own line;
+  // it is also the library spelling, so the same line carries the smell warning
 
   assert.deepEqual(notes('drop.tz'), [
-    { line: 3, column: 3, level: 'warning', code: 'TZL0003', message: 'a dropped value needs void' }
+    { line: 3, column: 3, level: 'warning', code: 'TZL0003', message: 'a dropped value needs void' },
+    { line: 3, column: 3, level: 'warning', code: 'TZL0005', message: 'result.ok is the library spelling; construct with :ok(...)' }
   ]);
 });
 

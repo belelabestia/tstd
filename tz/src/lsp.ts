@@ -6,6 +6,7 @@ import { call, is } from '@belelabestia/tstd';
 import { emit, Anchor } from './emit.js';
 import { openCheck } from './check.js';
 import { map, Source } from './map.js';
+import { smells } from './smell.js';
 
 /** a diagnostic on a tz line, with the level it carries */
 export type Note = { line: number, column: number, level: 'error' | 'warning', code: string, message: string; };
@@ -60,11 +61,13 @@ export const session = () => {
     const reports: { origin: string, notes: Note[] }[] = [];
     const sources: Source[] = [];
     const mirrored: string[] = [];
+    const spelled: Record<string, Note[]> = {};
 
     for (const origin of Object.keys(texts)) {
       const no = refused[origin];
+      spelled[origin] = smells(texts[origin]);
       if (!is.none(no)) {
-        reports.push({ origin, notes: [{ line: no.line + 1, column: no.column + 1, level: 'error', code: 'TZ0001', message: no.message }] });
+        reports.push({ origin, notes: [{ line: no.line + 1, column: no.column + 1, level: 'error', code: 'TZ0001', message: no.message }, ...spelled[origin]] });
         continue;
       }
 
@@ -119,7 +122,7 @@ export const session = () => {
         const relative = path.relative(process.cwd(), source.origin).split(path.sep).join('/');
         const absolute = path.resolve(source.origin);
         const notes = found[relative] ?? found[source.origin] ?? found[absolute] ?? [];
-        reports.push({ origin: source.origin, notes: [...notes, ...(typed[source.origin] ?? [])] });
+        reports.push({ origin: source.origin, notes: [...notes, ...(typed[source.origin] ?? []), ...(spelled[source.origin] ?? [])] });
       }
     }
 
