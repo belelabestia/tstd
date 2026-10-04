@@ -1,4 +1,4 @@
-# 20 retire the plan
+# 21 retire the plan
 
 phase: close
 status: planned
@@ -25,7 +25,7 @@ one thing must outlive the plan. the comment protocol is a living channel rather
 
 ## out of scope
 
-- any language work, and any session from 01 to 19.
+- any language work, and any session from 01 to 20.
 - changing the protocol's content beyond moving it.
 
 ## inputs
@@ -53,8 +53,8 @@ one thing must outlive the plan. the comment protocol is a living channel rather
 
 ## starting prompt
 
-> read `../../AGENTS.md` and `../../STYLE-KB.md` first, then the roadmap and this file. copy `session-context-template.md` to `context/20-retire-the-plan.md`. the plan has done its job and should not outlive its work. move the comment protocol into `AGENTS.md` (it is a living channel, not a phase), sweep every pointer at `plan/`, confirm every session is done, then delete `plan/roadmap.md`, `plan/sessions/`, `plan/context/` and `plan/session-context-template.md`, and write the closing entry in `UPDATES.md`. do not commit until the author reviews.
+> read `../../AGENTS.md` and `../../STYLE-KB.md` first, then the roadmap and this file. copy `session-context-template.md` to `context/21-retire-the-plan.md`. the plan has done its job and should not outlive its work. move the comment protocol into `AGENTS.md` (it is a living channel, not a phase), sweep every pointer at `plan/`, confirm every session is done, then delete `plan/roadmap.md`, `plan/sessions/`, `plan/context/` and `plan/session-context-template.md`, and write the closing entry in `UPDATES.md`. do not commit until the author reviews.
 
 ## context
 
-copy `session-context-template.md` to `context/20-retire-the-plan.md` before starting.
+copy `session-context-template.md` to `context/21-retire-the-plan.md` before starting.

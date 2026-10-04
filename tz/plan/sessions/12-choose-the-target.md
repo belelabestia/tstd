@@ -32,7 +32,7 @@ the target should be small enough to finish a first version, and real enough tha
 
 ## out of scope
 
-- building it (session 13).
+- building it (session 14).
 
 ## inputs
 

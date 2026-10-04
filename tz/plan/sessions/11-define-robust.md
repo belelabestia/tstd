@@ -1,4 +1,4 @@
-# 10 define robust
+# 11 define robust
 
 phase: battle
 status: planned
@@ -33,7 +33,7 @@ it also answers q5: the measurable meaning of "stable enough to split".
 ## out of scope
 
 - choosing the program (session 12).
-- building it (session 13).
+- building it (session 14).
 
 ## inputs
 
@@ -60,4 +60,4 @@ it also answers q5: the measurable meaning of "stable enough to split".
 
 ## context
 
-copy `../session-context-template.md` to `../context/10-define-robust.md` before starting.
+copy `../session-context-template.md` to `../context/11-define-robust.md` before starting.
