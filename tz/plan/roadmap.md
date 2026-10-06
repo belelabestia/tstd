@@ -52,7 +52,7 @@ material that onboards people and agents. the bootstrap (13) lands before the bu
 | 09 | the educational rewrite | ownership | done | author voice |
 | 10 | the core subset | ownership | done | the base dialect |
 | 11 | define robust | battle | done | q5 |
-| 12 | choose the target | battle | planned | q4 |
+| 12 | choose the target | battle | done | q4 |
 | 13 | the agent bootstrap | onboarding | planned | the agent starting point |
 | 14 | the first build | battle | planned | the dev experience |
 | 15 | onboard people | onboarding | planned | q6 |
@@ -80,7 +80,7 @@ where a swept note lands. a question is q-numbered; a routed task is t-numbered.
 - **q1, survivor binding.** after `x ?|(:idle, :loading, :failed) return;`, does a later `x` name the box or the payload? the docs say a coloned test keeps the box; the showcase spec expects the payload. session 02.
 - **q2, `TZL0003`.** type the dropped-value check now, or withdraw it until the stable typescript surface lands? session 04.
 - **q3, forward-work home.** where does planned work live? resolved in session 07: this file is the home, and the comment protocol feeds it. every parked note is a capture that a sweep routes here.
-- **q4, the target.** what is the first honest program tz must carry? session 12.
+- **q4, the target.** what is the first honest program tz must carry? resolved in session 12: the personal site, a monolith web service written in tz, files first. the brief is in `plan/context/12-choose-the-target.md`.
 - **q5, stable enough to split.** `../DESIGN.md` says tz moves to its own repo with a `git mv` once the prototype is stable. what does stable mean, in measurable terms? resolved in session 11: three conditions, all checkable. (1) the dependency is a version, not a path: tz reaches `tstd` through the package entry alone, with no `paths` into `../src` and no `file:..`. (2) a fresh clone of `tz/` alone, against a tagged `tstd` from the registry, passes `npm test` with no change to either side. (3) the ban table, the role list and the emitted shapes hold unchanged across one full `tstd` release while the battle program is built. the standard itself is in `plan/context/11-define-robust.md`.
 - **q6, publishing.** `@belelabestia/tz` is private at `0.0.0`. when and how does it become a package someone can install? session 15.
 - **q7, the `?!` tail.** `cond ?! err 'x'` emitted an unreWritten `err`, while `cond ? err` and `cond ?== false err` rewrote it. found in session 05. resolved in session 06: the tail rewrite was never the hole; the glued `!` of a bare `?!` ate the statement start in `scan.ts`, so the exit pass that rewrites the tail never saw it. making the `!` transparent to the start fixes it, and the working forms stay byte-identical.
