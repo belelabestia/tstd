@@ -1,6 +1,6 @@
 # tz - the typezig prototype
 
-tz is a superset of `typecore`, the subset of typescript that omits the overlap, with its own standard library, out of the box. `tstd` is the seed: the core library that carries every principle, and it works in typecore on its own. tz is the language built to optimize that usage to a point typescript alone could never reach. the design notes are in `tz/DESIGN.md`; the spec is in `tz/TUTORIAL.md`; the journal of decisions is in `tz/UPDATES.md`; the plan of action is in `tz/plan/roadmap.md`. this file is the entry point: how to run it and where the rest lives.
+tz is a superset of `typecore`, the subset of typescript that omits the overlap, with its own standard library, out of the box. `tstd` is the seed: the core library that carries every principle, and it works in typecore on its own. tz is the language built to optimize that usage to a point typescript alone could never reach. the design notes are in `tz/DESIGN.md`; the spec is in `tz/TUTORIAL.md`; the journal of decisions is in `tz/UPDATES.md`; the plan of action is in `tz/plan/roadmap.md`. this file is the entry point: how to run it and where the rest lives. if you are an agent, read `AGENTS.md` first: it is the contract for writing tz.
 
 ## a taste
 

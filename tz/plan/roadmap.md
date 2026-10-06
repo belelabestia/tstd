@@ -53,7 +53,7 @@ material that onboards people and agents. the bootstrap (13) lands before the bu
 | 10 | the core subset | ownership | done | the base dialect |
 | 11 | define robust | battle | done | q5 |
 | 12 | choose the target | battle | done | q4 |
-| 13 | the agent bootstrap | onboarding | planned | the agent starting point |
+| 13 | the agent bootstrap | onboarding | done | the agent starting point |
 | 14 | the first build | battle | planned | the dev experience |
 | 15 | onboard people | onboarding | planned | q6 |
 | 16 | onboard agents | onboarding | planned | the agent contract |

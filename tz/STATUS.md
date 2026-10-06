@@ -4,7 +4,7 @@ a superset of typecore, the subset of typescript that omits the overlap, with ts
 
 | sessions closed | phases closed | constructs | tests green |
 | --- | --- | --- | --- |
-| **12 / 21** | **2 / 4** | **22 decks** | **166** |
+| **13 / 21** | **2 / 4** | **22 decks** | **166** |
 
 ## progress
 
@@ -12,7 +12,7 @@ a superset of typecore, the subset of typescript that omits the overlap, with ts
 truth      ████████░░  6 / 8   phase 0 closed
 ownership  ██████████  4 / 4   done
 battle     ████░░░░░░  2 / 5   underway
-onboarding ░░░░░░░░░░  0 / 3   starts before the build
+onboarding ███░░░░░░░  1 / 3   underway
 close      ░░░░░░░░░░  0 / 1   last
 ```
 
@@ -30,12 +30,12 @@ close      ░░░░░░░░░░  0 / 1   last
 
 | # | session | the job |
 | --- | --- | --- |
-| 13 | bootstrap the agent | the contract an agent needs to build in tz |
 | 14 | build it | the personal site, its friction decides the next constructs |
 | 15 | onboard people | a person starts from a document |
 | 16 | onboard agents | the contract is tested and hardened |
 | 17 | the form audit | whether form's line is arbitrary |
+| 18 | the in-file test | a test keyword written in the file it tests |
 
 ## the ask
 
-the target is chosen: the personal site, a monolith web service written in tz, files first. the next milestone is the agent bootstrap (13), then one whole program running on tz, with the friction written down.
+the target is chosen and the agent contract is written. the next milestone is the build (14): one whole program running on tz, the personal site, with the friction written down.
