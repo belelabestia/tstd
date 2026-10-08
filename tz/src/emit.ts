@@ -1648,7 +1648,7 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
   };
 
   const declining = (i: number, init: number, at: number, last: number, land?: Landing) => {
-    const tails = ['return', 'ok', 'err', 'break', 'continue'];
+    const tails = ['return', 'ok', 'err', 'async', 'break', 'continue'];
 
     if (matcher[at] === at) {
       const nx = after[at];
@@ -1735,7 +1735,6 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
 
         const ahead = tokens[answer].text;
         if (tails.includes(ahead)) return no(answer, 'a => answers with a value; to decline, use an exit');
-        if (ahead === 'async') return no(answer, 'async states a promise body, not a matcher tail');
 
         if (tokens[answer].text === '{') {
           const close = twin[answer];
@@ -2168,7 +2167,6 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
         return undefined;
       }
 
-      if (tail === 'async') return no(cursor, 'async states a promise body, not a matcher tail');
       if (tail === 'else') return no(cursor, 'else chains a => answer; use ?true ... else ... for statements');
       if (tail === ':') return no(cursor, '?: is refused; answer with ? => ... else ...');
       if (tail === ';' || tail === ',' || closes.includes(tail)) return no(cursor, 'a matcher needs a tail: an exit, an expression, or a block');
@@ -2467,11 +2465,10 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
 
     for (const c of conds) if (bound !== '' && uses(c.from, c.to, bound) > 0) return no(c.from, 'a binding belongs to the tail; narrow the subject in the condition instead');
 
-    const tails = ['return', 'ok', 'err', 'break', 'continue'];
+    const tails = ['return', 'ok', 'err', 'async', 'break', 'continue'];
 
     if (cursor < 0 || tokens[cursor].text !== '=>') {
       if (cursor >= 0 && tails.includes(tokens[cursor].text)) return no(cursor, 'an arrow body answers; decline in a block');
-      if (cursor >= 0 && tokens[cursor].text === 'async') return no(cursor, 'async states a promise body, not a matcher tail');
       if (cursor >= 0 && tokens[cursor].text === 'else') return no(cursor, 'else chains a => answer');
       if (cursor >= 0 && tokens[cursor].text === ':') return no(cursor, '?: is refused; answer with ? => ... else ...');
       return no(cursor < 0 ? tip : cursor, 'an arrow body answers with =>');
@@ -2796,7 +2793,7 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
 
     for (const c of conds) if (bound !== '' && uses(c.from, c.to, bound) > 0) return no(c.from, 'a binding belongs to the tail; narrow the subject in the condition instead');
 
-    const tails = ['return', 'ok', 'err', 'break', 'continue'];
+    const tails = ['return', 'ok', 'err', 'async', 'break', 'continue'];
 
     if (cursor < 0) return no(tip, 'a matcher needs a tail: an exit, =>, or a block');
 
@@ -2849,7 +2846,6 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
 
       const ahead = tokens[answer].text;
       if (tails.includes(ahead)) return no(answer, 'a => answers with a value; to decline, use an exit');
-      if (ahead === 'async') return no(answer, 'async states a promise body, not a matcher tail');
 
       const ending = (j: number) => {
         while (j < tokens.length) {
@@ -3027,7 +3023,6 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
       return undefined;
     }
 
-    if (tail === 'async') return no(cursor, 'async states a promise body, not a matcher tail');
     if (tail === 'else') return no(cursor, 'else chains a => answer; juxtapose blocks');
     if (tail === ':') return no(cursor, '?: is refused; answer with ? => ... else ...');
     if (tail === ';' || tail === ',' || closes.includes(tail)) return no(cursor, 'a matcher needs a tail: an exit, =>, or a block');

@@ -957,6 +957,19 @@ test('refuse the lie the discipline check exists for', () => {
   assert.match(refused('const f = (x: number) => {\n  x ?> 0 err \'no\';\n  return x;\n};'), /mixes them/);
 });
 
+test('answer a matcher with an async exit', () => {
+  // async is an exit, so it is a matcher tail like return, ok and err
+
+  assert.match(
+    out('const f = (x: Result<string, string>) => {\n  const v = x ?err async 1;\n\n  async v;\n};'),
+    /if \(x\.branch === 'err'\) return Promise\.resolve\(1\); const v = x\.value;/
+  );
+
+  // the tail marks the body a promise, so the discipline check still refuses a mix
+
+  assert.match(refused('const f = (x: boolean) => {\n  x ? async 1;\n\n  ok \'done\';\n};'), /mixes them/);
+});
+
 test('refuse an assignment used as an expression', () => {
   // an assignment is a statement, so two in one or one read as a value is refused
 

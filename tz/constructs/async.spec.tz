@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import * as assert from 'node:assert/strict';
+import { result, type Result } from '@belelabestia/tstd';
 
 /*
   async states a promise that never suspends
@@ -7,6 +8,8 @@ import * as assert from 'node:assert/strict';
   an await in a body infers the promise; when there is none to infer from,
   `async x` says it anyway, emitting `return Promise.resolve(x)`. one
   body exits with one discipline, so async never mixes with return.
+  async is an exit like the rest, so it is a matcher tail too: `x ?err async d`
+  answers the err branch with a promise and yields the ok payload.
 */
 
 const ready = (x: string) => {
@@ -15,4 +18,23 @@ const ready = (x: string) => {
 
 void test('state a promise explicitly', () => {
   assert.equal(await ready('hi'), 'hi');
+});
+
+const fallback = (x: Result<string, string>) => {
+  const v = x ?err async 'fallback';
+
+  async v;
+};
+
+const passing = () => {
+  ok 'kept';
+};
+
+const failing = () => {
+  err 'nope';
+};
+
+void test('answer an err with an async exit', () => {
+  assert.equal(await fallback(failing()), 'fallback');
+  assert.equal(await fallback(passing()), 'kept');
 });

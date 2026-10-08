@@ -18,7 +18,7 @@ the working rules for the repo are in `../../../AGENTS.md`; this file is the tz 
 
 the syntax is built from three forms; everything else tz adds is a construct that bonds to a `tstd` module.
 
-- **exit**: leaving the scope. `return`, `err`, `ok`, `break`, `continue`. a body answers one way: `return`, or the fallible `ok`/`err`, or `async`; mixing those is refused (`ok` and `err` are one discipline and sit together).
+- **exit**: leaving the scope. `return`, `err`, `ok`, `async`, `break`, `continue`. `async x` emits `return Promise.resolve(x)`, and every exit is a matcher tail. a body answers one way: `return`, or the fallible `ok`/`err`, or `async`; mixing those is refused (`ok` and `err` are one discipline and sit together).
 - **arrow capture**: the `=>` form. it captures whatever is returned and stays in scope. it replaces `??` and `?:`.
 - **side quest**: the `?` family. it tests a value where it stands and decides between an exit and an arrow capture by what follows it. it replaces the early-return `if`, the two-branch `if`/`else`, the ternary and the `switch`.
 

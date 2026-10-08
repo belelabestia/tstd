@@ -4,12 +4,12 @@ a superset of typecore, the subset of typescript that omits the overlap, with ts
 
 | sessions closed | phases closed | constructs | tests green |
 | --- | --- | --- | --- |
-| **13 / 22** | **2 / 4** | **22 decks** | **166** |
+| **14 / 22** | **2 / 4** | **22 decks** | **168** |
 
 ## progress
 
 ```
-truth      ███████░░░  6 / 9   phase 0 closed
+truth      ████████░░  7 / 9   phase 0 closed
 ownership  ██████████  4 / 4   done
 battle     ████░░░░░░  2 / 5   underway
 onboarding ███░░░░░░░  1 / 3   underway
@@ -30,12 +30,12 @@ close      ░░░░░░░░░░  0 / 1   last
 
 | # | session | the job |
 | --- | --- | --- |
-| 14 | the async tail | `async` is an exit, so it is a matcher tail |
 | 15 | build it | the personal site, its friction decides the next constructs |
 | 16 | onboard people | a person starts from a document |
 | 17 | onboard agents | the contract is tested and hardened |
 | 18 | the form audit | whether form's line is arbitrary |
+| 19 | the in-file test | a test keyword written in the file it tests |
 
 ## the ask
 
-the target is chosen and the agent contract is written. the next session fixes the exit family (14), then the build (15): one whole program running on tz, the personal site, with the friction written down.
+the target is chosen, the agent contract is written, and the exit family is fixed (14). the next session is the build (15): one whole program running on tz, the personal site, with the friction written down.

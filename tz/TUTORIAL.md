@@ -118,7 +118,7 @@ a group head shares one tail across its halves, and an explicit `(cond)` arm wit
 
 ### one rule decides exit and arrow capture
 
-everything hangs on what follows a side quest. an exit keyword (`return`, `ok`, `err`, `break`, `continue`) leaves the scope, carrying a value along if one is given; `=>` arrow-captures a value, and always needs a land; a bare `{}` runs inline, exiting when it exits; `else` names the miss branch of an arrow capture. a bare value after a side quest captures nothing: expressions capture with `=>`, or they are refused.
+everything hangs on what follows a side quest. an exit keyword (`return`, `ok`, `err`, `async`, `break`, `continue`) leaves the scope, carrying a value along if one is given; `=>` arrow-captures a value, and always needs a land; a bare `{}` runs inline, exiting when it exits; `else` names the miss branch of an arrow capture. a bare value after a side quest captures nothing: expressions capture with `=>`, or they are refused.
 
 ```tz
 const user = db.find(id) ?none return;        // exits the function
