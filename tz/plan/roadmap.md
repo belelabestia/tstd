@@ -54,24 +54,27 @@ material that onboards people and agents. the bootstrap (13) lands before the bu
 | 11 | define robust | battle | done | q5 |
 | 12 | choose the target | battle | done | q4 |
 | 13 | the agent bootstrap | onboarding | done | the agent starting point |
-| 14 | the first build | battle | planned | the dev experience |
-| 15 | onboard people | onboarding | planned | q6 |
-| 16 | onboard agents | onboarding | planned | the agent contract |
-| 17 | the form audit | battle | planned | q8 |
-| 18 | the in-file test | battle | planned | q9 |
-| 19 | the `if` ban | truth | planned | the `if` overlap |
-| 20 | the value declaration | truth | planned | the declaration shape |
-| 21 | retire the plan | close | planned | the plan itself |
+| 14 | the async tail | truth | planned | the async exit as a matcher tail |
+| 15 | the first build | battle | planned | the dev experience |
+| 16 | onboard people | onboarding | planned | q6 |
+| 17 | onboard agents | onboarding | planned | the agent contract |
+| 18 | the form audit | battle | planned | q8 |
+| 19 | the in-file test | battle | planned | q9 |
+| 20 | the `if` ban | truth | planned | the `if` overlap |
+| 21 | the value declaration | truth | planned | the declaration shape |
+| 22 | retire the plan | close | planned | the plan itself |
 
-sessions run in order. 09 is blocked by 08; 15 and 16 are blocked by 14; and 13 precedes 14 because the agent is a builder. everything else is unblocked once 01 lands, because a session that fixes a defect needs the harness that catches the defect. 21 runs last, after every other session, because it deletes the table it sits in.
+sessions run in order. 09 is blocked by 08; 16 and 17 are blocked by 15; and 13 precedes 14, which precedes 15: the agent is a builder and the language is fixed before the build. everything else is unblocked once 01 lands, because a session that fixes a defect needs the harness that catches the defect. 22 runs last, after every other session, because it deletes the table it sits in.
 
-17 and 18 join the construct work of phase 2: 17 audits `form` because the author's charge is that its emit is inconsistent, and 18 explores a `test` keyword written in the file it tests. both are audits first, implementations second, so they may split.
+14 fixes the exit family before the build. `async x` emits `return Promise.resolve(x)`, so `async` is an exit, and every exit is a matcher tail; the emitter refuses `async` as a tail in five places and omits it from three tail lists, so `x ?err async 1` is refused while `x ?err return 1` compiles. the session adds `async` to the tails, removes the matcher-tail guards, keeps the guards against `=> async` and an exit inside an arrow body, and corrects the tutorial and design.
 
-19 is the `if` overlap, ruled in session 08: `switch` is already banned, `if` is not, and every `if` is replaceable by a side quest. it lands a ban-list change, an emit spec, and the sweep of the decks and examples that still write `if` (the clamp funnels, the spec guard clauses).
+18 and 19 join the construct work of phase 2: 18 audits `form` because the author's charge is that its emit is inconsistent, and 19 explores a `test` keyword written in the file it tests. both are audits first, implementations second, so they may split.
 
-20 is a discussion the author raised after session 09: `form` and `protocol` build values from object literals, so they should not sit where a keyword binds a name. `export form signup { ... }` should read `export const signup = form { ... }`, with no `=>`, and `protocol load { ... }` should follow. it decides the target spelling, the derived name and factory story, `export` and generics, and inventories the recognition cost. it plans no execution and owns the schedule of whatever it authorizes.
+20 is the `if` overlap, ruled in session 08: `switch` is already banned, `if` is not, and every `if` is replaceable by a side quest. it lands a ban-list change, an emit spec, and the sweep of the decks and examples that still write `if` (the clamp funnels, the spec guard clauses).
 
-21 closes the plan itself. once phase 3 lands, `plan/` has done its job: `UPDATES.md` is the durable journal and git keeps the history, so the roadmap, the sessions and the context files are a working aid whose work is finished. the session relocates what must outlive it, since the comment protocol is a living channel rather than a phase and moves into `AGENTS.md`, sweeps every remaining pointer at `plan/`, and then deletes `plan/roadmap.md`, `plan/sessions/`, `plan/context/` and `plan/session-context-template.md`. the plan records its own retirement, and then it is gone.
+21 is a discussion the author raised after session 09: `form` and `protocol` build values from object literals, so they should not sit where a keyword binds a name. `export form signup { ... }` should read `export const signup = form { ... }`, with no `=>`, and `protocol load { ... }` should follow. it decides the target spelling, the derived name and factory story, `export` and generics, and inventories the recognition cost. it plans no execution and owns the schedule of whatever it authorizes.
+
+22 closes the plan itself. once phase 3 lands, `plan/` has done its job: `UPDATES.md` is the durable journal and git keeps the history, so the roadmap, the sessions and the context files are a working aid whose work is finished. the session relocates what must outlive it, since the comment protocol is a living channel rather than a phase and moves into `AGENTS.md`, sweeps every remaining pointer at `plan/`, and then deletes `plan/roadmap.md`, `plan/sessions/`, `plan/context/` and `plan/session-context-template.md`. the plan records its own retirement, and then it is gone.
 
 ## the ledger
 
@@ -82,13 +85,13 @@ where a swept note lands. a question is q-numbered; a routed task is t-numbered.
 - **q3, forward-work home.** where does planned work live? resolved in session 07: this file is the home, and the comment protocol feeds it. every parked note is a capture that a sweep routes here.
 - **q4, the target.** what is the first honest program tz must carry? resolved in session 12: the personal site, a monolith web service written in tz, files first. the brief is in `plan/context/12-choose-the-target.md`.
 - **q5, stable enough to split.** `../DESIGN.md` says tz moves to its own repo with a `git mv` once the prototype is stable. what does stable mean, in measurable terms? resolved in session 11: three conditions, all checkable. (1) the dependency is a version, not a path: tz reaches `tstd` through the package entry alone, with no `paths` into `../src` and no `file:..`. (2) a fresh clone of `tz/` alone, against a tagged `tstd` from the registry, passes `npm test` with no change to either side. (3) the ban table, the role list and the emitted shapes hold unchanged across one full `tstd` release while the battle program is built. the standard itself is in `plan/context/11-define-robust.md`.
-- **q6, publishing.** `@belelabestia/tz` is private at `0.0.0`. when and how does it become a package someone can install? session 15.
+- **q6, publishing.** `@belelabestia/tz` is private at `0.0.0`. when and how does it become a package someone can install? session 16.
 - **q7, the `?!` tail.** `cond ?! err 'x'` emitted an unreWritten `err`, while `cond ? err` and `cond ?== false err` rewrote it. found in session 05. resolved in session 06: the tail rewrite was never the hole; the glued `!` of a bare `?!` ate the statement start in `scan.ts`, so the exit pass that rewrites the tail never saw it. making the `!` transparent to the start fixes it, and the working forms stay byte-identical.
-- **q8, the form line.** some of `form` is emitted, some is written by hand, and the author charges that the line is arbitrary. where does it belong? session 17, with a `protocol` note if the audit finds an adjacent inconsistency (that would be q12).
-- **q9, the in-file test.** a `test` keyword like zig's, in the file it tests, reaching module internals. feasible, and under what house-rule amendment? session 18.
+- **q8, the form line.** some of `form` is emitted, some is written by hand, and the author charges that the line is arbitrary. where does it belong? session 18, with a `protocol` note if the audit finds an adjacent inconsistency (that would be q12).
+- **q9, the in-file test.** a `test` keyword like zig's, in the file it tests, reaching module internals. feasible, and under what house-rule amendment? session 19.
 - **q10, the deck `declare`.** `declare` inside a deck produces a false `TZL0002`, while `const` does not; found in session 05 while writing the `?literal` deck, which used `const` instead. a checker false positive over a legitimate declaration. unassigned.
 - **q11, the tail comment.** a doc comment inside a `?` tail (`x ? //c\n log(x);`) loses the comment and emits a semicolon; found while drafting `not.spec.tz` and avoided. an emit defect. unassigned.
-- **q12, the protocol note.** reserved for a `protocol` inconsistency if session 17's audit uncovers one adjacent to the `form` line.
+- **q12, the protocol note.** reserved for a `protocol` inconsistency if session 18's audit uncovers one adjacent to the `form` line.
 - **q13, the useless subject.** in `constructs/cond.spec.tz`, `n ?(n % 2 == 0) => 'even' else => 'odd'` answers both sides, so the subject `n` is never yielded and does nothing. the author wants the shape refused. a proposed refusal, not a construct. unassigned.
 - **q14, effect against exit and value.** in `examples/signup.tz`, the guard note asks for a strict structural definition that excludes an effect from a union of effect, exit and value, and whether the transpiler and language already hold that principle, should hold it, or could hold it. a design question. unassigned.
 - **q15, the `? {}` subject type.** in `constructs/block.spec.tz`, the note says the matched subject of a `? {}` over a `Result` should read as a `Branch<...>`. whether the emit and the editor should name it so. a typing question about the emit. unassigned.
@@ -106,7 +109,7 @@ where a swept note lands. a question is q-numbered; a routed task is t-numbered.
 
 these are settled as out of scope until the author raises them:
 
-- new language constructs. the battle test produces candidates; it does not spend them here. this does not cover the two the author raised and scheduled: `test` (q9, session 18) and the `form` audit (q8, session 17).
+- new language constructs. the battle test produces candidates; it does not spend them here. this does not cover the two the author raised and scheduled: `test` (q9, session 19) and the `form` audit (q8, session 18).
 - a linter, a formatter, a bundler, another test framework.
 - the editor affordance set above, beyond what already ships in `tzd`.
 
@@ -147,4 +150,4 @@ a parked note is not documentation: it names words the language does not own, an
 
 ## what a green close looks like
 
-at the end of phase 0, `npm test` runs the emitted code and a broken showcase fails the build. at the end of phase 1, no prompt is parked in a doc and the tutorial reads in one voice. at the end of phase 2, a real program runs on tz and the friction is written down. at the end of phase 3, a person and an agent can each start from a document and be productive. and at the very end, the plan retires itself: session 21 moves the comment protocol into `AGENTS.md`, deletes the roadmap, the sessions and the context files, and leaves the code, the docs and the journal as the whole record.
+at the end of phase 0, `npm test` runs the emitted code and a broken showcase fails the build. at the end of phase 1, no prompt is parked in a doc and the tutorial reads in one voice. at the end of phase 2, a real program runs on tz and the friction is written down. at the end of phase 3, a person and an agent can each start from a document and be productive. and at the very end, the plan retires itself: session 22 moves the comment protocol into `AGENTS.md`, deletes the roadmap, the sessions and the context files, and leaves the code, the docs and the journal as the whole record.

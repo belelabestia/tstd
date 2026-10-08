@@ -32,7 +32,7 @@ the refused **words** are the table in `src/typecore.ts`: `class`, `function`, `
 
 the refused **punctuation and shapes** are in `src/ban.ts`: `===`/`!==`, `??`, a comparison against `null`/`undefined`, an assignment used as an expression, `?:` (write a side quest), the gluing mistakes around `?`, a typescript `try {`, a bare `return;`, the `async` modifier, `Promise.reject`, `get`/`set`, and the method shorthand, which hides a `this` its type never states.
 
-every refusal's diagnostic names the replacement. a spelling the library owns rather than the language (`protocol.init`, `result.ok`, `scope.sync`, `call.sync`, `branch`, `make`) is warned by the editor, not banned, because interop needs it. one documented ban is not enforced yet: a statement `else`, which is the `if` overlap (session 19).
+every refusal's diagnostic names the replacement. a spelling the library owns rather than the language (`protocol.init`, `result.ok`, `scope.sync`, `call.sync`, `branch`, `make`) is warned by the editor, not banned, because interop needs it. one documented ban is not enforced yet: a statement `else`, which is the `if` overlap (session 20).
 
 ## running it
 

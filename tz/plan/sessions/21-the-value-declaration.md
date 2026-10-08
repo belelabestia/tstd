@@ -1,4 +1,4 @@
-# 20 the value declaration
+# 21 the value declaration
 
 phase: truth
 status: planned
@@ -17,7 +17,7 @@ export const signup = form {
 
 no `=>`, because `{` here opens an object literal, not a scope. the same objection lands on `protocol`, which today reads `protocol load { ... }` and should read `const load = protocol { ... }`, or however the discussion settles the shape.
 
-this is a shape complaint, not a feature: the construct is right, the position is wrong. it is the same family as the `if` overlap (session 19) and the naming rules: one spelling per idea, and the spelling should say what the thing is.
+this is a shape complaint, not a feature: the construct is right, the position is wrong. it is the same family as the `if` overlap (session 20) and the naming rules: one spelling per idea, and the spelling should say what the thing is.
 
 ## the questions
 
@@ -26,7 +26,7 @@ this is a shape complaint, not a feature: the construct is right, the position i
 3. **generics.** `export protocol outcome<T, E> { ... }` has no obvious home in `const outcome = protocol<T, E> { ... }`. settle the generic spelling, or the reason it cannot ride.
 4. **what `export` exports.** `export const signup = form { ... }` exports the value; the derived type must travel too. is one `export` enough, or does the type need its own line.
 5. **the recognition cost.** the lexer finds `scope` by lookahead and `protocol` by `protocol`, then a name, then `{`. `const x = protocol {` is a different follow set, and `form` and `protocol` become expression heads rather than declaration heads. inventory what moves: `scan.ts`, `emit.ts`, the `roles` list, `ban.ts`, the decks, the coherence claims, the docs.
-6. **the relation to sessions 10 and 17.** session 10 names the base and touches `protocol` and `form` as leaky constructs; session 17 audits `form`'s emit. does this discussion gate them, feed them, or run after? this session decides, per the author's instruction that it owns its own schedule.
+6. **the relation to sessions 10 and 18.** session 10 names the base and touches `protocol` and `form` as leaky constructs; session 18 audits `form`'s emit. does this discussion gate them, feed them, or run after? this session decides, per the author's instruction that it owns its own schedule.
 
 ## what this session must produce
 
@@ -53,7 +53,7 @@ this is a shape complaint, not a feature: the construct is right, the position i
 - `../DESIGN.md`, the constructs and the recognition notes under `## the new words`.
 - `../src/emit.ts` (`forming`, `protocoling`, `construct`), `../src/scan.ts` (the lookaheads), `../src/ban.ts`.
 - `../constructs/form.spec.tz` and `../constructs/protocol.spec.tz`.
-- session 10's design (the base dialect) and session 17's charge (the form line).
+- session 10's design (the base dialect) and session 18's charge (the form line).
 
 ## steps
 
@@ -71,8 +71,8 @@ this is a shape complaint, not a feature: the construct is right, the position i
 
 ## starting prompt
 
-> read `../../AGENTS.md` and `../../STYLE-KB.md` first, then the roadmap and this file. copy `session-context-template.md` to `context/20-the-value-declaration.md`. the author objects to `export form signup { ... }` and `protocol load { ... }`: `form` and `protocol` sit where `function`/`class` keywords sit, but they build values from object literals, so the shape should be `export const signup = form { ... }` with no `=>` (a `{` here is an object literal, not a scope). discuss the target spelling for both, the derived name and factory story, `export`, generics, and the recognition cost, then take the author's ruling. this is a discussion: change nothing, and let this session own the schedule of the execution it authorizes.
+> read `../../AGENTS.md` and `../../STYLE-KB.md` first, then the roadmap and this file. copy `session-context-template.md` to `context/21-the-value-declaration.md`. the author objects to `export form signup { ... }` and `protocol load { ... }`: `form` and `protocol` sit where `function`/`class` keywords sit, but they build values from object literals, so the shape should be `export const signup = form { ... }` with no `=>` (a `{` here is an object literal, not a scope). discuss the target spelling for both, the derived name and factory story, `export`, generics, and the recognition cost, then take the author's ruling. this is a discussion: change nothing, and let this session own the schedule of the execution it authorizes.
 
 ## context
 
-copy `session-context-template.md` to `context/20-the-value-declaration.md` before starting.
+copy `session-context-template.md` to `context/21-the-value-declaration.md` before starting.

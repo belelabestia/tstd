@@ -1,4 +1,4 @@
-# 14 the first build
+# 15 the first build
 
 phase: battle
 status: planned
@@ -22,7 +22,7 @@ the author wants to feel how tz affects building software, which is the one thin
 ## out of scope
 
 - fixing the language mid-build. if a defect blocks the build, it is filed and the session routes around it, unless the author rules otherwise.
-- onboarding material. that is sessions 15 and 16, extracted after the build.
+- onboarding material. that is sessions 16 and 17, extracted after the build.
 
 ## inputs
 
@@ -46,8 +46,8 @@ the author wants to feel how tz affects building software, which is the one thin
 
 ## starting prompt
 
-> read `../../AGENTS.md` and `../../STYLE-KB.md` first, then the roadmap, the session 11 standard, the session 12 brief, and this file. copy `session-context-template.md` to `context/14-the-first-build.md`. build the first version of the target in tz. keep a friction journal with exact code for every place the language fought back, and a ranked, evidenced list of candidate changes. do not fix the language mid-build; file and route around blockers. measure the session 11 criteria and report them. do not commit until the author reviews.
+> read `../../AGENTS.md` and `../../STYLE-KB.md` first, then the roadmap, the session 11 standard, the session 12 brief, and this file. copy `session-context-template.md` to `context/15-the-first-build.md`. build the first version of the target in tz. keep a friction journal with exact code for every place the language fought back, and a ranked, evidenced list of candidate changes. do not fix the language mid-build; file and route around blockers. measure the session 11 criteria and report them. do not commit until the author reviews.
 
 ## context
 
-copy `../session-context-template.md` to `../context/14-the-first-build.md` before starting.
+copy `../session-context-template.md` to `../context/15-the-first-build.md` before starting.
