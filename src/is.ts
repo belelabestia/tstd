@@ -56,18 +56,21 @@ const plain = (x: Record<string, unknown>) =>
   Object.getPrototypeOf(x) === Object.prototype ||
   Object.getPrototypeOf(x) === null;
 
-export const json = (x: unknown): x is Json =>
-  string(x) ||
-  number(x) ||
-  boolean(x) || (
-    record(x) &&
-    plain(x) &&
-    Object.values(x).every(json)
-  ) || (
-    array(x) &&
-    x.every(json)
-  ) ||
-  none(x);
+/** whether a value is json, given the containers already on the path to it */
+const visit = (x: unknown, seen: Set<unknown>): x is Json => {
+  if (string(x) || number(x) || boolean(x) || none(x)) return true;
+  if (!record(x) || seen.has(x)) return false;
+  if (!array(x) && !plain(x)) return false;
+
+  seen.add(x);
+  const ok = array(x)
+    ? x.every((v) => visit(v, seen))
+    : Object.values(x).every((v) => visit(v, seen));
+  seen.delete(x);
+  return ok;
+};
+
+export const json = (x: unknown): x is Json => visit(x, new Set());
 
 export const model = <T extends Schema>(x: unknown, schema: T): x is Flat<Model<T>> => {
   if (!record(x)) return false;

@@ -105,7 +105,7 @@ these compress `STYLE-KB.md`. go there for the examples.
 - the body is one boolean expression, one condition per line, operator leading. it stays an expression so boolean algebra keeps matching type algebra.
 - compose with `&&` and `||`. there are no combinators and there will be none.
 - a guard body stays an expression, so `.every` is the one sanctioned exception to the loop rule: `is.json` uses it because a `for` would force a statement body. everywhere else, loop and return early.
-- narrow, never parse. validation does not allocate.
+- narrow, never parse. validation allocates no result; a guard may hold what it needs to decide, so long as it holds nothing by the time it returns (o25).
 - narrowing applies to references, not to literal expressions. bind to a variable first.
 
 ### flow

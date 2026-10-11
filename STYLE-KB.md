@@ -2,23 +2,6 @@
 
 working notes behind `AGENTS.md`. every entry is grounded in a real line of this repo.
 
-## open work
-
-### `is.json` recurses forever on a cyclic graph of plain objects
-
-filed 2026-09-08. the vacuity hole and the `NaN` hole that stood here are ruled and fixed (o17); this one is not. it is the single case where "what `JSON.stringify` tolerates" and "what the notation can spell" give the same answer, because both refuse a cycle.
-
-```ts
-const a: any = {}; a.self = a;
-is.json(a) // RangeError: Maximum call stack size exceeded
-```
-
-every node in that graph is a plain record, so the prototype test passes and `json` calls itself until the stack runs out. a guard that throws is worse than one that lies: `is.json` sits on the boundary between unknown input and `Json`, so a self-referential payload takes the process down instead of being refused, and `f5` says business code has no `try`/`catch` to catch it with. `JSON.parse` cannot build a cycle, so the reachable case is a value assembled in memory and handed to `is.json` or `form.encode` directly.
-
-the fix wants a ruling because the obvious one is forbidden. cycle detection needs a set of visited objects, and e4 says validation does not allocate. a depth limit allocates nothing but wants a second parameter, which would make `json` the one guard in the file that does not fit `TypeGuard<T>`. do not fix it by weakening the type.
-
-the two designs that were open on 2026-09-06 are built and ruled: resources became `src/scope.ts` (o15, then o19 and o20), and the zoned form became a recipe in `src/form.spec.ts` with the machinery in `src/iso.ts` (o16).
-
 ---
 
 two kinds of entry:
@@ -521,7 +504,7 @@ the blank line after the guard clause is consistent across `model` and `models`.
 
 ✅ do `(x: unknown): x is T`
 
-readme: "prefer type narrowing (`x is T`) to parsing (`return x as T`) for validation as it is a cheaper abstraction". validation never allocates; encoding/decoding is a separate concern the library does not own.
+readme: "prefer type narrowing (`x is T`) to parsing (`return x as T`) for validation as it is a cheaper abstraction". validation allocates no result; encoding/decoding is a separate concern the library does not own. a guard may hold what it needs to decide, so long as it holds nothing by the time it returns, which is what `is.json` does with the containers on the path (o25).
 
 ---
 
@@ -1533,3 +1516,21 @@ export type Decoded<T extends Fields> = Flat<{ [K in keyof T as T[K] extends { a
 - **the factory is the literal notation, the way `branch` is.** an inline `as: 'createdAt'` widens to `string` and the decoded side collapses to an index signature, so the rename travels through `form.as(...)` and the generic keeps the literal. `form.spec.ts` pins this with a `@ts-expect-error` on the wire spelling surviving decoding.
 - **no helper for the walk.** `decode` and `encode` remap through one local, `memory`, which reads the member or falls back to the wire key. plain fields never rename, so they never mention it.
 - **remapping cost the walkers their typing.** the remapped `Decoded` is no longer homomorphic, so the walkers accumulate into a `Record`, read and write through it, and brand the result once at the return. those casts are o6b working as designed: there is no other way to write into the remapped side.
+
+### o25. `is.json` holds the containers on the path, so a cycle is refused instead of fatal: house (ruled)
+
+a guard must be total over `unknown` and must not throw, and `is.json` broke both on a value that reaches back to itself:
+
+```ts
+const a: Record<string, unknown> = {};
+a.self = a;
+is.json(a); // used to be RangeError: Maximum call stack size exceeded
+```
+
+the ruling is the author's: "i'll tolerate the cost. the alternative would be to make `is.json` fallible, breaking the whole contract of type narrowing in tstd." a guard that crashes on a reachable `unknown` is the worse bug, worse than the allocation e4 seemed to forbid.
+
+- **the set is bookkeeping, not parsing.** what e4 forbids is building a value the caller gets back, which is the line between narrowing and decoding. `visit` adds each container on the way down and deletes it on the way out, so the set holds one path and never escapes; e4's wording was too broad, the rule was not.
+- **ancestors, not everything seen.** add before recursing, delete after, or a shared leaf would read as a cycle. `is.json({ l: shared, r: shared })` is a tree with two paths to one leaf, and a set that never removed would lie about it. `is.spec.ts` pins both the cycle and the shared leaf.
+- **the depth cap was the other candidate and it lies.** it allocates nothing, but any bound low enough to be safe refuses acyclic values the notation spells fine: a cap of 32 rejects a depth-40 record, while `JSON.stringify` itself only runs out somewhere past 4000, which is an engine detail and not a rule. the cap trades the crash for a false negative and cannot be principled.
+- **`json` keeps its arity.** the recursion is a module-private `visit(x, seen)`, so the export stays one argument and `TypeGuard<Json>`, which is what `form.Field` and `is.Schema` expect. a second parameter on `json` itself would also collide with `.every`, which passes `(value, index, array)`, so the callbacks are wrapped rather than handed `json` (o7).
+- **the deep-but-acyclic `RangeError` stays.** the set catches a revisit, not depth, and per o17 a value too deep for `stringify` is not json either, so the guard and the notation still agree.

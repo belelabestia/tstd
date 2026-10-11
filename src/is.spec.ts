@@ -59,6 +59,23 @@ test('refuse what json notation cannot express', () => {
   assert.ok(is.json(bare));
 });
 
+test('refuse a value that contains itself', () => {
+  // json is a tree, so a value that reaches back to itself has no finite spelling;
+  // the guard says so instead of following the loop until the stack runs out
+  const record: Record<string, unknown> = {};
+  record.self = record;
+  assert.ok(!is.json(record));
+
+  const list: unknown[] = [];
+  list.push(list);
+  assert.ok(!is.json(list));
+
+  // the same object on two paths is not a cycle, it is a tree that shares a leaf,
+  // so what the guard tracks is the path, not every value it has seen
+  const shared = { a: 1 };
+  assert.ok(is.json({ l: shared, r: shared }));
+});
+
 test('validate model schemas', () => {
   // here's a more complex unknown variable
   const a: unknown = {
