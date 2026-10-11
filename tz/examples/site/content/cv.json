@@ -1,0 +1,7 @@
+{
+  "name": "ada",
+  "sections": [
+    { "title": "work", "lines": ["engineer, 2020 to now", "writer, 2015 to 2020"] },
+    { "title": "study", "lines": ["mathematics, 2011 to 2015"] }
+  ]
+}

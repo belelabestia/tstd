@@ -1,0 +1,112 @@
+import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
+import { branch, call, is, make, result } from '@belelabestia/tstd';
+import { load, type Content } from './load.js';
+import { list, markdown, notFound, stylesheet } from './render.js';
+import { page, view } from './page.js';
+import { type Post, type Topic } from './forms.js';
+
+const home = (content: Content) => view(page.singleton({
+  title: 'home',
+  theme: 'mono',
+  body: `<p>${content.cv.name}</p>${list(content.links.map((one) => `<a href="${one.url}">${one.label}</a>`))}`
+}));
+
+const cvPage = (content: Content) => {
+  const sections = content.cv.sections.map((one) => `<h2>${one.title}</h2>${list(one.lines)}`);
+
+  return view(page.singleton({ title: 'cv', theme: 'mono', body: sections.join('\n') }));
+};
+
+const linksPage = (content: Content) => view(page.singleton({
+  title: 'links',
+  theme: 'mono',
+  body: list(content.links.map((one) => `<a href="${one.url}">${one.label}</a>`))
+}));
+
+const topicsPage = (content: Content) => view(page.collection({
+  title: 'topics',
+  theme: 'mono',
+  items: content.topics.map((one) => `<a href="/topics/${one.id}">${one.title}</a>`)
+}));
+
+const topicPage = (one: Topic, content: Content) => {
+  const items = content.posts
+    .filter((post) => post.topic == one.id)
+    .map((post) => `<a href="/posts/${post.slug}">${post.title}</a>`);
+
+  return view(page.collection({ title: one.title, theme: one.theme, items }));
+};
+
+const postPage = (one: Post, content: Content) => {
+  const found = content.topics.find((topic) => topic.id == one.topic);
+  const theme = found ?some (topic) => topic.theme else => 'mono';
+
+  return view(page.singleton({ title: one.title, theme, body: markdown(one.body) }));
+};
+
+const topicRoute = (path: string, content: Content) => {
+  const id = path.slice('/topics/'.length);
+  const found = content.topics.find((one) => one.id == id);
+  found ?none return { status: 404, html: notFound() };
+
+  return { status: 200, html: topicPage(found, content) };
+};
+
+const postRoute = (path: string, content: Content) => {
+  const slug = path.slice('/posts/'.length);
+  const found = content.posts.find((one) => one.slug == slug);
+  found ?none return { status: 404, html: notFound() };
+
+  return { status: 200, html: postPage(found, content) };
+};
+
+const themeRoute = (path: string) => {
+  const name = path.slice('/theme/'.length).replace(/\.css$/, '');
+
+  return { status: 200, html: stylesheet(name) };
+};
+
+const route = (path: string, content: Content) => {
+  path.startsWith('/topics/') ? return topicRoute(path, content);
+  path.startsWith('/posts/') ? return postRoute(path, content);
+  path.startsWith('/theme/') ? return themeRoute(path);
+
+  return path ? {
+    == '/' => ({ status: 200, html: home(content) }),
+    == '/cv' => ({ status: 200, html: cvPage(content) }),
+    == '/links' => ({ status: 200, html: linksPage(content) }),
+    == '/topics' => ({ status: 200, html: topicsPage(content) }),
+    else => ({ status: 404, html: notFound() })
+  };
+};
+
+const handle = (req: IncomingMessage, res: ServerResponse, content: Content) => {
+  const raw = req.url ?none => '/';
+  const parsed = make => URL(raw, 'http://site');
+  const path = parsed ? {
+    :ok (url) => url.pathname,
+    :err => '/'
+  };
+
+  const answer = route(path, content);
+
+  void res.writeHead(answer.status, { 'content-type': 'text/html' });
+  void res.end(answer.html);
+};
+
+/** boot the site: load the content, then listen on a port */
+export const start = (root: string, port: number) => {
+  const held = load(root);
+  const out = held.exit ? {
+    :done (answer) => answer,
+    :panic (why) => :err(`content panic: ${String(why)}`)
+  };
+
+  const content = try out;
+  const made = try call => {
+    return createServer((req: IncomingMessage, res: ServerResponse) => void handle(req, res, content));
+  };
+
+  void made.listen(port);
+  ok made;
+};

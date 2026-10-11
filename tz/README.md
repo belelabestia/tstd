@@ -43,6 +43,7 @@ node dist/tzc.js examples constructs             # emit the .ts beside each .tz,
 node dist/tzx.js --test constructs/arrow.spec.tz # run a construct deck
 node dist/tzx.js --test examples/signup.spec.tz  # run the example spec
 node dist/tzx.js examples/main.tz                # run a program
+node dist/tzx.js examples/site/main.tz           # run the site
 node dist/tzd.js examples constructs             # the editor checks, headless: tzc parity plus the unranked warnings
 ```
 
@@ -95,7 +96,7 @@ plain nvim needs only the first line: the detector file sets the filetype. the s
 - `tzc`, `tzx`, and diagnostics that land on the source
 - a coherence spec that walks the docs against the code, so drift fails the build
 
-`constructs/` holds one deck per construct: a `spec.tz` of small use cases with walkthrough comments, so the construct can be read and run on its own. `examples/` holds the modules that solve whole problems, with `examples/signup.spec.tz` as their spec. `npm test` runs both, `tzc` and `tzd` emit and check both, so a construct that drifts out of the showcase fails the build.
+`constructs/` holds one deck per construct: a `spec.tz` of small use cases with walkthrough comments, so the construct can be read and run on its own. `examples/` holds the modules that solve whole problems, with `examples/signup.spec.tz` as their spec. the current whole program is `examples/site/`: a small web service that serves a home, a cv, the links, a topic list and a page per post from files, with the theme following the topic, and `examples/site/server.spec.tz` boots it and hits every route under `npm test`. `npm test` runs both, `tzc` and `tzd` emit and check both, so a construct that drifts out of the showcase fails the build.
 
 ## what is not
 

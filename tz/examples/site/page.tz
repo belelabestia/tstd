@@ -1,0 +1,14 @@
+import { protocol, type Union } from '@belelabestia/tstd';
+import { list, shell } from './render.js';
+
+/** a page is one file rendered once, or a list generated per item */
+export protocol page {
+  singleton<{ title: string, theme: string, body: string }>,
+  collection<{ title: string, theme: string, items: string[] }>
+}
+
+/** a page rendered to one html document */
+export const view = (one: Page) => one ? {
+  :singleton (single) => shell(single.title, single.theme, single.body),
+  :collection (many) => shell(many.title, many.theme, list(many.items))
+};

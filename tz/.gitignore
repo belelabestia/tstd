@@ -1,3 +1,3 @@
-examples/*.ts
+examples/**/*.ts
 constructs/*.ts
 .tzd/

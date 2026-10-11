@@ -1,0 +1,43 @@
+import { form, is } from '@belelabestia/tstd';
+
+/** a topic the site groups posts under, wearing a theme */
+export form topic {
+  id: is.string,
+  title: is.string,
+  theme: is.string
+}
+
+/** a post as it is stored, prose included */
+export form post {
+  slug: is.string,
+  title: is.string,
+  topic: is.string,
+  date: is.string,
+  body: is.string
+}
+
+/** one outbound link */
+export form link {
+  label: is.string,
+  url: is.string
+}
+
+type Section = { title: string, lines: string[]; };
+
+/** one section of the cv: a heading and its lines */
+const section = (x: unknown): x is Section =>
+  is.record(x) &&
+  is.string(x.title) &&
+  is.array(x.lines) &&
+  x.lines.every(is.string);
+
+/** the sections of a cv, each one proven */
+const sectionList = (x: unknown): x is Section[] =>
+  is.array(x) &&
+  x.every(section);
+
+/** the cv: a name and its sections */
+export form cv {
+  name: is.string,
+  sections: sectionList
+}

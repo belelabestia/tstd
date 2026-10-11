@@ -1,0 +1,65 @@
+import { test } from 'node:test';
+import * as assert from 'node:assert/strict';
+import { once } from 'node:events';
+import { join } from 'node:path';
+import { is } from '@belelabestia/tstd';
+import { start } from './server.js';
+
+/*
+  the site, end to end
+
+  the spec boots the real server on an ephemeral port, asks each route over
+  http, and reads the response a visitor would see. the content is the files
+  under `content/`, so the spec also proves the loader against real bytes.
+*/
+
+const root = join(import.meta.dirname, 'content');
+
+void test('serve every route end to end', () => {
+  const booted = start(root, 0);
+  booted.branch ?!= 'ok' assert.fail();
+
+  const server = booted.value;
+  void await once(server, 'listening');
+
+  const address = server.address();
+  address ?none assert.fail();
+  typeof address == 'string' ? assert.fail();
+
+  const base = `http://127.0.0.1:${address.port}`;
+
+  const home = await fetch(`${base}/`);
+  assert.equal(home.status, 200);
+  assert.match(await home.text(), /ada/);
+
+  const cv = await fetch(`${base}/cv`);
+  assert.equal(cv.status, 200);
+  assert.match(await cv.text(), /mathematics/);
+
+  const links = await fetch(`${base}/links`);
+  assert.equal(links.status, 200);
+  assert.match(await links.text(), /github/);
+
+  const topics = await fetch(`${base}/topics`);
+  assert.equal(topics.status, 200);
+  assert.match(await topics.text(), /Technology/);
+
+  const topic = await fetch(`${base}/topics/tech`);
+  assert.equal(topic.status, 200);
+  const topicBody = await topic.text();
+  assert.match(topicBody, /hello, tz/);
+  assert.match(topicBody, /theme\/blue\.css/);
+
+  const post = await fetch(`${base}/posts/hello-tech`);
+  assert.equal(post.status, 200);
+  assert.match(await post.text(), /a first post/);
+
+  const sheet = await fetch(`${base}/theme/blue.css`);
+  assert.equal(sheet.status, 200);
+  assert.match(await sheet.text(), /--theme: blue/);
+
+  const missing = await fetch(`${base}/nope`);
+  assert.equal(missing.status, 404);
+
+  void server.close();
+});

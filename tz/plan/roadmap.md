@@ -35,7 +35,7 @@ the teaching docs carried prompts parked as comments: notes to an agent left mid
 
 ### phase 3, onboarding
 
-material that onboards people and agents. the bootstrap (13) lands before the build, because the agent is a builder and needs the contract first; the tested agent contract (16) and the getting-started path for people (15) are derived from the battle test, not invented ahead of it. tz is well suited to agent onboarding because the ban list is already machine-readable.
+material that onboards people and agents. the bootstrap (13) lands before the build, because the agent is a builder and needs the contract first; the tested agent contract (17) and the getting-started path for people (16) are derived from the battle test, not invented ahead of it. tz is well suited to agent onboarding because the ban list is already machine-readable.
 
 ## the sessions
 
@@ -55,7 +55,7 @@ material that onboards people and agents. the bootstrap (13) lands before the bu
 | 12 | choose the target | battle | done | q4 |
 | 13 | the agent bootstrap | onboarding | done | the agent starting point |
 | 14 | the async tail | truth | done | the async exit as a matcher tail |
-| 15 | the first build | battle | planned | the dev experience |
+| 15 | the first build | battle | done | the dev experience |
 | 16 | onboard people | onboarding | planned | q6 |
 | 17 | onboard agents | onboarding | planned | the agent contract |
 | 18 | the form audit | battle | planned | q8 |
@@ -64,7 +64,7 @@ material that onboards people and agents. the bootstrap (13) lands before the bu
 | 21 | the value declaration | truth | planned | the declaration shape |
 | 22 | retire the plan | close | planned | the plan itself |
 
-sessions run in order. 09 is blocked by 08; 16 and 17 are blocked by 15; and 13 precedes 14, which precedes 15: the agent is a builder and the language is fixed before the build. everything else is unblocked once 01 lands, because a session that fixes a defect needs the harness that catches the defect. 22 runs last, after every other session, because it deletes the table it sits in.
+sessions run in order. 09 is blocked by 08; 16 and 17 follow 15, which has landed; and 13 preceded 14, which preceded 15: the agent is a builder and the language is fixed before the build. everything else is unblocked once 01 lands, because a session that fixes a defect needs the harness that catches the defect. 22 runs last, after every other session, because it deletes the table it sits in.
 
 14 fixes the exit family before the build. `async x` emits `return Promise.resolve(x)`, so `async` is an exit, and every exit is a matcher tail; the emitter refuses `async` as a tail in five places and omits it from three tail lists, so `x ?err async 1` is refused while `x ?err return 1` compiles. the session adds `async` to the tails, removes the matcher-tail guards, keeps the guards against `=> async` and an exit inside an arrow body, and corrects the tutorial and design.
 

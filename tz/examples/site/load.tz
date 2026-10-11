@@ -1,0 +1,116 @@
+import { readFileSync, readdirSync } from 'node:fs';
+import { join } from 'node:path';
+import { call, form, is, result, scope } from '@belelabestia/tstd';
+import { cv, link, post, topic, type Cv, type Link, type Post, type Topic } from './forms.js';
+
+/** everything the site serves, read off disk */
+export type Content = {
+  topics: Topic[],
+  links: Link[],
+  cv: Cv,
+  posts: Post[];
+};
+
+/** the resource a scope holds: a directory now, a connection later */
+const directory = (root: string) => ({
+  open: () => root,
+  close: (at: string) => void at,
+  abort: (at: string) => void at
+});
+
+/** a file read as text, or why it could not be */
+const text = (file: string) => {
+  const raw = try call => {
+    return readFileSync(file, 'utf8');
+  };
+
+  ok raw;
+};
+
+/** a file read and parsed, or why it could not be */
+const json = (file: string) => {
+  const raw = try text(file);
+  const parsed = try call => JSON.parse(raw);
+  ok parsed;
+};
+
+const topics = (at: string) => {
+  const raw = try json(join(at, 'topics.json'));
+  form.models(raw, topic) ?! err 'topics.json is not a list of topics';
+  ok raw.map((one) => form.decode(one, topic));
+};
+
+const links = (at: string) => {
+  const raw = try json(join(at, 'links.json'));
+  form.models(raw, link) ?! err 'links.json is not a list of links';
+  ok raw.map((one) => form.decode(one, link));
+};
+
+const cvOf = (at: string) => {
+  const raw = try json(join(at, 'cv.json'));
+  form.model(raw, cv) ?! err 'cv.json is not a cv';
+  ok form.decode(raw, cv);
+};
+
+/** the metadata a post carries, and the prose after the --- line */
+const matter = (raw: string) => {
+  const parts = raw.split('\n---\n');
+  const meta: Record<string, string | undefined> = {};
+
+  for (const line of parts[0].split('\n')) {
+    const at = line.indexOf(':');
+    at ?< 0 continue;
+    meta[line.slice(0, at).trim()] = line.slice(at + 1).trim();
+  }
+
+  const more = parts.length > 1;
+  const body = more ? {
+    == true => parts[1],
+    == false => ''
+  };
+
+  return {
+    title: meta.title ?none => '',
+    topic: meta.topic ?none => '',
+    date: meta.date ?none => '',
+    body
+  };
+};
+
+const one = (at: string, file: string) => {
+  const raw = try text(join(at, 'posts', file));
+  const found = matter(raw);
+  const slug = file.replace(/\.md$/, '');
+
+  form.model({ slug, ...found }, post) ?! err `post ${file} has no title, topic or date`;
+  ok form.decode({ slug, ...found }, post);
+};
+
+const posts = (at: string) => {
+  const files = try call => {
+    return readdirSync(join(at, 'posts'));
+  };
+
+  const out: Post[] = [];
+
+  for (const file of files) {
+    file.endsWith('.md') ?! continue;
+    const read = try one(at, file);
+    void out.push(read);
+  }
+
+  ok out;
+};
+
+/** the whole content tree, read once under one held directory */
+export const load = (root: string) => scope (hold) => {
+  const at = try hold(directory(root));
+
+  const foundTopics = try topics(at);
+  const foundLinks = try links(at);
+  const foundCv = try cvOf(at);
+  const foundPosts = try posts(at);
+
+  const content = { topics: foundTopics, links: foundLinks, cv: foundCv, posts: foundPosts };
+  ok content;
+};

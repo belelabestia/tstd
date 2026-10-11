@@ -1,0 +1,21 @@
+import { join } from 'node:path';
+import { is } from '@belelabestia/tstd';
+import { start } from './server.js';
+
+/*
+  run the site
+
+  `tzx examples/site/main.tz` boots the server on PORT, or 3000. behind caddy
+  the proxy targets this port; the content is read from `content/` beside it.
+*/
+
+const root = join(import.meta.dirname, 'content');
+const port = Number(process.env.PORT ?none => '3000');
+const booted = start(root, port);
+const up = booted.branch == 'ok';
+
+up ? {
+  console.log(`site listening on ${port}`);
+} else {
+  console.log('site failed to start');
+};

@@ -1,0 +1,42 @@
+/** the markdown a post body carries, rendered to html */
+export const markdown = (body: string) => {
+  const out: string[] = [];
+
+  for (const block of body.split('\n\n')) {
+    const text = block.trim();
+    text.length ?== 0 continue;
+
+    text.startsWith('# ') ? {
+      void out.push(`<h1>${text.slice(2)}</h1>`);
+    } else {
+      void out.push(`<p>${text}</p>`);
+    };
+  }
+
+  return out.join('\n');
+};
+
+/** one html document around a body, wearing a theme */
+export const shell = (title: string, theme: string, body: string) => `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>${title}</title>
+<link rel="stylesheet" href="/theme/${theme}.css">
+</head>
+<body>
+<header><a href="/">home</a> <a href="/cv">cv</a> <a href="/links">links</a> <a href="/topics">topics</a></header>
+<main>${body}</main>
+</body>
+</html>`;
+
+/** a list of already rendered entries */
+export const list = (items: string[]) => `<ul>${items.map((one) => `<li>${one}</li>`).join('')}</ul>`;
+
+/** the page for a path the site does not serve */
+export const notFound = () => shell('not found', 'mono', '<p>nothing here.</p>');
+
+/** the stylesheet one theme wears */
+export const stylesheet = (theme: string) => `:root { --theme: ${theme}; }
+body { margin: 2rem auto; max-width: 40rem; font-family: system-ui; }
+a { color: var(--theme); }`;
