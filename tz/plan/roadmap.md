@@ -58,25 +58,28 @@ material that onboards people and agents. the bootstrap (13) lands before the bu
 | 15 | the first build | battle | done | the dev experience |
 | 16 | onboard people | onboarding | done | q6 |
 | 17 | onboard agents | onboarding | planned | the agent contract |
-| 18 | the form audit | battle | planned | q8 |
-| 19 | the in-file test | battle | planned | q9 |
-| 20 | the `if` ban | truth | planned | the `if` overlap |
-| 21 | the value declaration | truth | planned | the declaration shape |
-| 22 | retire the plan | close | planned | the plan itself |
+| 18 | the arrow capture | truth | planned | q16 |
+| 19 | the struct and the codec | battle | planned | q8 |
+| 20 | the in-file test | battle | planned | q9 |
+| 21 | the `if` ban | truth | planned | the `if` overlap |
+| 22 | the construct table | truth | planned | the construct landscape |
+| 23 | retire the plan | close | planned | the plan itself |
 
-sessions run in order. 09 is blocked by 08; 17 follows 16, which followed 15; and 13 preceded 14, which preceded 15: the agent is a builder and the language is fixed before the build. everything else is unblocked once 01 lands, because a session that fixes a defect needs the harness that catches the defect. 22 runs last, after every other session, because it deletes the table it sits in.
+sessions run in order. 09 is blocked by 08; 17 follows 16, which followed 15; and 13 preceded 14, which preceded 15: the agent is a builder and the language is fixed before the build. everything else is unblocked once 01 lands, because a session that fixes a defect needs the harness that catches the defect. 23 runs last, after every other session, because it deletes the table it sits in.
 
 14 fixes the exit family before the build. `async x` emits `return Promise.resolve(x)`, so `async` is an exit, and every exit is a matcher tail; the emitter refuses `async` as a tail in five places and omits it from three tail lists, so `x ?err async 1` is refused while `x ?err return 1` compiles. the session adds `async` to the tails, removes the matcher-tail guards, keeps the guards against `=> async` and an exit inside an arrow body, and corrects the tutorial and design.
 
 16 followed 15 and landed: `GETTING-STARTED.md` is the getting-started path and `README.md` is the map, a fresh clone reaches a running program after a single install inside `tz/`, and q6 is ruled as repo-only onboarding with publishing deferred to the split. 17 follows: the agent contract is tested and hardened.
 
-18 and 19 join the construct work of phase 2: 18 audits `form` because the author's charge is that its emit is inconsistent, and 19 explores a `test` keyword written in the file it tests. both are audits first, implementations second, so they may split.
+18 is the arrow capture, the author's change of mind. `call`, `make` and `scope` carry a `=>`, and the same glyph is the side-quest capture, "produce a value, stay in scope", so a reader learns two meanings before meeting the one the language is built on. the session asks whether the three boundary constructs keep the arrow at all, and whether the side-quest arrow's expression-versus-statement distinction is load bearing. it is a vocabulary session, ruled before anything changes.
 
-20 is the `if` overlap, ruled in session 08: `switch` is already banned, `if` is not, and every `if` is replaceable by a side quest. it lands a ban-list change, an emit spec, and the sweep of the decks and examples that still write `if` (the clamp funnels, the spec guard clauses).
+19 and 20 join the construct work of phase 2, and 19 is the bigger of the two. the struct and the codec folds three charges into one session: a `form` is what other libraries call a `struct`, so the name should say so; its declaration should read `export const signup = struct { ... }` with no `=>`, absorbing the value declaration; and the line between what the block emits and what the caller writes is arbitrary, absorbing the form audit (q8). it also takes the collection question, since validation decides whether a payload is a list or an object and a tuple has no home, and the codec boundary, with `tstd` open to change. 20 explores a `test` keyword written in the file it tests. both are audits first, implementations second, so they may split.
 
-21 is a discussion the author raised after session 09: `form` and `protocol` build values from object literals, so they should not sit where a keyword binds a name. `export form signup { ... }` should read `export const signup = form { ... }`, with no `=>`, and `protocol load { ... }` should follow. it decides the target spelling, the derived name and factory story, `export` and generics, and inventories the recognition cost. it plans no execution and owns the schedule of whatever it authorizes.
+21 is the `if` overlap, ruled in session 08: `switch` is already banned, `if` is not, and every `if` is replaceable by a side quest. it lands a ban-list change, an emit spec, and the sweep of the decks and examples that still write `if` (the clamp funnels, the spec guard clauses).
 
-22 closes the plan itself. once phase 3 lands, `plan/` has done its job: `UPDATES.md` is the durable journal and git keeps the history, so the roadmap, the sessions and the context files are a working aid whose work is finished. the session relocates what must outlive it, since the comment protocol is a living channel rather than a phase and moves into `AGENTS.md`, sweeps every remaining pointer at `plan/`, and then deletes `plan/roadmap.md`, `plan/sessions/`, `plan/context/` and `plan/session-context-template.md`. the plan records its own retirement, and then it is gone.
+22 is the construct table, the author's second change of mind: the constructs ordered as a crescendo of complexity, `try`, `make` and `call` on the way up and `scope` at the top. the tutorial's construct matrix lists the side-quest spellings by what they replace, not the constructs by the reader's cost, so the ladder does not exist yet. it is a docs session, written after the language work settles the set.
+
+23 closes the plan itself. once phase 3 lands, `plan/` has done its job: `UPDATES.md` is the durable journal and git keeps the history, so the roadmap, the sessions and the context files are a working aid whose work is finished. the session relocates what must outlive it, since the comment protocol is a living channel rather than a phase and moves into `AGENTS.md`, sweeps every remaining pointer at `plan/`, and then deletes `plan/roadmap.md`, `plan/sessions/`, `plan/context/` and `plan/session-context-template.md`. the plan records its own retirement, and then it is gone.
 
 ## the ledger
 
@@ -89,14 +92,15 @@ where a swept note lands. a question is q-numbered; a routed task is t-numbered.
 - **q5, stable enough to split.** `../DESIGN.md` says tz moves to its own repo with a `git mv` once the prototype is stable. what does stable mean, in measurable terms? resolved in session 11: three conditions, all checkable. (1) the dependency is a version, not a path: tz reaches `tstd` through the package entry alone, with no `paths` into `../src` and no `file:..`. (2) a fresh clone of `tz/` alone, against a tagged `tstd` from the registry, passes `npm test` with no change to either side. (3) the ban table, the role list and the emitted shapes hold unchanged across one full `tstd` release while the battle program is built. the standard itself is in `plan/context/11-define-robust.md`.
 - **q6, publishing.** resolved in session 16: tz stays `private` at `0.0.0` and onboarding is repo-only; the package becomes installable once the q5 split conditions hold, and publishes like `tstd` then. rejected: a private preview now (a token story for a prototype that has not split); going public on npmjs before the split (a versioning contract before tz is stable).
 - **q7, the `?!` tail.** `cond ?! err 'x'` emitted an unreWritten `err`, while `cond ? err` and `cond ?== false err` rewrote it. found in session 05. resolved in session 06: the tail rewrite was never the hole; the glued `!` of a bare `?!` ate the statement start in `scan.ts`, so the exit pass that rewrites the tail never saw it. making the `!` transparent to the start fixes it, and the working forms stay byte-identical.
-- **q8, the form line.** some of `form` is emitted, some is written by hand, and the author charges that the line is arbitrary. where does it belong? session 18, with a `protocol` note if the audit finds an adjacent inconsistency (that would be q12).
-- **q9, the in-file test.** a `test` keyword like zig's, in the file it tests, reaching module internals. feasible, and under what house-rule amendment? session 19.
+- **q8, the form line.** some of `form` is emitted, some is written by hand, and the author charges that the line is arbitrary. where does it belong? session 19, folded into the struct and the codec, with a `protocol` note if the audit finds an adjacent inconsistency (that would be q12).
+- **q9, the in-file test.** a `test` keyword like zig's, in the file it tests, reaching module internals. feasible, and under what house-rule amendment? session 20.
 - **q10, the deck `declare`.** `declare` inside a deck produces a false `TZL0002`, while `const` does not; found in session 05 while writing the `?literal` deck, which used `const` instead. a checker false positive over a legitimate declaration. unassigned.
 - **q11, the tail comment.** a doc comment inside a `?` tail (`x ? //c\n log(x);`) loses the comment and emits a semicolon; found while drafting `not.spec.tz` and avoided. an emit defect. unassigned.
-- **q12, the protocol note.** reserved for a `protocol` inconsistency if session 18's audit uncovers one adjacent to the `form` line.
+- **q12, the protocol note.** reserved for a `protocol` inconsistency if session 19's audit uncovers one adjacent to the `form` line.
 - **q13, the useless subject.** in `constructs/cond.spec.tz`, `n ?(n % 2 == 0) => 'even' else => 'odd'` answers both sides, so the subject `n` is never yielded and does nothing. the author wants the shape refused. a proposed refusal, not a construct. unassigned.
 - **q14, effect against exit and value.** in `examples/signup.tz`, the guard note asks for a strict structural definition that excludes an effect from a union of effect, exit and value, and whether the transpiler and language already hold that principle, should hold it, or could hold it. a design question. unassigned.
 - **q15, the `? {}` subject type.** in `constructs/block.spec.tz`, the note says the matched subject of a `? {}` over a `Result` should read as a `Branch<...>`. whether the emit and the editor should name it so. a typing question about the emit. unassigned.
+- **q16, the arrow capture.** `call`, `make` and `scope` carry the same `=>` the side quests use for a capture, so one glyph carries two readings. do the boundary constructs keep it, and is the side-quest expression-versus-statement arrow load bearing? the author has no final stance. session 18.
 
 ### tasks
 
@@ -111,7 +115,7 @@ where a swept note lands. a question is q-numbered; a routed task is t-numbered.
 
 these are settled as out of scope until the author raises them:
 
-- new language constructs. the battle test produces candidates; it does not spend them here. this does not cover the two the author raised and scheduled: `test` (q9, session 19) and the `form` audit (q8, session 18).
+- new language constructs. the battle test produces candidates; it does not spend them here. this does not cover the two the author raised and scheduled: `test` (q9, session 20) and the struct and the codec (q8, session 19).
 - a linter, a formatter, a bundler, another test framework.
 - the editor affordance set above, beyond what already ships in `tzd`.
 
@@ -152,4 +156,4 @@ a parked note is not documentation: it names words the language does not own, an
 
 ## what a green close looks like
 
-at the end of phase 0, `npm test` runs the emitted code and a broken showcase fails the build. at the end of phase 1, no prompt is parked in a doc and the tutorial reads in one voice. at the end of phase 2, a real program runs on tz and the friction is written down. at the end of phase 3, a person and an agent can each start from a document and be productive. and at the very end, the plan retires itself: session 22 moves the comment protocol into `AGENTS.md`, deletes the roadmap, the sessions and the context files, and leaves the code, the docs and the journal as the whole record.
+at the end of phase 0, `npm test` runs the emitted code and a broken showcase fails the build. at the end of phase 1, no prompt is parked in a doc and the tutorial reads in one voice. at the end of phase 2, a real program runs on tz and the friction is written down. at the end of phase 3, a person and an agent can each start from a document and be productive. and at the very end, the plan retires itself: session 23 moves the comment protocol into `AGENTS.md`, deletes the roadmap, the sessions and the context files, and leaves the code, the docs and the journal as the whole record.

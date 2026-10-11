@@ -4,12 +4,12 @@ a superset of typecore, the subset of typescript that omits the overlap, with ts
 
 | sessions closed | phases closed | constructs | tests green |
 | --- | --- | --- | --- |
-| **16 / 22** | **2 / 4** | **22 decks** | **170** |
+| **16 / 23** | **2 / 4** | **22 decks** | **170** |
 
 ## progress
 
 ```
-truth      ████████░░  7 / 9   phase 0 closed
+truth      ███████░░░  7 / 10  phase 0 closed
 ownership  ██████████  4 / 4   done
 battle     ██████░░░░  3 / 5   underway
 onboarding ██████░░░░  2 / 3   underway
@@ -31,9 +31,11 @@ close      ░░░░░░░░░░  0 / 1   last
 | # | session | the job |
 | --- | --- | --- |
 | 17 | onboard agents | the contract is tested and hardened |
-| 18 | the form audit | whether form's line is arbitrary |
-| 19 | the in-file test | a test keyword written in the file it tests |
-| 20 | the `if` ban | the last documented, unenforced ban |
+| 18 | the arrow capture | whether `call`, `make`, `scope` still carry `=>` |
+| 19 | the struct and the codec | the name, the shape, the collection and the codec |
+| 20 | the in-file test | a test keyword written in the file it tests |
+| 21 | the `if` ban | the last documented, unenforced ban |
+| 22 | the construct table | the constructs as a crescendo of complexity |
 
 ## the ask
 

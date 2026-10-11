@@ -1,4 +1,4 @@
-# 22 retire the plan
+# 23 retire the plan
 
 phase: close
 status: planned
@@ -25,7 +25,7 @@ one thing must outlive the plan. the comment protocol is a living channel rather
 
 ## out of scope
 
-- any language work, and any session from 01 to 21.
+- any language work, and any session from 01 to 22.
 - changing the protocol's content beyond moving it.
 
 ## inputs
