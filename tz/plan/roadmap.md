@@ -65,7 +65,7 @@ the language is used, and every place it fights back becomes a todo. when the la
 | 18 | the arrow capture | truth | planned | q16 |
 | 19 | the struct and the codec | battle | planned | q8 |
 | 20 | the in-file test | battle | planned | q9 |
-| 21 | the `if` ban | truth | planned | the `if` overlap |
+| 21 | the `if` ban | truth | done | the `if` overlap |
 | 22 | the construct table | truth | planned | the construct landscape |
 | 23 | under pressure | pressure | planned | q17, q18, q19, q20 |
 | 24 | retire the plan | close | planned | the plan itself |
@@ -80,7 +80,7 @@ sessions run in order. 09 is blocked by 08; 17 follows 16, which followed 15; an
 
 19 and 20 join the construct work of phase 2, and 19 is the bigger of the two. the struct and the codec folds three charges into one session: a `form` is what other libraries call a `struct`, so the name should say so; its declaration should read `export const signup = struct { ... }` with no `=>`, absorbing the value declaration; and the line between what the block emits and what the caller writes is arbitrary, absorbing the form audit (q8). it also takes the collection question, since validation decides whether a payload is a list or an object and a tuple has no home, and the codec boundary, with `tstd` open to change. 20 explores a `test` keyword written in the file it tests. both are audits first, implementations second, so they may split.
 
-21 is the `if` overlap, ruled in session 08: `switch` is already banned, `if` is not, and every `if` is replaceable by a side quest. it lands a ban-list change, an emit spec, and the sweep of the decks and examples that still write `if` (the clamp funnels, the spec guard clauses). the side-quest statement's `else` arm is untouched, because it is the replacement rather than the thing banned: only the `if` statement goes, and its own `else` is already refused.
+21 is the `if` overlap, ruled in session 08, and it ran ahead of 18. `switch` is already banned and `if` was not, yet every `if` is replaceable by a side quest, so `if` joined the refused table and the reader dropped what that left dead (`if` from `scan.tails` and `check.heads`, `new` from `scan.words`, a leftover from the prototype). it landed the ban-list change, an emit spec, and the sweep of the decks and examples that still wrote `if` (the clamp funnels, the spec guard clauses). the side-quest statement's `else` arm is untouched, because it is the replacement rather than the thing banned: only the `if` statement goes, and its own `else` is already refused.
 
 22 is the construct table, the author's second change of mind: the constructs ordered as a crescendo of complexity, `try`, `make` and `call` on the way up and `scope` at the top. the tutorial's construct matrix lists the side-quest spellings by what they replace, not the constructs by the reader's cost, so the ladder does not exist yet. it is a docs session, written after the language work settles the set.
 
