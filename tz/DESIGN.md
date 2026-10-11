@@ -76,6 +76,7 @@ yes, and this is the part that makes tz a language instead of a preprocessor. a 
 | `instanceof` | there are no classes to be an instance of | a branch test |
 | `function*` `yield` | flow hidden in a protocol | a loop |
 | `abstract` `implements` `private` `protected` `public` | class vocabulary | gone with `class` |
+| `if` | a side quest is the same decision, in one spelling | `cond ? ... else ...` |
 | `else` after an `if` **statement** | the funnel is the flow | a side quest chain, or a `? {}` block |
 | `?:` | one conditional expression is enough | `cond ? => a else => b` |
 | `??` | silent about which half it is doing, and cannot hold a statement | `val ?none => dflt` |

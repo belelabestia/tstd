@@ -28,11 +28,11 @@ the constructs beyond the three are the language forms of `tstd` modules: `scope
 
 the ban list is split, so read both files; do not copy the rows, they drift.
 
-the refused **words** are the table in `src/typecore.ts`: `class`, `function`, `this`, `new`, `interface`, `enum`, `var`, `namespace`, `module`, `any`, `instanceof`, `yield`, the class modifiers (`abstract`, `implements`, `private`, `protected`, `public`, `super`), `throw`, `switch`, `catch`, `finally`. `extends` and `constructor` need no row: they are unreachable once `class` is gone.
+the refused **words** are the table in `src/typecore.ts`: `class`, `function`, `this`, `new`, `interface`, `enum`, `var`, `namespace`, `module`, `any`, `instanceof`, `yield`, the class modifiers (`abstract`, `implements`, `private`, `protected`, `public`, `super`), `throw`, `if`, `switch`, `catch`, `finally`. `extends` and `constructor` need no row: they are unreachable once `class` is gone.
 
 the refused **punctuation and shapes** are in `src/ban.ts`: `===`/`!==`, `??`, a comparison against `null`/`undefined`, an assignment used as an expression, `?:` (write a side quest), the gluing mistakes around `?`, a typescript `try {`, a bare `return;`, the `async` modifier, `Promise.reject`, `get`/`set`, and the method shorthand, which hides a `this` its type never states.
 
-every refusal's diagnostic names the replacement. a spelling the library owns rather than the language (`protocol.init`, `result.ok`, `scope.sync`, `call.sync`, `branch`, `make`) is warned by the editor, not banned, because interop needs it. one documented ban is not enforced yet: a statement `if`, which is the `if` overlap (session 21); its `else` is already refused.
+every refusal's diagnostic names the replacement. a spelling the library owns rather than the language (`protocol.init`, `result.ok`, `scope.sync`, `call.sync`, `branch`, `make`) is warned by the editor, not banned, because interop needs it.
 
 ## running it
 

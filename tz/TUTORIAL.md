@@ -224,8 +224,8 @@ when the boolean is worth refusing, exit with a statement, one with no `else`: a
 
 ```tz
 export const clamp = (n: number) => {
-  if (n < 0) return 0;
-  if (n > 100) return 100;
+  n ?< 0 return 0;
+  n ?> 100 return 100;
 
   return n;
 };
@@ -364,7 +364,7 @@ scope (session) => {
     ok render(conn, buf, tmp);
   };
 
-  if (out.exit.branch == 'done') err 'panicked';
+  out.exit ?:panic (why) err `panic: ${why.value}`;
   ok try out.exit.value;
 }
 ```

@@ -31,7 +31,7 @@ const greet = (raw: unknown) => {
 void test('prove the shape, then map both ways', () => {
   const raw: unknown = JSON.parse('{"id":"a","created_at":1704164645006}');
 
-  if (!form.model(raw, user)) assert.fail();
+  form.model(raw, user) ?! assert.fail();
 
   const u = form.decode(raw, user);
 
