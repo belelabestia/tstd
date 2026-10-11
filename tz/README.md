@@ -69,6 +69,15 @@ it knows `try`, `scope`, `protocol`, `form`, `call`, `else`, the `ok`, `err`, `a
 
 two residues, both wontfix and cosmetic. typescript's grammar reads a `? {}` arm as an object literal key, so a quoted arm value loses string scope and the selector cannot see it; the grammar refuses any word with a quote against it instead. a tz word inside a template hole stays unhighlighted because the whole template is a string to the selector.
 
+`editor/nvim/` is the same shape for nvim, with no code either: a detector and one syntax file. the base is the runtime's regex typescript, because a syntax file is the only engine nvim has that can read tz at all: the tree-sitter typescript parser turns every side quest into an ERROR node and goes grey exactly where the language works. the injection is cluster surgery. the words join every set the base's regions declare they scan, and the few regions that spell their sets out item by item are followed explicitly. two base regions are taken back out of those sets: the ternary, because `?:` is banned in tz and its region would own every `?`, and the template, because the base ends a template at the first inner backtick and would strand every line below a nested one in a string. the replacement nests the only way this engine can: the template holds the hole, the hole holds the tz words and itself, and neither holds a template.
+
+```
+vim.opt.rtp:append("~/repo/tstd/tz/editor/nvim")
+vim.filetype.add({ extension = { tz = "tz" } })
+```
+
+plain nvim needs only the first line: the detector file sets the filetype. the second is for setups whose plugin manager never sources the legacy detector files. one residue, and one improvement over the vs code grammar: a hole gets the tz words and nothing wider, so a plain value inside a hole stays uncoloured, while tz words inside a hole are coloured here but stay unhighlighted in vs code.
+
 ## what is here
 
 - the side quest family, postfix on any value: `?none` / `?some`, `?==` / `?!=` / `?>` / `?<` / `?>=` / `?<=`, `?&(...)` / `?|(...)`, `?:tag`, `?(cond)`, bare `?` / `?!`, with an exit, an arrow capture, a block, or an `else` chain after them
