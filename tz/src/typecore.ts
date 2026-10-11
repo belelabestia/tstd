@@ -19,6 +19,7 @@ export const refused: Record<string, string> = {
   public: 'gone with class',
   super: 'gone with class',
   throw: 'err',
+  if: 'a side quest',
   switch: '? {}',
   catch: 'call.sync, call.async, or try',
   finally: 'call.sync, call.async, or try'

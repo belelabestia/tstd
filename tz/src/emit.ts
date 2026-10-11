@@ -854,8 +854,6 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
 
     return count;
   };
-  const conditional = (i: number) => no(i, 'an if expression is refused; answer with ? => ... else ...');
-
 
   const scoping = (i: number) => {
     const t = tokens[i];
@@ -3641,13 +3639,6 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
     if (t.kind !== 'word' || !keyword(tokens, before, i)) continue;
 
     if (t.text === 'else' && !consumed[i]) return no(i, 'else after an if statement is refused; the funnel is the flow');
-
-    if (t.text === 'if' && !starts[i]) {
-      const bad = conditional(i);
-      if (bad !== undefined) return bad;
-
-      continue;
-    }
 
     if (t.text === 'scope' && after[i] >= 0 && tokens[after[i]].text === '(' && twin[after[i]] >= 0 && after[twin[after[i]]] >= 0 && tokens[after[twin[after[i]]]].text === '=>' && after[after[twin[after[i]]]] >= 0 && tokens[after[after[twin[after[i]]]]].text === '{') {
       if (starts[i] && frames[owner[i]].kind !== 'object') return no(i, 'a scope hands back its exit; bind it');

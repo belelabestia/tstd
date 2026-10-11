@@ -919,14 +919,22 @@ test('declare a form once, and read it twice', () => {
   assert.match(refused('export form user {\n  id: is.string,\n  seen: {\n    is: iso.timestamp\n  } as\n}'), /renames with a key/);
 });
 
-test('refuse the if expression, and pass the statement through', () => {
-  // answering is the matchers' job now; an if without else is just flow
+test('refuse the if, and keep the side quest that replaces it', () => {
+  // every if is a side quest: the early-return, the trigger, the two-branch statement
 
-  assert.match(refused('const n = if (is.number(raw)) raw else 42;'), /an if expression is refused/);
+  assert.match(refused('const f = (n: number) => {\n  if (n < 0) return 0;\n  return n;\n};'), /if is refused/);
+  assert.match(refused('const n = if (is.number(raw)) raw else 42;'), /if is refused/);
 
   assert.equal(
-    out('const f = (n: number) => {\n  if (n < 0) return 0;\n  return n;\n};'),
-    'const f = (n: number) => {\n  if (n < 0) return 0;\n  return n;\n};'
+    out('const f = (n: number) => {\n  n ?< 0 return 0;\n  return n;\n};'),
+    'const f = (n: number) => {\n  if (n < (0)) return 0;\n  return n;\n};'
+  );
+
+  // the two sided statement keeps its else, exactly what the if/else was reaching for
+
+  assert.equal(
+    out('const f = (cond: boolean) => {\n  cond ? seen(`yes`) else seen(`no`);\n};'),
+    'const f = (cond: boolean) => {\n  if (cond === true) seen(`yes`); else seen(`no`);\n};'
   );
 });
 
@@ -974,7 +982,7 @@ test('refuse an assignment used as an expression', () => {
   // an assignment is a statement, so two in one or one read as a value is refused
 
   assert.match(refused('const f = () => {\n  let a = 0;\n  let b = 0;\n  a = b = 2;\n  return a + b;\n};'), /an assignment is a statement/);
-  assert.match(refused('const f = (n: number) => {\n  let a = 0;\n  if (a = n) return a;\n  return n;\n};'), /an assignment is a statement/);
+  assert.match(refused('const f = (n: number) => {\n  let a = 0;\n  while (a = n) a = a - 1;\n  return n;\n};'), /an assignment is a statement/);
 
   // the bare form is the statement itself, and a for header owns its own
 
