@@ -32,7 +32,7 @@ the refused **words** are the table in `src/typecore.ts`: `class`, `function`, `
 
 the refused **punctuation and shapes** are in `src/ban.ts`: `===`/`!==`, `??`, a comparison against `null`/`undefined`, an assignment used as an expression, `?:` (write a side quest), the gluing mistakes around `?`, a typescript `try {`, a bare `return;`, the `async` modifier, `Promise.reject`, `get`/`set`, and the method shorthand, which hides a `this` its type never states.
 
-every refusal's diagnostic names the replacement. a spelling the library owns rather than the language (`protocol.init`, `result.ok`, `scope.sync`, `call.sync`, `branch`, `make`) is warned by the editor, not banned, because interop needs it. one documented ban is not enforced yet: a statement `else`, which is the `if` overlap (session 21).
+every refusal's diagnostic names the replacement. a spelling the library owns rather than the language (`protocol.init`, `result.ok`, `scope.sync`, `call.sync`, `branch`, `make`) is warned by the editor, not banned, because interop needs it. one documented ban is not enforced yet: a statement `if`, which is the `if` overlap (session 21); its `else` is already refused.
 
 ## running it
 
@@ -53,7 +53,7 @@ node dist/tzd.js examples constructs    # the editor checks, headless
 
 `tzc` takes a file or a directory, mirrors `tsc`, and moves a diagnostic back onto the `.tz` line. `tzx` mirrors `tsx`, and `tzd` is the editor checks.
 
-the emitter never writes an import; the imports are yours: `ok` and `err` need `result`, a `form` declaration needs `form` and the guards it names (`is`), and a `protocol` needs `protocol` and `Union`. a type only import has to say `type`, because `tzx` leans on node's own type stripping.
+the emitter never writes an import, so a construct that bonds to a `tstd` module needs it imported; the deck for that construct shows the line. `ok` and `err` need `result`; `?none` and `?some` need `is`; `:tag` construction needs `branch`; the `call`, `make` and `scope` constructs need their own name; a `form` declaration needs `form` and the guards it names (`is`); a `protocol` needs `protocol` and `Union`; `try` needs nothing on its own, since it inlines the branch check. a type only import has to say `type`, because `tzx` leans on node's own type stripping.
 
 ## verifying
 
@@ -88,4 +88,9 @@ export const read = (raw: unknown) => {
 
 read it in the order the machine runs: `form` declares the wire shape and the domain shape once; `form.model` proves the payload, and the side quest refuses it when the proof fails; `form.decode` is infallible after the proof, so it carries the post unboxed; `ok` answers.
 
-two things the sample does not say outright. `?!` is `?== false`: it refuses when the guard is false. and `form.model`, `form.decode` and `form.encode` are `tstd` exports, not constructs; the `form` construct is the declaration.
+the sample does not say outright:
+
+- `?!` is `?== false`: it refuses when the guard is false.
+- `form.model`, `form.decode` and `form.encode` are `tstd` exports, not constructs; the `form` construct is the declaration.
+- `try call => f(...)` hands `f` and its arguments straight to `call.sync`, which can resolve a different overload than the call you wrote: a function whose return type depends on an argument's literal type, node's `readFileSync(path, 'utf8')` for one, takes the block form `try call => { return f(...); }`.
+- an `await` in a scope body makes the resource async with it: `open` answers a promise, `close` and `abort` do too, and `hold` takes the resource object and is awaited, `try await hold(resource)`.

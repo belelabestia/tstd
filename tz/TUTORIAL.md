@@ -340,7 +340,15 @@ export const both = (first: string, second: string) => scope (hold) => {
 
 the `=>` is not decoration. that block is a function body: `try` exits from it, `ok` and `err` are its exits. writing the `=>` says so, and it keeps the discipline check to one sentence, since a function body stays exactly a `{` preceded by `=>` with no second case for `scope`. it also settles the recognition: `scope(x) => {}` is not valid javascript, so a call to somebody else's `scope` can never be read as the construct.
 
-an async body picks `scope.async` and an async callback, and the count that decides it is the same one that decides everything else, an `await` in the body.
+an async body picks `scope.async` and an async callback, and the count that decides it is the same one that decides everything else, an `await` in the body. the resource changes with it: every step answers a promise, so `open` returns a `Promise<T>` and `close` and `abort` return a `Promise<void>`, and the acquisition is awaited, `try await hold(...)`. a resource written for the sync scope does not fit the async one, or the reverse, so a lifetime that crosses both is declared twice.
+
+```tz
+export const bothLater = (first: string, second: string) => scope (hold) => {
+  const a = try await hold(pool.takeLater(first));
+  const b = try await hold(pool.takeLater(second));
+  ok `${a} and ${b}`;
+};
+```
 
 hold is a value, not a keyword. `hold` binds, the way `catch (e)` and `?:err (e)` bind, so it takes the parens the rest of the language takes. what it does not take is keyword status. `hold x` would read as syntax, and then the emitter has to answer which scope the resource belongs to, which is the one question a token-level rewriter has no business answering. as a value it answers nothing: `hold` is a parameter name copied through, and `hold(x)` is a call the emitter never looks at.
 
