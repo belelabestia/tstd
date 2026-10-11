@@ -37,6 +37,10 @@ the teaching docs carried prompts parked as comments: notes to an agent left mid
 
 material that onboards people and agents. the bootstrap (13) lands before the build, because the agent is a builder and needs the contract first; the tested agent contract (17) and the getting-started path for people (16) are derived from the battle test, not invented ahead of it. tz is well suited to agent onboarding because the ban list is already machine-readable.
 
+### phase 4, pressure
+
+the language is used, and every place it fights back becomes a todo. when the language, the emitter or the contract moves, one cold agent is pointed at `AGENTS.md` alone with a small task on the surface that changed, and what it cannot say, cannot import, or gets wrong is filed in the ledger; the language then evolves from that data rather than from guesswork. the pass runs on the sessions that move the language rather than on a timer, so the findings keep arriving where they can change something and the cost stays bounded. the phase ends when a cold agent can carry a real project in tz without hitting a blocker, which is the point the author starts using it in his own projects.
+
 ## the sessions
 
 | # | session | phase | status | resolves |
@@ -57,19 +61,20 @@ material that onboards people and agents. the bootstrap (13) lands before the bu
 | 14 | the async tail | truth | done | the async exit as a matcher tail |
 | 15 | the first build | battle | done | the dev experience |
 | 16 | onboard people | onboarding | done | q6 |
-| 17 | onboard agents | onboarding | planned | the agent contract |
+| 17 | onboard agents | onboarding | done | the agent contract |
 | 18 | the arrow capture | truth | planned | q16 |
 | 19 | the struct and the codec | battle | planned | q8 |
 | 20 | the in-file test | battle | planned | q9 |
 | 21 | the `if` ban | truth | planned | the `if` overlap |
 | 22 | the construct table | truth | planned | the construct landscape |
-| 23 | retire the plan | close | planned | the plan itself |
+| 23 | under pressure | pressure | planned | q17, q18, q19, q20 |
+| 24 | retire the plan | close | planned | the plan itself |
 
-sessions run in order. 09 is blocked by 08; 17 follows 16, which followed 15; and 13 preceded 14, which preceded 15: the agent is a builder and the language is fixed before the build. everything else is unblocked once 01 lands, because a session that fixes a defect needs the harness that catches the defect. 23 runs last, after every other session, because it deletes the table it sits in.
+sessions run in order. 09 is blocked by 08; 17 follows 16, which followed 15; and 13 preceded 14, which preceded 15: the agent is a builder and the language is fixed before the build. everything else is unblocked once 01 lands, because a session that fixes a defect needs the harness that catches the defect. 24 runs last, after every other session, because it deletes the table it sits in.
 
 14 fixes the exit family before the build. `async x` emits `return Promise.resolve(x)`, so `async` is an exit, and every exit is a matcher tail; the emitter refuses `async` as a tail in five places and omits it from three tail lists, so `x ?err async 1` is refused while `x ?err return 1` compiles. the session adds `async` to the tails, removes the matcher-tail guards, keeps the guards against `=> async` and an exit inside an arrow body, and corrects the tutorial and design.
 
-16 followed 15 and landed: `GETTING-STARTED.md` is the getting-started path and `README.md` is the map, a fresh clone reaches a running program after a single install inside `tz/`, and q6 is ruled as repo-only onboarding with publishing deferred to the split. 17 follows: the agent contract is tested and hardened.
+16 followed 15 and landed: `GETTING-STARTED.md` is the getting-started path and `README.md` is the map, a fresh clone reaches a running program after a single install inside `tz/`, and q6 is ruled as repo-only onboarding with publishing deferred to the split. 17 followed: the agent contract is tested and hardened by pointing cold agents at it, and the passes that did it now run on the sessions that move the language, their findings filed as q17 to q20.
 
 18 is the arrow capture, the author's change of mind. `call`, `make` and `scope` carry a `=>`, and the same glyph is the side-quest capture, "produce a value, stay in scope", so a reader learns two meanings before meeting the one the language is built on. the session asks whether the three boundary constructs keep the arrow at all, and whether the side-quest arrow's expression-versus-statement distinction is load bearing. it is a vocabulary session, ruled before anything changes.
 
@@ -79,7 +84,9 @@ sessions run in order. 09 is blocked by 08; 17 follows 16, which followed 15; an
 
 22 is the construct table, the author's second change of mind: the constructs ordered as a crescendo of complexity, `try`, `make` and `call` on the way up and `scope` at the top. the tutorial's construct matrix lists the side-quest spellings by what they replace, not the constructs by the reader's cost, so the ladder does not exist yet. it is a docs session, written after the language work settles the set.
 
-23 closes the plan itself. once phase 3 lands, `plan/` has done its job: `UPDATES.md` is the durable journal and git keeps the history, so the roadmap, the sessions and the context files are a working aid whose work is finished. the session relocates what must outlive it, since the comment protocol is a living channel rather than a phase and moves into `AGENTS.md`, sweeps every remaining pointer at `plan/`, and then deletes `plan/roadmap.md`, `plan/sessions/`, `plan/context/` and `plan/session-context-template.md`. the plan records its own retirement, and then it is gone.
+23 is the first batch of pressure, and the method is the point. the session 17 passes put a cold agent on the guide and read where the language fought back; this session reproduces each finding, rules on it, and lands the fix, one commit each. the four on file are the boundary's direct form (q17), a quest inside a `? {}` arm (q18), a tag written inline against a union-typed target (q19), and a promise-returning resource method (q20). the pass runs on the sessions that move the language, one agent on the surface that changed, so the batch is never the last one.
+
+24 closes the plan itself. once phase 4 lands, `plan/` has done its job: `UPDATES.md` is the durable journal and git keeps the history, so the roadmap, the sessions and the context files are a working aid whose work is finished. the session relocates what must outlive it, since the comment protocol is a living channel rather than a phase and moves into `AGENTS.md`, sweeps every remaining pointer at `plan/`, and then deletes `plan/roadmap.md`, `plan/sessions/`, `plan/context/` and `plan/session-context-template.md`. the plan records its own retirement, and then it is gone.
 
 ## the ledger
 
@@ -101,6 +108,10 @@ where a swept note lands. a question is q-numbered; a routed task is t-numbered.
 - **q14, effect against exit and value.** in `examples/signup.tz`, the guard note asks for a strict structural definition that excludes an effect from a union of effect, exit and value, and whether the transpiler and language already hold that principle, should hold it, or could hold it. a design question. unassigned.
 - **q15, the `? {}` subject type.** in `constructs/block.spec.tz`, the note says the matched subject of a `? {}` over a `Result` should read as a `Branch<...>`. whether the emit and the editor should name it so. a typing question about the emit. unassigned.
 - **q16, the arrow capture.** `call`, `make` and `scope` carry the same `=>` the side quests use for a capture, so one glyph carries two readings. do the boundary constructs keep it, and is the side-quest expression-versus-statement arrow load bearing? the author has no final stance. session 18.
+- **q17, the boundary's direct form.** `try call => f(a)` hands `f` and its arguments straight to `call.sync`, which widens the arguments and can resolve a different overload than the call you wrote: `readFileSync(path, 'utf8')` comes back `string | NonSharedBuffer`, so the next line that needs a `string` fails, while the block form keeps the literal and the `'utf8'` overload. found by the session 17 pass (session 15 candidate 5). session 23.
+- **q18, a quest inside a `? {}` arm.** an arm holds a value, an exit or a block, not a side quest, so `:loading => cond ? => a else => b` is refused; the refusal names the `else`-after-`if` rule rather than the nesting, so the writer is sent to the wrong place. bind the inner value first. found by the session 17 pass. session 23.
+- **q19, a tag written against a union-typed target.** `const x: SomeUnion = :tag;` fails when the tag carries `void`, because the inline construction infers its payload from every member at once (`void | string`); binding first compiles. the `tstd` o23 rule, seen through the `:tag` notation. found by the session 17 pass. session 23.
+- **q20, a promise-returning resource method.** the `async` modifier is refused, so a resource whose `open` answers a promise is written `() => Promise.resolve(x)` or with a body ending `async x;`; the contract says the resource must be async but not how to spell the step. found by the session 17 pass. session 23.
 
 ### tasks
 
@@ -152,8 +163,9 @@ a parked note is not documentation: it names words the language does not own, an
 3. **rule.** any genuine design question goes to the author. the ruling is recorded in the context file with its reasoning, and the rejected alternatives.
 4. **work.** implement, then verify: `npm test` in the repo root and in `tz/`, `tzc examples constructs`, `tzd examples constructs`, and the `tzx` spec. a type claim is checked by compiling it, not by reading it.
 5. **sweep.** grep `#todo`, `#fixme` and `#prompt` and route each note by the comment protocol, so nothing is left parked when the session closes.
-6. **close.** the author reviews. once it passes, commit with one decision per commit, add a dated entry to `../UPDATES.md`, flip the status in the table above, and commit the context file with the session. then push.
+6. **pressure.** when the session moved the language, the emitter or the contract, point one cold agent at `AGENTS.md` alone with a small task on the surface it touched; file what it cannot say, cannot import, or gets wrong as a q in the ledger, so the language evolves from use rather than from guesswork.
+7. **close.** the author reviews. once it passes, commit with one decision per commit, add a dated entry to `../UPDATES.md`, flip the status in the table above, and commit the context file with the session. then push.
 
 ## what a green close looks like
 
-at the end of phase 0, `npm test` runs the emitted code and a broken showcase fails the build. at the end of phase 1, no prompt is parked in a doc and the tutorial reads in one voice. at the end of phase 2, a real program runs on tz and the friction is written down. at the end of phase 3, a person and an agent can each start from a document and be productive. and at the very end, the plan retires itself: session 23 moves the comment protocol into `AGENTS.md`, deletes the roadmap, the sessions and the context files, and leaves the code, the docs and the journal as the whole record.
+at the end of phase 0, `npm test` runs the emitted code and a broken showcase fails the build. at the end of phase 1, no prompt is parked in a doc and the tutorial reads in one voice. at the end of phase 2, a real program runs on tz and the friction is written down. at the end of phase 3, a person and an agent can each start from a document and be productive. at the end of phase 4, a cold agent carries a real project in tz without hitting a blocker, and the author starts using it in his own. and at the very end, the plan retires itself: session 24 moves the comment protocol into `AGENTS.md`, deletes the roadmap, the sessions and the context files, and leaves the code, the docs and the journal as the whole record.
