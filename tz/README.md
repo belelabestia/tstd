@@ -1,6 +1,6 @@
 # tz - the typezig prototype
 
-tz is a superset of `typecore`, the subset of typescript that omits the overlap, with its own standard library, out of the box. `tstd` is the seed: the core library that carries every principle, and it works in typecore on its own. tz is the language built to optimize that usage to a point typescript alone could never reach. the design notes are in `tz/DESIGN.md`; the spec is in `tz/TUTORIAL.md`; the journal of decisions is in `tz/UPDATES.md`; the plan of action is in `tz/plan/roadmap.md`. this file is the entry point: how to run it and where the rest lives. if you are an agent, read `AGENTS.md` first: it is the contract for writing tz.
+tz is a superset of `typecore`, the subset of typescript that omits the overlap, with its own standard library, out of the box. `tstd` is the seed: the core library that carries every principle, and it works in typecore on its own. tz is the language built to optimize that usage to a point typescript alone could never reach. the design notes are in `tz/DESIGN.md`; the spec is in `tz/TUTORIAL.md`; the journal of decisions is in `tz/UPDATES.md`; the plan of action is in `tz/plan/roadmap.md`. this file is the map: what tz is and where the rest lives, and the first run is in `GETTING-STARTED.md`. if you are an agent, read `AGENTS.md` first: it is the contract for writing tz.
 
 ## a taste
 
@@ -28,56 +28,9 @@ export const submit = (raw: unknown, save: (conn: Conn, user: Signup) => Promise
 };
 ```
 
-## running it
+## start here
 
-```
-npm install
-npm run build
-npm test
-```
-
-then, from this directory:
-
-```
-node dist/tzc.js examples constructs             # emit the .ts beside each .tz, then typecheck both
-node dist/tzx.js --test constructs/arrow.spec.tz # run a construct deck
-node dist/tzx.js --test examples/signup.spec.tz  # run the example spec
-node dist/tzx.js examples/main.tz                # run a program
-node dist/tzx.js examples/site/main.tz           # run the site
-node dist/tzd.js examples constructs             # the editor checks, headless: tzc parity plus the unranked warnings
-```
-
-`tzc` mirrors `tsc`: it emits, runs `tsc` on the emit, and moves every diagnostic back onto the `.tz` line and column it came from. `--out <dir>` mirrors the tree somewhere else and `--no-check` stops after the emit.
-
-`tzx` mirrors `tsx`: a node loader hook turns `.tz` into typescript in memory and lets node strip the types, so nothing lands on disk. every argument goes through to node, which is why `--test` works. a relative `./x.js` import resolves to `x.tz` when one is there, so a tz file writes the same specifier the emit will.
-
-two things to know when writing a `.tz` file:
-
-- **the emitter never writes an import.** a file that says `ok` imports `result`, one that uses a side quest imports `is`. forget one and `tsc` tells you, in the usual way, on the right line.
-- **a type only import has to say `type`.** `tzx` leans on node's own type stripping, which cannot tell a type from a value, so write `import { result, type Result } from ...`.
-
-## the editor
-
-`editor/` is a vs code extension with no code in it: a language for `.tz`, a grammar that is one include of `source.ts`, and an injection that adds the words typescript does not have. point your extensions directory at it and reload the window.
-
-```
-New-Item -Path "$env:USERPROFILE\.vscode\extensions\typezig" -ItemType Junction -Target .\editor
-```
-
-the words are an injection rather than a pattern in the grammar because an include of `source.ts` only reaches the top level of a file, and a side quest is always inside a body. an injection is merged into every rule at every depth instead, and `-comment -string` in its selector keeps it out of prose.
-
-it knows `try`, `scope`, `protocol`, `form`, `call`, `else`, the `ok`, `err`, `async`, `return`, `break` and `continue` exits, the `?none`, `?some`, `?==`, `?:tag` and `?(cond)` side quests plus bare `?` and `?!`, the `:tag` construction, and the `:tag`, `==`, `else` and `(cond)` arms of a `? {}` block. inside a `protocol` declaration it colors the branch names and the `=>` targets, so a machine reads as arrows between names instead of a block of white.
-
-two residues, both wontfix and cosmetic. typescript's grammar reads a `? {}` arm as an object literal key, so a quoted arm value loses string scope and the selector cannot see it; the grammar refuses any word with a quote against it instead. a tz word inside a template hole stays unhighlighted because the whole template is a string to the selector.
-
-`editor/nvim/` is the same shape for nvim, with no code either: a detector and one syntax file. the base is the runtime's regex typescript, because a syntax file is the only engine nvim has that can read tz at all: the tree-sitter typescript parser turns every side quest into an ERROR node and goes grey exactly where the language works. the injection is cluster surgery. the words join every set the base's regions declare they scan, and the few regions that spell their sets out item by item are followed explicitly. two base regions are taken back out of those sets: the ternary, because `?:` is banned in tz and its region would own every `?`, and the template, because the base ends a template at the first inner backtick and would strand every line below a nested one in a string. the replacement nests the only way this engine can: the template holds the hole, the hole holds the tz words and itself, and neither holds a template.
-
-```
-vim.opt.rtp:append("~/repo/tstd/tz/editor/nvim")
-vim.filetype.add({ extension = { tz = "tz" } })
-```
-
-plain nvim needs only the first line: the detector file sets the filetype. the second is for setups whose plugin manager never sources the legacy detector files. one residue, and one improvement over the vs code grammar: a hole gets the tz words and nothing wider, so a plain value inside a hole stays uncoloured, while tz words inside a hole are coloured here but stay unhighlighted in vs code.
+`GETTING-STARTED.md` walks from a fresh clone to a running program: install, a first program, the mental model, and the editor.
 
 ## what is here
 

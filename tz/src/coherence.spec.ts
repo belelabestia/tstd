@@ -15,7 +15,7 @@ import { puncts } from './lex.js';
   claim matches the handler, and every construct has a spec and a design entry.
 */
 
-const docs = ['README.md', 'DESIGN.md', 'TUTORIAL.md'];
+const docs = ['README.md', 'DESIGN.md', 'TUTORIAL.md', 'GETTING-STARTED.md'];
 
 const read = (file: string) => readFileSync(new URL(`../${file}`, import.meta.url), 'utf8');
 
@@ -59,9 +59,9 @@ test('every backticked identifier in the docs is a known construct', () => {
     'rows', 'constructs', 'decks', 'examples', 'seen', 'serve', 'set', 'side', 'source', 'spec', 'src', 'string', 'table',
     'task', 'tmp', 'to', 'ts', 'tsc', 'tstd', 'tsx', 'type', 'typecore', 'typescript', 'tz', 'tzc', 'tzx', 'tzd',
     'using',
-    'Union', 'unknown', 'unwrap', 'User', 'UserForm', 'val', 'void', 'x', 'AGENTS', 'LanguageService',
+    'Union', 'unknown', 'unwrap', 'User', 'UserForm', 'val', 'void', 'x', 'AGENTS', 'GETTING', 'README', 'DESIGN', 'TUTORIAL', 'LanguageService',
     'DateTime', 'Payment', 'A', '_', 'Result', 'Branch', 'loader', 'roles', 'npm', 'emit',
-    'pred', 'hit', 'miss'
+    'pred', 'hit', 'miss', 'hello'
   ]);
 
   const misses: string[] = [];
