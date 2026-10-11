@@ -56,7 +56,7 @@ material that onboards people and agents. the bootstrap (13) lands before the bu
 | 13 | the agent bootstrap | onboarding | done | the agent starting point |
 | 14 | the async tail | truth | done | the async exit as a matcher tail |
 | 15 | the first build | battle | done | the dev experience |
-| 16 | onboard people | onboarding | planned | q6 |
+| 16 | onboard people | onboarding | done | q6 |
 | 17 | onboard agents | onboarding | planned | the agent contract |
 | 18 | the form audit | battle | planned | q8 |
 | 19 | the in-file test | battle | planned | q9 |
@@ -64,9 +64,11 @@ material that onboards people and agents. the bootstrap (13) lands before the bu
 | 21 | the value declaration | truth | planned | the declaration shape |
 | 22 | retire the plan | close | planned | the plan itself |
 
-sessions run in order. 09 is blocked by 08; 16 and 17 follow 15, which has landed; and 13 preceded 14, which preceded 15: the agent is a builder and the language is fixed before the build. everything else is unblocked once 01 lands, because a session that fixes a defect needs the harness that catches the defect. 22 runs last, after every other session, because it deletes the table it sits in.
+sessions run in order. 09 is blocked by 08; 17 follows 16, which followed 15; and 13 preceded 14, which preceded 15: the agent is a builder and the language is fixed before the build. everything else is unblocked once 01 lands, because a session that fixes a defect needs the harness that catches the defect. 22 runs last, after every other session, because it deletes the table it sits in.
 
 14 fixes the exit family before the build. `async x` emits `return Promise.resolve(x)`, so `async` is an exit, and every exit is a matcher tail; the emitter refuses `async` as a tail in five places and omits it from three tail lists, so `x ?err async 1` is refused while `x ?err return 1` compiles. the session adds `async` to the tails, removes the matcher-tail guards, keeps the guards against `=> async` and an exit inside an arrow body, and corrects the tutorial and design.
+
+16 followed 15 and landed: `GETTING-STARTED.md` is the getting-started path and `README.md` is the map, a fresh clone reaches a running program after a single install inside `tz/`, and q6 is ruled as repo-only onboarding with publishing deferred to the split. 17 follows: the agent contract is tested and hardened.
 
 18 and 19 join the construct work of phase 2: 18 audits `form` because the author's charge is that its emit is inconsistent, and 19 explores a `test` keyword written in the file it tests. both are audits first, implementations second, so they may split.
 
@@ -85,7 +87,7 @@ where a swept note lands. a question is q-numbered; a routed task is t-numbered.
 - **q3, forward-work home.** where does planned work live? resolved in session 07: this file is the home, and the comment protocol feeds it. every parked note is a capture that a sweep routes here.
 - **q4, the target.** what is the first honest program tz must carry? resolved in session 12: the personal site, a monolith web service written in tz, files first. the brief is in `plan/context/12-choose-the-target.md`.
 - **q5, stable enough to split.** `../DESIGN.md` says tz moves to its own repo with a `git mv` once the prototype is stable. what does stable mean, in measurable terms? resolved in session 11: three conditions, all checkable. (1) the dependency is a version, not a path: tz reaches `tstd` through the package entry alone, with no `paths` into `../src` and no `file:..`. (2) a fresh clone of `tz/` alone, against a tagged `tstd` from the registry, passes `npm test` with no change to either side. (3) the ban table, the role list and the emitted shapes hold unchanged across one full `tstd` release while the battle program is built. the standard itself is in `plan/context/11-define-robust.md`.
-- **q6, publishing.** `@belelabestia/tz` is private at `0.0.0`. when and how does it become a package someone can install? session 16.
+- **q6, publishing.** resolved in session 16: tz stays `private` at `0.0.0` and onboarding is repo-only; the package becomes installable once the q5 split conditions hold, and publishes like `tstd` then. rejected: a private preview now (a token story for a prototype that has not split); going public on npmjs before the split (a versioning contract before tz is stable).
 - **q7, the `?!` tail.** `cond ?! err 'x'` emitted an unreWritten `err`, while `cond ? err` and `cond ?== false err` rewrote it. found in session 05. resolved in session 06: the tail rewrite was never the hole; the glued `!` of a bare `?!` ate the statement start in `scan.ts`, so the exit pass that rewrites the tail never saw it. making the `!` transparent to the start fixes it, and the working forms stay byte-identical.
 - **q8, the form line.** some of `form` is emitted, some is written by hand, and the author charges that the line is arbitrary. where does it belong? session 18, with a `protocol` note if the audit finds an adjacent inconsistency (that would be q12).
 - **q9, the in-file test.** a `test` keyword like zig's, in the file it tests, reaching module internals. feasible, and under what house-rule amendment? session 19.
