@@ -35,9 +35,9 @@ const objects = [
   '===', '==', '!==', '!=', '<', '>', '<=', '>=', '...', '=>'
 ];
 
-export const words = ['return', 'ok', 'err', 'async', 'satisfies', 'as', 'of', 'in', 'typeof', 'new', 'extends'];
+export const words = ['return', 'ok', 'err', 'async', 'satisfies', 'as', 'of', 'in', 'typeof', 'extends'];
 
-export const tails = ['if', 'for', 'while'];
+export const tails = ['for', 'while'];
 
 export const matchers = ['none', 'some', 'ok', 'err'];
 
@@ -372,7 +372,7 @@ export const scan = (tokens: Token[]) => {
       if (text === ')' && twin[i] >= 0) {
         const head = before[twin[i]];
         if ((head >= 0 && tagged[head] >= 0) || tagged[twin[i]] >= 0) { start = true; tail = true; }
-        else if (head >= 0 && tokens[head].kind === 'word' && tails.includes(tokens[head].text)) { start = true; tail = tokens[head].text !== 'if'; }
+        else if (head >= 0 && tokens[head].kind === 'word' && tails.includes(tokens[head].text)) { start = true; tail = true; }
       }
 
       continue;

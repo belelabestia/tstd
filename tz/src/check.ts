@@ -549,7 +549,7 @@ const unwrapped = (expr: string) => {
 /** the words that head a statement, so a drop never starts with one */
 const heads = [
   'const', 'let', 'import', 'export', 'return', 'ok', 'err', 'try', 'void',
-  'scope', 'protocol', 'form', 'call', 'make', 'async', 'if', 'for', 'while',
+  'scope', 'protocol', 'form', 'call', 'make', 'async', 'for', 'while',
   'else', 'do', 'type', 'break', 'continue', 'satisfies', 'as'
 ];
 
