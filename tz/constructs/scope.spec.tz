@@ -21,7 +21,7 @@ const pool = {
   })
 };
 
-const both = (first: string, second: string) => scope (hold) => {
+const both = (first: string, second: string) => scope (hold) {
   const a = try hold(pool.take(first));
   const b = try hold(pool.take(second));
   ok `${a} and ${b}`;

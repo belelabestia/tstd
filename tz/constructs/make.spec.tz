@@ -5,16 +5,16 @@ import { make, result } from '@belelabestia/tstd';
 /*
   make is the constructor that does not throw
 
-  `new` is banned, and its replacement takes `=>` the way `call` does,
-  because a platform constructor panics. `make => C(...)` names the
-  constructor and keeps the arguments where they are, and the boundary
-  becomes a Result. a constructor only syncs, so there is no async side.
+  `new` is banned, and its replacement names the constructor and keeps the
+  arguments where they are, because a platform constructor panics.
+  `make C(...)` spells `make(C, ...)`, and the boundary becomes a Result.
+  a constructor only syncs, so there is no async side.
 */
 
-const url = (href: string) => make => URL(href);
+const url = (href: string) => make URL(href);
 
 const built = (href: string) => {
-  const u = try make => URL(href);
+  const u = try make URL(href);
   ok u.href;
 };
 

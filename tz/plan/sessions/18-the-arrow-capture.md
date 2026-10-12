@@ -1,7 +1,7 @@
 # 18 the arrow capture
 
 phase: truth
-status: planned
+status: done
 resolves: q16
 
 ## why

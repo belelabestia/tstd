@@ -20,7 +20,7 @@ const directory = (root: string) => ({
 
 /** a file read as text, or why it could not be */
 const text = (file: string) => {
-  const raw = try call => {
+  const raw = try call {
     return readFileSync(file, 'utf8');
   };
 
@@ -30,7 +30,7 @@ const text = (file: string) => {
 /** a file read and parsed, or why it could not be */
 const json = (file: string) => {
   const raw = try text(file);
-  const parsed = try call => JSON.parse(raw);
+  const parsed = try call JSON.parse(raw);
   ok parsed;
 };
 
@@ -87,7 +87,7 @@ const one = (at: string, file: string) => {
 };
 
 const posts = (at: string) => {
-  const files = try call => {
+  const files = try call {
     return readdirSync(join(at, 'posts'));
   };
 
@@ -103,7 +103,7 @@ const posts = (at: string) => {
 };
 
 /** the whole content tree, read once under one held directory */
-export const load = (root: string) => scope (hold) => {
+export const load = (root: string) => scope (hold) {
   const at = try hold(directory(root));
 
   const foundTopics = try topics(at);

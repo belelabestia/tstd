@@ -864,8 +864,8 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
     if (inner < 0 || inner >= close) return no(i, 'a scope binds one name');
     if (tokens[inner].kind !== 'word' || after[inner] !== close) return no(i, 'a scope binds one name');
 
-    const arrow = after[close];
-    const open = after[arrow];
+    const open = after[close];
+    if (open < 0 || tokens[open].text !== '{') return no(i, 'a scope body opens with {');
     const end = twin[open];
     if (end < 0) return no(i, 'a scope has no closing brace');
 
@@ -875,7 +875,7 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
     scoped[f] = true;
 
     const opens = frames[f].suspends ? '.async(async ' : '.sync(';
-    edits.push({ from: t.to, to: tokens[arrow].to, text: `${opens}${binding} =>` });
+    edits.push({ from: t.to, to: tokens[open].from, text: `${opens}${binding} => ` });
     edits.push({ from: tokens[end].to, to: tokens[end].to, text: ')' });
   };
 
@@ -1090,7 +1090,7 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
   };
 
   const wrapping = (at: number, box?: { suspends: boolean }) => {
-    let n = after[at];
+    const n = after[at];
     if (n < 0) return no(at, 'call needs an expression');
 
     const async = before[at] >= 0 && tokens[before[at]].text === 'await' && tokens[before[at]].kind === 'word' && keyword(tokens, before, before[at]) && after[before[at]] === at;
@@ -1109,44 +1109,38 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
       if (plain) edits.push({ from: tokens[aw].from, to: tokens[at].from, text: '' });
     }
 
-    if (tokens[n].text === '=>' && keyword(tokens, before, n)) {
-      const block = after[n];
-      if (block < 0) return no(n, 'call needs an expression');
-      if (tokens[block].text !== '{') {
-        n = block;
-      }
-      else {
-        const close = twin[block];
-        if (close < 0) return no(block, 'a call block has no closing brace');
+    if (tokens[n].text === '{') {
+      const block = n;
+      const close = twin[block];
+      if (close < 0) return no(block, 'a call block has no closing brace');
 
-        const f = holds[block];
-        if (f >= 0) {
-          if (frames[f].fallible || frames[f].promises) return no(block, 'try, ok and err stay outside a call block');
+      const f = holds[block];
+      if (f >= 0) {
+        if (frames[f].fallible || frames[f].promises) return no(block, 'try, ok and err stay outside a call block');
 
-          if (frames[f].suspends) scoped[f] = true;
-          if (frames[f].suspends && box !== undefined) box.suspends = true;
+        if (frames[f].suspends) scoped[f] = true;
+        if (frames[f].suspends && box !== undefined) box.suspends = true;
 
-          const lastReturn = frames[f].last;
-          if (lastReturn < 0 || tokens[lastReturn].text !== 'return' || after[lastReturn] < 0 || tokens[after[lastReturn]].text === ';') {
-            return no(block, 'a call block answers with return');
-          }
-
-          if (frames[f].suspends && !async) {
-            edits.push({ from: tokens[at].from, to: tokens[block].from, text: 'call.async(async () => ' });
-            edits.push({ from: tokens[close].to, to: tokens[close].to, text: ')' });
-            return undefined;
-          }
+        const lastReturn = frames[f].last;
+        if (lastReturn < 0 || tokens[lastReturn].text !== 'return' || after[lastReturn] < 0 || tokens[after[lastReturn]].text === ';') {
+          return no(block, 'a call block answers with return');
         }
 
-        edits.push({ from: tokens[at].from, to: tokens[block].from, text: `${open}${async ? 'async ' : ''}() => ` });
-        edits.push({ from: tokens[close].to, to: tokens[close].to, text: ')' });
-        return undefined;
+        if (frames[f].suspends && !async) {
+          edits.push({ from: tokens[at].from, to: tokens[block].from, text: 'call.async(async () => ' });
+          edits.push({ from: tokens[close].to, to: tokens[close].to, text: ')' });
+          return undefined;
+        }
       }
+
+      edits.push({ from: tokens[at].from, to: tokens[block].from, text: `${open}${async ? 'async ' : ''}() => ` });
+      edits.push({ from: tokens[close].to, to: tokens[close].to, text: ')' });
+      return undefined;
     }
 
     const word = tokens[n].text;
-    if (word === ';' || word === ',' || word === ':' || word === '.' || word === '?.' || word === '=>' || closes.includes(word)) return no(n, 'call needs an expression');
-    if (word === '{') return no(n, 'a call block takes =>; return answers the closure it opens');
+    if (word === '=>') return no(n, 'call takes a block or an expression, not =>');
+    if (word === ';' || word === ',' || word === ':' || word === '.' || word === '?.' || closes.includes(word)) return no(n, 'call needs an expression');
 
     let j = n;
 
@@ -1227,14 +1221,11 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
       return no(at, 'make is sync; an await adds nothing');
     }
 
-    let n = after[at];
-    if (n < 0) return no(at, 'make takes =>; name the constructor after it');
-    if (tokens[n].text !== '=>' || !keyword(tokens, before, n)) return no(at, 'make takes =>; name the constructor after it');
-
-    let m = after[n];
+    let m = after[at];
     while (m >= 0 && tokens[m].kind === 'comment') m = after[m];
     const first = m;
-    if (first < 0) return no(n, 'a constructor follows make =>');
+    if (first < 0) return no(at, 'make takes the constructor and its arguments');
+    if (tokens[first].text === '(') return no(first, 'make takes the constructor and its arguments; write make C(...)');
 
     while (m >= 0) {
       const t = tokens[m];
@@ -1303,11 +1294,6 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
     }
 
     if (tokens[n].text === 'call' && keyword(tokens, before, n)) {
-      const arrow = after[n];
-      if (arrow < 0 || tokens[arrow].text !== '=>' || !keyword(tokens, before, arrow)) {
-        return no(n, 'try call takes =>; the unwrap yields left');
-      }
-
       const box = { suspends: false };
       const bad = wrapping(n, box);
       if (bad !== undefined) return bad;
@@ -3640,7 +3626,7 @@ const rewrite = (source: string, tokens: Token[], read: ReturnType<typeof scan>)
 
     if (t.text === 'else' && !consumed[i]) return no(i, 'else after an if statement is refused; the funnel is the flow');
 
-    if (t.text === 'scope' && after[i] >= 0 && tokens[after[i]].text === '(' && twin[after[i]] >= 0 && after[twin[after[i]]] >= 0 && tokens[after[twin[after[i]]]].text === '=>' && after[after[twin[after[i]]]] >= 0 && tokens[after[after[twin[after[i]]]]].text === '{') {
+    if (t.text === 'scope' && after[i] >= 0 && tokens[after[i]].text === '(' && twin[after[i]] >= 0 && after[twin[after[i]]] >= 0 && tokens[after[twin[after[i]]]].text === '{') {
       if (starts[i] && frames[owner[i]].kind !== 'object') return no(i, 'a scope hands back its exit; bind it');
 
       const bad = scoping(i);

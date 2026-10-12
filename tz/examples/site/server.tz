@@ -82,7 +82,7 @@ const route = (path: string, content: Content) => {
 
 const handle = (req: IncomingMessage, res: ServerResponse, content: Content) => {
   const raw = req.url ?none => '/';
-  const parsed = make => URL(raw, 'http://site');
+  const parsed = make URL(raw, 'http://site');
   const path = parsed ? {
     :ok (url) => url.pathname,
     :err => '/'
@@ -103,7 +103,7 @@ export const start = (root: string, port: number) => {
   };
 
   const content = try out;
-  const made = try call => {
+  const made = try call {
     return createServer((req: IncomingMessage, res: ServerResponse) => void handle(req, res, content));
   };
 

@@ -4,12 +4,12 @@ a superset of typecore, the subset of typescript that omits the overlap, with ts
 
 | sessions closed | phases closed | constructs | tests green |
 | --- | --- | --- | --- |
-| **18 / 24** | **3 / 5** | **22 decks** | **170** |
+| **19 / 25** | **3 / 5** | **22 decks** | **170** |
 
 ## progress
 
 ```
-truth      ████████░░  8 / 10  phase 0 closed
+truth      █████████░  9 / 10  phase 0 closed
 ownership  ██████████  4 / 4   done
 battle     ██████░░░░  3 / 5   underway
 onboarding ██████████  3 / 3   done
@@ -32,12 +32,12 @@ close      ░░░░░░░░░░  0 / 1   last
 
 | # | session | the job |
 | --- | --- | --- |
-| 18 | the arrow capture | whether `call`, `make`, `scope` still carry `=>` |
 | 19 | the struct and the codec | the name, the shape, the collection and the codec |
 | 20 | the in-file test | a test keyword written in the file it tests |
 | 22 | the construct table | the constructs as a crescendo of complexity |
 | 23 | under pressure | the first batch the cold passes filed |
+| 24 | the produced value | the exit that answers the nearest body, and the word for it |
 
 ## the ask
 
-the target is built: the personal site runs from files under `examples/site/`, and its friction is ranked in the session 15 context. a person and an agent each start from a document: `GETTING-STARTED.md` walks a newcomer to a running program, and `AGENTS.md` is the contract a cold agent writes from, proven by pointing one at it. the passes that hardened it now run on the sessions that move the language, and what they file is the language's next work. the next session is 18, the arrow capture: whether `call`, `make` and `scope` still carry `=>`.
+the target is built: the personal site runs from files under `examples/site/`, and its friction is ranked in the session 15 context. a person and an agent each start from a document: `GETTING-STARTED.md` walks a newcomer to a running program, and `AGENTS.md` is the contract a cold agent writes from, proven by pointing one at it. the passes that hardened it now run on the sessions that move the language, and what they file is the language's next work. the next session is 19, the struct and the codec: the name, the shape, the collection and the codec.

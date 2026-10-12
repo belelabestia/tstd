@@ -32,11 +32,11 @@ make(URL, href);`);
       'branch is the library spelling; construct with :tag(...)',
       'result.ok is the library spelling; construct with :ok(...)',
       'result.err is the library spelling; construct with :err(...)',
-      'scope.sync is the library spelling; use scope (hold) => { ... }',
-      'scope.async is the library spelling; use scope (hold) => { ... }',
+      'scope.sync is the library spelling; use scope (hold) { ... }',
+      'scope.async is the library spelling; use scope (hold) { ... }',
       'call.sync is the library spelling; use call',
       'call.async is the library spelling; use call',
-      'make is the library spelling; use make => ...'
+      'make is the library spelling; use make ...'
     ]
   );
 
@@ -60,9 +60,9 @@ protocol load {
 }
 const rows = x.branch;
 const made = y.make;
-scope (hold) => {};
-const url = make => URL(href);
-const r = call => JSON.parse(raw);
+scope (hold) {};
+const url = make URL(href);
+const r = call JSON.parse(raw);
 const done = :ok(1);`),
     []
   );

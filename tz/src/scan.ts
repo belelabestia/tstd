@@ -306,7 +306,12 @@ export const scan = (tokens: Token[]) => {
       return 'body';
     }
 
-    if (t.text === ')' && twin[p] >= 0) return 'block';
+    if (t.text === ')' && twin[p] >= 0) {
+      const head = before[twin[p]];
+      if (head >= 0 && tokens[head].kind === 'word' && tokens[head].text === 'scope' && keyword(tokens, before, head)) return 'body';
+
+      return 'block';
+    }
 
     if (objects.includes(t.text) || (t.kind === 'word' && words.includes(t.text))) return 'object';
     return 'block';
@@ -406,8 +411,7 @@ export const scan = (tokens: Token[]) => {
   for (let f = frames.length - 1; f > 0; f--) {
     if (frames[f].kind !== 'body' || !frames[f].suspends) continue;
 
-    const arrow = before[frames[f].open];
-    const head = arrow >= 0 && tokens[arrow].text === '=>' ? before[arrow] : -1;
+    const head = before[frames[f].open];
     if (head >= 0 && tokens[head].kind === 'word' && tokens[head].text === 'call' && keyword(tokens, before, head)) {
       frames[holder(frames[f].parent)].suspends = true;
     }

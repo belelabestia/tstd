@@ -51,11 +51,11 @@ the constructs, in the order they were ruled:
 
 - **the exit family**: `return`, `ok`, `err`, `async`, `break`, `continue`. `return`, `ok`, `err` and `async` answer a body and are matcher tails; `break` and `continue` only leave a loop. one discipline per body: a body uses exactly one of `return`, `ok`, `err`, `async`, or an arrow capture. mixing is refused at the source line.
 - **side quests**: `?none`, `?some`, `?==`, `?!=`, `?>`, `?<`, `?>=`, `?<=`, `?&(...)`, `?|(...)`, `?:tag`, `?(cond)`, `?!(cond)`, bare `?` and `?!`, plus the `? {}` block for exhaustive answers. each one tests one thing at the position where it stands. a side quest that finds its match exits or arrow captures; a side quest that misses continues unless the chain ends. a bare `?` and its negation `?!` head that same tail family, so a landing exit rewrites the same way: `cond ?! err 'x'` lands the error `cond ? err` does. an `else` either answers with `=>` or continues the chain with a quest on the locked subject: one chain holds one subject, so a nested chain is composition and a subjectless quest is refused. `?true`, `?false` and `?literal` retired into `?==`; juxtaposed chains join in groups now. a side quest is postfix in syntax and first in execution: the test runs before the subject, and a miss yields the subject. `?(cond)` and `?!(cond)` are the custom quests: the condition is a third party predicate, so the expression on the left is the value the miss yields, not what the condition reads. it is read once, only on the miss, so a bare statement with no land refuses it, and one that repeats the subject is refused because the test would read it twice. a bare boolean with a value `else` is the inverted form of the same quest, so `pred ? => hit else => miss` is refused in favour of `miss ?!(pred) => hit`. a coloned test keeps the subject boxed, for the answer side and the exit side alike, so the payload of the branch that survived a refusal is read with `.value`; `?ok` and `?err` are the only tests that unwrap, because the complement of one branch of a two-member union is always the other branch, and always carries the payload.
-- **scope**: `scope (hold) => { ... }`. holds resources and hands them back in reverse. picks `scope.sync` or `scope.async` from the body.
+- **scope**: `scope (hold) { ... }`. holds resources and hands them back in reverse. picks `scope.sync` or `scope.async` from the body.
 - **protocol**: a union or a machine in one block. a parameter is the only slot in a value that states a type, so one object of functions states one type per key.
 - **form**: the wire shape and the domain shape in one block. a field is either a guard (plain), a `{ is, decode, encode }` triple, a triple renamed with `as`, or a `form.nest(...)` of another form.
-- **call**: the boundary that does not throw. `call expr`, `call => { ... }`, `await call expr`, `await call => { ... }`. sync or async, expression or block; an `await` inside picks the async variant on its own.
-- **make**: the constructor that does not throw. `make => C(...)` spells `make(C, ...)`, so `new` stays off the table and the word stays one spelling. a constructor only syncs, so an `await` adds nothing and is refused.
+- **call**: the boundary that does not throw. `call expr`, `call { ... }`, `await call expr`, `await call { ... }`. sync or async, expression or block; an `await` inside picks the async variant on its own.
+- **make**: the constructor that does not throw. `make C(...)` spells `make(C, ...)`, so `new` stays off the table and the word stays one spelling. a constructor only syncs, so an `await` adds nothing and is refused.
 
 ## the ban list
 
@@ -66,7 +66,7 @@ yes, and this is the part that makes tz a language instead of a preprocessor. a 
 | `class` | hierarchies, and a method carries a `this` the type never states | a module, or a closure with `init` |
 | `function` | arrow consts only | `const f = () => {}` |
 | `this` | invisible requirement | an argument |
-| `new` | `make` owns every instantiation | `make => C(...)` |
+| `new` | `make` owns every instantiation | `make C(...)` |
 | `try` `catch` `finally` (the ts ones) | a throw is invisible to a signature | `call.sync`, `call.async`, or tz `try` |
 | `interface` | `type` covers everything | `type` |
 | `enum` | a hierarchy in disguise | `Union` or `protocol` |
@@ -203,9 +203,9 @@ it is refused for the partition instead. a side quest never answers is the sente
 
 ### zig's block expression, and `break <expr>`
 
-`break <expr>` is the other way to spell "a block answers", and tz does not take it. `break` means one thing here and should keep meaning it: leave a loop. zig can overload the word because zig labels its blocks (`break :blk v` names which one it leaves); without labels, `break 8080;` inside a loop inside a block is a real question about where control goes and the reader has no token to answer it with. an arrow capture block answers with `return`, which already means "an exit leaves here". a block is an arrow body or an iife, and in both, `return` answers the block. source and emit agree without inventing anything.
+`break <expr>` is the other way to spell "a block answers", and tz does not take it. `break` means one thing here and should keep meaning it: leave a loop. zig can overload the word because zig labels its blocks (`break :blk v` names which one it leaves); without labels, `break 8080;` inside a loop inside a block is a real question about where control goes and the reader has no token to answer it with. a block is a construct's body or an iife, and in both, `return` answers the block. source and emit agree without inventing anything.
 
-a general block expression, `const n = { ... };` in any expression position, is the remaining piece of zig's `break :blk`, and it is parked, not refused. its one real cost: a `{` in expression position becomes a body boundary, so "a function body is a `{` preceded by `=>`" grows a second case and the discipline check has to learn it. cheap, but not free, and the `=>` form covers everything that has come up.
+a general block expression, `const n = { ... };` in any expression position, is the remaining piece of zig's `break :blk`, and it is parked, not refused. its one real cost: a `{` in expression position becomes a body boundary, so "a function body is a `{` a construct opens" grows a second case and the discipline check has to learn it. cheap, but not free, and the `=>` form covers everything that has come up.
 
 ### a `task` keyword
 

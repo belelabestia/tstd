@@ -282,14 +282,14 @@ test('call the foreign boundary by keyword', () => {
   // on its own passes the function and its args straight to the boundary
 
   assert.equal(
-    out('const f = (body: string) => {\n  const raw = try call => JSON.parse(body);\n  ok raw;\n};'),
+    out('const f = (body: string) => {\n  const raw = try call JSON.parse(body);\n  ok raw;\n};'),
     'const f = (body: string) => {\n  const $0 = call.sync(JSON.parse, body); if ($0.branch === \'err\') return $0; const raw = $0.value;\n  return result.ok(raw);\n};'
   );
 
   // a block holds several lines, and await picks the async boundary
 
   assert.equal(
-    out('const f = (url: string) => {\n  const r = try await call => fetch(url);\n  ok r;\n};'),
+    out('const f = (url: string) => {\n  const r = try await call fetch(url);\n  ok r;\n};'),
     'const f = async (url: string) => {\n  const $0 = await call.async(fetch, url); if ($0.branch === \'err\') return $0; const r = $0.value;\n  return result.ok(r);\n};'
   );
 
@@ -301,70 +301,58 @@ test('call the foreign boundary by keyword', () => {
   // only a bare call passes through; anything else still takes the closure
 
   assert.equal(
-    out('const r = call => a.b(c);'),
+    out('const r = call a.b(c);'),
     'const r = call.sync(a.b, c);'
   );
 
   assert.equal(
-    out('const r = call => a + 1;'),
+    out('const r = call a + 1;'),
     'const r = call.sync(() => a + 1);'
   );
 
   assert.equal(
-    out('const r = call => g(a, b);'),
+    out('const r = call g(a, b);'),
     'const r = call.sync(g, a, b);'
   );
 
-  // try unwraps left, so it takes => like a side matcher does; without try the whole result is wrapped
+  // the arrow is gone: call takes a block or an expression, nothing else
 
-  assert.match(refused('const f = (body: string) => {\n  const raw = try call JSON.parse(body);\n  ok raw;\n};'), /try call takes =>/);
-
-  // call always takes => too: without try it is the same closure, answered straight back
-
-  assert.equal(
-    out('const r = call => JSON.parse(x);'),
-    'const r = call.sync(JSON.parse, x);'
-  );
-
-  assert.equal(
-    out('const parse = (raw: string) => call => JSON.parse(raw);'),
-    'const parse = (raw: string) => call.sync(JSON.parse, raw);'
-  );
+  assert.match(refused('const r = call => JSON.parse(x);'), /not =>/);
+  assert.match(refused('const r = make => URL(href);'), /constructor and its arguments/);
 
   // an arrow with no block cannot lift, so await forwards the promise itself
 
   assert.equal(
-    out('export const get = (url: string) => await call => fetch(url);'),
+    out('export const get = (url: string) => await call fetch(url);'),
     'export const get = (url: string) => call.async(fetch, url);'
   );
 
-  // a call block opens its closure with =>, so return answers it and nothing else
+  // a call block is a function body, so return answers it and nothing else
 
   assert.equal(
-    out('const f = (file: { read: () => string }) => {\n  const out = try call => {\n    const content = file.read();\n    return JSON.parse(content);\n  };\n  ok out;\n};'),
+    out('const f = (file: { read: () => string }) => {\n  const out = try call {\n    const content = file.read();\n    return JSON.parse(content);\n  };\n  ok out;\n};'),
     'const f = (file: { read: () => string }) => {\n  const $0 = call.sync(() => {\n    const content = file.read();\n    return JSON.parse(content);\n  }); if ($0.branch === \'err\') return $0; const out = $0.value;\n  return result.ok(out);\n};'
   );
 
-  // an await inside the closure picks call.async, writes the async itself, and is awaited from the body
+  // an await inside the block picks call.async, writes the async itself, and is awaited from the body
 
   assert.equal(
-    out('const f = (url: string) => {\n  const r = try call => {\n    return await fetch(url);\n  };\n  ok r;\n};'),
+    out('const f = (url: string) => {\n  const r = try call {\n    return await fetch(url);\n  };\n  ok r;\n};'),
     'const f = async (url: string) => {\n  const $0 = await call.async(async () => {\n    return await fetch(url);\n  }); if ($0.branch === \'err\') return $0; const r = $0.value;\n  return result.ok(r);\n};'
   );
 
   assert.equal(
-    out('const f = () => {\n  const r = try call => await g();\n  ok r;\n};'),
+    out('const f = () => {\n  const r = try call await g();\n  ok r;\n};'),
     'const f = async () => {\n  const $0 = await call.async(async () => await g()); if ($0.branch === \'err\') return $0; const r = $0.value;\n  return result.ok(r);\n};'
   );
 
-  // a bare block is refused, and a falling body never answers
+  // a falling block never answers
 
-  assert.match(refused('const f = (file: string) => {\n  const raw = try call {\n    const c = file.read();\n  };\n  ok raw;\n};'), /takes =>/);
-  assert.match(refused('const f = (file: string) => {\n  const raw = try call => {\n    const c = file.read();\n  };\n  ok raw;\n};'), /answers with return/);
+  assert.match(refused('const f = (file: string) => {\n  const raw = try call {\n    const c = file.read();\n  };\n  ok raw;\n};'), /answers with return/);
 
   // a call answers, so an uncaptured one dangles and is refused
 
-  assert.match(refused('const f = (file: { read: () => string }) => {\n  call => {\n    return 1;\n  };\n  return 0;\n};'), /capture it with try or bind it/);
+  assert.match(refused('const f = (file: { read: () => string }) => {\n  call {\n    return 1;\n  };\n  return 0;\n};'), /capture it with try or bind it/);
   assert.match(refused('const f = (x: string) => {\n  call JSON.parse(x);\n  return 0;\n};'), /capture it with try or bind it/);
 
   // an explicit void discards on purpose, and passes through
@@ -377,76 +365,76 @@ test('call the foreign boundary by keyword', () => {
   // a call that yields nothing spells void, in a fallible body too
 
   assert.equal(
-    out('const f = (save: (x: string) => void, x: string) => {\n  void call => save(x);\n  ok `saved`;\n};'),
+    out('const f = (save: (x: string) => void, x: string) => {\n  void call save(x);\n  ok `saved`;\n};'),
     'const f = (save: (x: string) => void, x: string) => {\n  void call.sync(save, x);\n  return result.ok(`saved`);\n};'
   );
 
   // try lands its ok, so the bare drop is refused and the deliberate one spells void try
 
   assert.equal(
-    out('const f = (g: () => void) => {\n  void try call => g();\n  ok 1;\n};'),
+    out('const f = (g: () => void) => {\n  void try call g();\n  ok 1;\n};'),
     'const f = (g: () => void) => {\n  const $0 = call.sync(g); if ($0.branch === \'err\') return $0; void $0.value;\n  return result.ok(1);\n};'
   );
 
-  assert.match(refused('const f = (g: () => void) => {\n  try call => g();\n  ok 1;\n};'), /drops the ok branch/);
+  assert.match(refused('const f = (g: () => void) => {\n  try call g();\n  ok 1;\n};'), /drops the ok branch/);
 });
 
 test('make a constructor by keyword', () => {
-  // make takes => and returns make(Constructor, args), so the direct call passes through tstd
+  // make names the constructor and its args, so the direct call passes through tstd
 
   assert.equal(
-    out('const url = make => URL(href);'),
+    out('const url = make URL(href);'),
     'const url = make(URL, href);'
   );
 
   assert.equal(
-    out('const url = make => URL();'),
+    out('const url = make URL();'),
     'const url = make(URL);'
   );
 
   // the constructed name is the whole span up to the paren, so paths survive
 
   assert.equal(
-    out('const url = make => net.URL(href);'),
+    out('const url = make net.URL(href);'),
     'const url = make(net.URL, href);'
   );
 
   // try lands the ok branch on the value, and void keeps the boundary
 
   assert.equal(
-    out('const f = (href: string) => {\n  const url = try make => URL(href);\n  ok url;\n};'),
+    out('const f = (href: string) => {\n  const url = try make URL(href);\n  ok url;\n};'),
     'const f = (href: string) => {\n  const $0 = make(URL, href); if ($0.branch === \'err\') return $0; const url = $0.value;\n  return result.ok(url);\n};'
   );
 
   assert.equal(
-    out('const f = () => {\n  void make => URL(href);\n  ok 1;\n};'),
+    out('const f = () => {\n  void make URL(href);\n  ok 1;\n};'),
     'const f = () => {\n  void make(URL, href);\n  return result.ok(1);\n};'
   );
 
   assert.equal(
-    out('const f = () => {\n  void try make => URL(href);\n  ok 1;\n};'),
+    out('const f = () => {\n  void try make URL(href);\n  ok 1;\n};'),
     'const f = () => {\n  const $0 = make(URL, href); if ($0.branch === \'err\') return $0; void $0.value;\n  return result.ok(1);\n};'
   );
 
-  // make owns the word, so the tstd spelling is made by this keyword and the rest is refused
+  // make owns the word, so the library spelling and the old arrow are refused
 
-  assert.match(refused('const url = make(URL, href);'), /takes =>/);
-  assert.match(refused('const url = make URL(href);'), /takes =>/);
-  assert.match(refused('const f = (href: string) => {\n  const url = try make URL(href);\n  ok url;\n};'), /takes =>/);
+  assert.match(refused('const url = make(URL, href);'), /write make C/);
+  assert.match(refused('const url = make => URL(href);'), /constructor and its arguments/);
+  assert.match(refused('const f = (href: string) => {\n  const url = try make => URL(href);\n  ok url;\n};'), /constructor and its arguments/);
 
   // make is sync; an await has no async dimension to add
 
-  assert.match(refused('const url = await make => URL(href);'), /make is sync/);
-  assert.match(refused('const f = (href: string) => {\n  const url = try await make => URL(href);\n  ok url;\n};'), /make is sync/);
+  assert.match(refused('const url = await make URL(href);'), /make is sync/);
+  assert.match(refused('const f = (href: string) => {\n  const url = try await make URL(href);\n  ok url;\n};'), /make is sync/);
 
   // a make answer dangles when uncaptured, and a block could never build a constructor
 
-  assert.match(refused('const f = (href: string) => {\n  make => URL(href);\n  return 0;\n};'), /capture it with try or bind it/);
-  assert.match(refused('const url = make => { return URL(href); };'), /cannot build a constructor/);
+  assert.match(refused('const f = (href: string) => {\n  make URL(href);\n  return 0;\n};'), /capture it with try or bind it/);
+  assert.match(refused('const url = make { return URL(href); };'), /cannot build a constructor/);
 
   // like a try call, a try make that is never handled has nothing to land on
 
-  assert.match(refused('const f = () => {\n  try make => URL(href);\n  ok 1;\n};'), /drops the ok branch/);
+  assert.match(refused('const f = () => {\n  try make URL(href);\n  ok 1;\n};'), /drops the ok branch/);
 });
 
 test('answer with a chain, decline with a statement', () => {
@@ -999,25 +987,25 @@ test('refuse an assignment used as an expression', () => {
 test('hold resources in a scope, one line for one line', () => {
   // sync is the case with no await; the binding keeps its name and the close gains );
   assert.equal(
-    out('const copy = (from: string, to: string) => scope (hold) => {\n  const src = try hold(openRead(from));\n  const dst = try hold(openWrite(to));\n  ok pump(src, dst);\n};'),
+    out('const copy = (from: string, to: string) => scope (hold) {\n  const src = try hold(openRead(from));\n  const dst = try hold(openWrite(to));\n  ok pump(src, dst);\n};'),
     'const copy = (from: string, to: string) => scope.sync(hold => {\n  const $0 = hold(openRead(from)); if ($0.branch === \'err\') return $0; const src = $0.value;\n  const $1 = hold(openWrite(to)); if ($1.branch === \'err\') return $1; const dst = $1.value;\n  return result.ok(pump(src, dst));\n});'
   );
 
   // an await in the body picks scope.async and an async callback, by the same count as the lifts
 
   assert.equal(
-    out('const f = (x: string) => scope (hold) => {\n  const a = try await hold(open(x));\n  ok a;\n};'),
+    out('const f = (x: string) => scope (hold) {\n  const a = try await hold(open(x));\n  ok a;\n};'),
     'const f = (x: string) => scope.async(async hold => {\n  const $0 = await hold(open(x)); if ($0.branch === \'err\') return $0; const a = $0.value;\n  return result.ok(a);\n});'
   );
 
   // a scope binds one name, the way a matcher binds one
 
-  assert.match(refused('const f = () => scope (a, b) => {\n  ok 1;\n};'), /binds one name/);
-  assert.match(refused('const f = () => scope () => {\n  ok 1;\n};'), /binds one name/);
+  assert.match(refused('const f = () => scope (a, b) {\n  ok 1;\n};'), /binds one name/);
+  assert.match(refused('const f = () => scope () {\n  ok 1;\n};'), /binds one name/);
 
   // a scope hands back its exit, so an uncaptured one dangles and is refused
 
-  assert.match(refused('const f = () => {\n  scope (hold) => {\n    ok 1;\n  };\n  return 0;\n};'), /hands back its exit/);
+  assert.match(refused('const f = () => {\n  scope (hold) {\n    ok 1;\n  };\n  return 0;\n};'), /hands back its exit/);
 });
 
 test('declare a union or a machine, and name the three things a protocol makes', () => {

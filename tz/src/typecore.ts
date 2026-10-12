@@ -36,10 +36,10 @@ export const warned: Record<string, string> = {
   'protocol.init': 'declare with protocol { ... }',
   'result.ok': 'construct with :ok(...)',
   'result.err': 'construct with :err(...)',
-  'scope.sync': 'use scope (hold) => { ... }',
-  'scope.async': 'use scope (hold) => { ... }',
+  'scope.sync': 'use scope (hold) { ... }',
+  'scope.async': 'use scope (hold) { ... }',
   'call.sync': 'use call',
   'call.async': 'use call',
   branch: 'construct with :tag(...)',
-  make: 'use make => ...'
+  make: 'use make ...'
 };

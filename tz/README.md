@@ -14,7 +14,7 @@ export form signup {
   age: is.number
 }
 
-export const submit = (raw: unknown, save: (conn: Conn, user: Signup) => Promise<string>) => scope (hold) => {
+export const submit = (raw: unknown, save: (conn: Conn, user: Signup) => Promise<string>) => scope (hold) {
   const conn = try hold(connect());
 
   form.model(raw, signup) ?! err 'malformed signup';
@@ -22,7 +22,7 @@ export const submit = (raw: unknown, save: (conn: Conn, user: Signup) => Promise
   const user = form.decode(raw, signup);
   user.age ?< 18 err 'under age';
 
-  const id = try await call => save(conn, user);
+  const id = try await call save(conn, user);
 
   ok `created ${id}`;
 };

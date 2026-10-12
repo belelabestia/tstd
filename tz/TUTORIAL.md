@@ -58,7 +58,7 @@ arrow capture is the spell for "produce a value, stay in scope". the `=>` form n
 const port = process.env.PORT ?none => 8080;
 ```
 
-an arrow capture is the only way a `=>` appears; there is no block that just lists answers. the body decides what an arrow capture does: when it has a `=>` and a value, it captures; when it has an exit keyword (`return`, `err`, `ok`, `break`, `continue`), it leaves.
+an arrow capture is the only construct that spells `=>`. the boundary constructs open their body with their own keyword (`call { ... }`, `scope (hold) { ... }`, `make C(...)`), so in the construct vocabulary the arrow belongs to the capture alone; a plain typescript arrow function is still the language's, and stays. the body decides what an arrow capture does: when it has a `=>` and a value, it captures; when it has an exit keyword (`return`, `err`, `ok`, `break`, `continue`), it leaves.
 
 ## side quests: the `?` family
 
@@ -320,7 +320,7 @@ the flip side of the ladder, in one place. an expression captures with `=>` and 
 ```tz
 export const name = (id: string) => {
   const raw = try row(id);
-  const parsed = try call => JSON.parse(raw);
+  const parsed = try call JSON.parse(raw);
   is.model(parsed, rowShape) ?! err 'not a row';
   ok parsed.name;
 };
@@ -331,19 +331,19 @@ export const name = (id: string) => {
 `scope` holds resources and hands them back in reverse, whatever happened to the work; it replaces the `try`/`finally` cleanup you would otherwise hand-thread through every exit. `scope` is the deepest closed-to-open step so far, so its bond is marked: this is the language form of `scope.sync` / `scope.async` in `tstd`.
 
 ```tz
-export const both = (first: string, second: string) => scope (hold) => {
+export const both = (first: string, second: string) => scope (hold) {
   const a = try hold(pool.take(first));
   const b = try hold(pool.take(second));
   ok `${a} and ${b}`;
 };
 ```
 
-the `=>` is not decoration. that block is a function body: `try` exits from it, `ok` and `err` are its exits. writing the `=>` says so, and it keeps the discipline check to one sentence, since a function body stays exactly a `{` preceded by `=>` with no second case for `scope`. it also settles the recognition: `scope(x) => {}` is not valid javascript, so a call to somebody else's `scope` can never be read as the construct.
+the block is a function body: `try` exits from it, `ok` and `err` are its exits, and `return` would answer it too. the construct says so on its own, so no `=>` is needed to open it; the emitter writes the arrow into the callback it hands to `scope.sync`. that is the same move `call` and `make` make: the keyword owns the body, so the arrow belongs to the side quests alone.
 
 an async body picks `scope.async` and an async callback, and the count that decides it is the same one that decides everything else, an `await` in the body. the resource changes with it: every step answers a promise, so `open` returns a `Promise<T>` and `close` and `abort` return a `Promise<void>`, and the acquisition is awaited, `try await hold(...)`. a resource written for the sync scope does not fit the async one, or the reverse, so a lifetime that crosses both is declared twice.
 
 ```tz
-export const bothLater = (first: string, second: string) => scope (hold) => {
+export const bothLater = (first: string, second: string) => scope (hold) {
   const a = try await hold(pool.takeLater(first));
   const b = try await hold(pool.takeLater(second));
   ok `${a} and ${b}`;
@@ -355,10 +355,10 @@ hold is a value, not a keyword. `hold` binds, the way `catch (e)` and `?:err (e)
 nesting is where that pays, because two names reach two lifetimes:
 
 ```tz
-scope (session) => {
+scope (session) {
   const conn = try session(connect(url));
 
-  const out = scope (page) => {
+  const out = scope (page) {
     const buf = try page(alloc(size));
     const tmp = try session(openTemp());
     ok render(conn, buf, tmp);
@@ -451,40 +451,40 @@ a throw is converted into a `Result` at two boundaries; this is the second one, 
 when the `Result` is the whole answer, exit with it directly: no `try`, no `ok`. an expression that is exactly one call passes the function and its arguments straight to the boundary, `call.sync(f, a)`, and any other expression is tucked into the closure the emit opens, which is the value the body carries:
 
 ```tz
-export const parse = (raw: string) => call => JSON.parse(raw);
+export const parse = (raw: string) => call JSON.parse(raw);
 ```
 
-`try` is for when work continues after the boundary: it unwraps left, so `try call` takes `=>` the way a side quest does:
+`try` is for when work continues after the boundary: it unwraps left, so `try call` binds the value out of the `Result`:
 
 ```tz
-const raw = try call => JSON.parse(file.readToString());
+const raw = try call JSON.parse(file.readToString());
 ```
 
 multi-line work takes the block form, and an async foreign call takes `await call`:
 
 ```tz
-const raw = try call => {
+const raw = try call {
   const content = file.readToString();
   return JSON.parse(content);
 };
 ```
 
 ```tz
-const response = try await call => fetch(url);
+const response = try await call fetch(url);
 ```
 
 an `await` inside the closure picks `call.async` and the async closure on its own, keyword or no keyword, and the body lifts to `async` either way:
 
 ```tz
-const response = try call => {
+const response = try call {
   return await fetch(url);
 };
 ```
 
-an arrow with no block cannot lift, so there `await` forwards the promise itself: `=> await call => fetch(url)` carries the same `Promise` of `Result` the async block variant carries, with nothing to suspend:
+an expression with no block cannot lift, so there `await` forwards the promise itself: `await call fetch(url)` carries the same `Promise` of `Result` the async block variant carries, with nothing to suspend:
 
 ```tz
-export const get = (url: string) => await call => fetch(url);
+export const get = (url: string) => await call fetch(url);
 ```
 
 the boundary matrix, each row the same three lines of emitted typescript:
@@ -492,15 +492,15 @@ the boundary matrix, each row the same three lines of emitted typescript:
 | mechanism | syntax | target |
 | --- | --- | --- |
 | sync expression | `call expr` | `JSON.parse`, `fs.readFileSync` |
-| sync block | `call => { ... }` | multi-line sync foreign work |
-| async expression | `await call => expr` | `fetch`, third-party sdks |
-| async block | `await call => { ... }` | multi-line async foreign work |
+| sync block | `call { ... }` | multi-line sync foreign work |
+| async expression | `await call expr` | `fetch`, third-party sdks |
+| async block | `await call { ... }` | multi-line async foreign work |
 
 the keyword still needs the import, the way `ok` needs `result`: the emit calls `call.sync`, and the emitter never writes an import. a block answers with its `return`, so a block that falls off the end is refused, and `try`, `ok` and `err` stay outside it: the boundary converts the panic, nothing else does. and since a bare `call` answers instead of throwing, an uncaptured one dangles: a `call` with no land is refused, so `return` (or a binding) carries it, never silence. a call that captures nothing spells `void`, which discards the boundary on purpose and passes through:
 
 ```tz
 export const forget = (save: (x: string) => void, x: string) => {
-  void call => save(x);
+  void call save(x);
   ok 'saved';
 };
 ```
@@ -508,24 +508,24 @@ export const forget = (save: (x: string) => void, x: string) => {
 `try` lands its ok, so a bare `try` statement is refused: the deliberate drop spells `void try`, which propagates the err and voids the ok on the record. the two spellings differ in exactly one thing, whether the failure climbs:
 
 ```tz
-void call => save(x);   // drops the whole result, failure and all
-void try call => save(x);   // propagates the err, drops the ok
+void call save(x);   // drops the whole result, failure and all
+void try call save(x);   // propagates the err, drops the ok
 ```
 
 the deeper rule is type-level and belongs to the lsp, not the emitter: any expression statement whose value carries something (it is not `void`, `undefined` or `null`) needs the `void`, whatever produced it. the emitter only catches the constructs that announce their product themselves, `call`, `scope` and `try`; whether some other dropped value, a plain call, an unwrapped `x.value` or a test promise, hides a result is a question of types, and the lsp is where it gets asked. an assignment is a statement, so its value is incidental and needs no `void`, which is exactly why an assignment cannot be used as an expression.
 
 ## make: the constructor that does not throw
 
-`new` is banned, and its replacement takes `=>` like `call` does, because a constructor is the other thing that panics: platform and library constructors throw. `make` names the constructor, keeps the args where they are, and the boundary becomes a `Result`. its bond: `make` in `tstd`, the one function that owns every instantiation.
+`new` is banned, and its replacement names the constructor and keeps the args where they are, because a constructor is the other thing that panics: platform and library constructors throw. `make C(...)` spells `make(C, ...)`, and the boundary becomes a `Result`. its bond: `make` in `tstd`, the one function that owns every instantiation.
 
 ```tz
-const url = make => URL(href);
+const url = make URL(href);
 ```
 
 `try make` unwraps left exactly like `try call`:
 
 ```tz
-const url = try make => URL(href);
+const url = try make URL(href);
 ```
 
 a constructor only syncs, so there is no async side of this boundary: an `await` in front of `make` is refused, and so is a make that dangles, the way a call dangles. `new` is gone, but the constructor itself is foreign the same way a throwing function is foreign: if your own code would have used `new`, `make` is the crossing, and `class` stays banned.
@@ -540,10 +540,10 @@ export form configForm {
   host: is.string
 }
 
-const loadConfig = (filePath: string) => scope (hold) => {
+const loadConfig = (filePath: string) => scope (hold) {
   const file = try hold(openFile(filePath));
 
-  const raw = try call => JSON.parse(file.readToString());
+  const raw = try call JSON.parse(file.readToString());
 
   form.model(raw, configForm) ?! err `invalid configuration structure in ${filePath}`;
 

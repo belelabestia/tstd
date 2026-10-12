@@ -15,7 +15,7 @@ const row = (id: string) => {
 /** the name a row carries, or why it could not be read */
 export const name = (id: string) => {
   const raw = try row(id);
-  const parsed = try call => JSON.parse(raw);
+  const parsed = try call JSON.parse(raw);
   is.model(parsed, shape) ?! err 'not a row';
   ok parsed.name;
 };

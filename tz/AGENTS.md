@@ -92,5 +92,5 @@ the sample does not say outright:
 
 - `?!` is `?== false`: it refuses when the guard is false.
 - `form.model`, `form.decode` and `form.encode` are `tstd` exports, not constructs; the `form` construct is the declaration.
-- `try call => f(...)` hands `f` and its arguments straight to `call.sync`, which can resolve a different overload than the call you wrote: a function whose return type depends on an argument's literal type, node's `readFileSync(path, 'utf8')` for one, takes the block form `try call => { return f(...); }`.
+- `try call f(...)` hands `f` and its arguments straight to `call.sync`, which can resolve a different overload than the call you wrote: a function whose return type depends on an argument's literal type, node's `readFileSync(path, 'utf8')` for one, takes the block form `try call { return f(...); }`.
 - an `await` in a scope body makes the resource async with it: `open` answers a promise, `close` and `abort` do too, and `hold` takes the resource object and is awaited, `try await hold(resource)`.

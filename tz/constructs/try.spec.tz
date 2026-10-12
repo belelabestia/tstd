@@ -22,7 +22,7 @@ const name = (table: Record<string, string>, id: string) => {
 };
 
 const parsed = (raw: string) => {
-  const value = try call => JSON.parse(raw);
+  const value = try call JSON.parse(raw);
   ok value;
 };
 
